@@ -1,0 +1,59 @@
+{
+  "at": "2026-10-09T13:28:37.648739+00:00",
+  "logLines": [
+    "time=2026-10-09T06:25:24.322-04:00 level=INFO source=routes.go:2375 msg=\"Ollama cloud disabled: false\"",
+    "time=2026-10-09T06:25:24.674-04:00 level=INFO source=model_recommendations.go:177 msg=\"model recommendations cache sleep scheduled\" wait=3h40m54.107946593s consecutive_failures=0",
+    "time=2026-10-09T06:25:27.027-04:00 level=INFO source=runner.go:405 msg=\"dropping integrated GPU; to enable, set OLLAMA_IGPU_ENABLE=1\" id=0 library=Vulkan compute=0.0 name=Vulkan0 description=\"AMD Radeon Graphics (RADV RENOIR)\" pci_id=0000:07:00.0",
+    "time=2026-10-09T06:25:27.027-04:00 level=INFO source=types.go:32 msg=\"inference compute\" id=0 filter_id=1 library=Vulkan compute=0.0 name=Vulkan1 description=\"AMD Radeon RX 5500M (RADV NAVI14)\" libdirs=ollama,vulkan driver=0.0 pci_id=0000:03:00.0 type=discrete total=\"4.0 GiB\" available=\"4.0 GiB\"",
+    "time=2026-10-09T06:25:36.070-04:00 level=INFO source=sched.go:630 msg=\"gpu memory\" id=0 library=Vulkan available=\"3.5 GiB\" free=\"4.0 GiB\" minimum=\"457.0 MiB\" overhead=\"0 B\"",
+    "load_backend: loaded Vulkan backend from /home/boozer/.local/opt/ollama-v0.40.2/lib/ollama/vulkan/libggml-vulkan.so",
+    "cmn  common_param:   - Vulkan0 : AMD Radeon RX 5500M (RADV NAVI14) (4096 MiB, 4082 MiB free)",
+    "common_memory_breakdown_print: |   - Vulkan0 (RX 5500M (RADV NAVI14)) |  4096 = 4082 + (3030 =  2375 +     576 +      79) +       -3017 |",
+    "llama_prepare_model_devices: using device Vulkan0 (AMD Radeon RX 5500M (RADV NAVI14)) (0000:03:00.0) - 4082 MiB free",
+    "load_tensors: offloaded 37/37 layers to GPU",
+    "load_tensors:      Vulkan0 model buffer size =  2375.91 MiB",
+    "load_tensors:  Vulkan_Host model buffer size =   304.29 MiB",
+    "llama_context: Vulkan_Host  output buffer size =     0.58 MiB",
+    "llama_kv_cache:    Vulkan0 KV buffer size =   576.00 MiB",
+    "sched_reserve:    Vulkan0 compute buffer size =    79.01 MiB",
+    "sched_reserve: Vulkan_Host compute buffer size =    14.02 MiB",
+    "time=2026-10-09T09:27:42.912-04:00 level=INFO source=sched.go:630 msg=\"gpu memory\" id=0 library=Vulkan available=\"3.5 GiB\" free=\"4.0 GiB\" minimum=\"457.0 MiB\" overhead=\"0 B\"",
+    "time=2026-10-09T09:28:22.481-04:00 level=INFO source=sched.go:630 msg=\"gpu memory\" id=0 library=Vulkan available=\"3.5 GiB\" free=\"4.0 GiB\" minimum=\"457.0 MiB\" overhead=\"0 B\"",
+    "load_backend: loaded Vulkan backend from /home/boozer/.local/opt/ollama-v0.40.2/lib/ollama/vulkan/libggml-vulkan.so",
+    "cmn  common_param:   - Vulkan0 : AMD Radeon RX 5500M (RADV NAVI14) (4096 MiB, 4082 MiB free)",
+    "common_memory_breakdown_print: |   - Vulkan0 (RX 5500M (RADV NAVI14)) |  4096 = 4082 + (3030 =  2375 +     576 +      79) +       -3017 |",
+    "llama_prepare_model_devices: using device Vulkan0 (AMD Radeon RX 5500M (RADV NAVI14)) (0000:03:00.0) - 4082 MiB free",
+    "load_tensors: offloaded 37/37 layers to GPU",
+    "load_tensors:      Vulkan0 model buffer size =  2375.91 MiB",
+    "load_tensors:  Vulkan_Host model buffer size =   304.29 MiB",
+    "llama_context: Vulkan_Host  output buffer size =     0.58 MiB",
+    "llama_kv_cache:    Vulkan0 KV buffer size =   576.00 MiB",
+    "sched_reserve:    Vulkan0 compute buffer size =    79.01 MiB",
+    "sched_reserve: Vulkan_Host compute buffer size =    14.02 MiB"
+  ],
+  "records": [
+    {
+      "command": [
+        "cat",
+        "/sys/class/drm/card0/device/power/control",
+        "/sys/class/drm/card0/device/power/autosuspend_delay_ms",
+        "/sys/class/drm/card0/device/power/runtime_status",
+        "/sys/class/drm/card0/device/mem_info_gtt_used",
+        "/sys/class/drm/card0/device/mem_info_vram_used"
+      ],
+      "exitCode": 0,
+      "stdout": "auto\n5000\nactive\n484716544\n3111792640\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "ps",
+        "-eo",
+        "pid=,comm="
+      ],
+      "exitCode": 0,
+      "stdout": "  81414 brave-browser-s\n  81421 brave\n  81431 brave\n  81432 brave\n  81434 brave\n  81457 brave\n  81459 brave\n  81465 brave\n  81534 brave\n  81561 brave\n  81742 brave\n  82095 brave\n  82597 codium\n  82602 codium\n  82603 codium\n  82605 codium\n  82635 codium\n  82644 codium\n  83074 codium\n  83467 codium\n  84255 codium\n  86062 codium\n  86076 codium\n  86103 codium\n  86114 codex\n  86812 codium\n  87851 codium\n  89050 codex-code-mode\n  89501 brave\n  90568 brave\n  96355 codium\n 100642 brave\n 100736 brave\n 101057 brave",
+      "stderr": ""
+    }
+  ]
+}

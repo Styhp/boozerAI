@@ -1,0 +1,355 @@
+{
+  "command": [
+    "node",
+    "docs/benchmarks/m6-explain-once-msi.mjs",
+    "/home/boozer/boozer-ai",
+    "pricing.ts",
+    "docs/benchmarks/m6-explain-current-norecorder-msi.json",
+    "10"
+  ],
+  "exitCode": 0,
+  "stdout": "{\n \"at\": \"2026-10-09T13:30:38.814Z\",\n \"selected\": \"pricing.ts\",\n \"idleWaitS\": 10,\n \"eventTypes\": [\n  \"snippets\",\n  \"token\",\n  \"done\"\n ],\n \"firstTextMs\": 3161.3786630000013,\n \"clientMs\": 6445.608603000001,\n \"ok\": true,\n \"durationMs\": 6444,\n \"canaryLeaked\": false,\n \"invalidCitations\": 0,\n \"citations\": 7,\n \"thinkingSeen\": false,\n \"peak\": {\n  \"minMemAvailMiB\": 5210,\n  \"peakRunnerRssMiB\": 638,\n  \"peakRecorderRssMiB\": 0,\n  \"peakGttMiB\": 3423,\n  \"peakVramMiB\": 2967,\n  \"gpuPmAtStart\": \"suspended\"\n },\n \"ollamaPs\": \"NAME                 ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               \\nqwen3:4b-instruct    0edcdef34593    3.2 GB    100% GPU     4096       llamacpp    29 minutes from now\",\n \"loadavg\": \"2.33 1.54 0.82 6/1164 101408\",\n \"samples\": 14\n}\n",
+  "stderr": "",
+  "freeSamples": [
+    {
+      "at": "2026-10-09T13:30:22.008912+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.8Gi       341Mi       205Mi       5.4Gi       5.2Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:22.511070+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       267Mi       208Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:23.013644+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       252Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:23.516361+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       239Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:24.018526+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       233Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:24.521105+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       237Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:25.023618+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       238Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:25.525589+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       237Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:26.028134+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       244Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:26.530563+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       243Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:27.032633+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       245Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:27.535337+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       257Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:28.037553+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       251Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:28.539684+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       250Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:29.042705+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       251Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:29.544766+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       250Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:30.047261+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       256Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:30.549977+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       252Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:31.052128+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       263Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:31.554738+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       264Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:32.057121+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       263Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:32.559218+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       233Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:33.061385+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       229Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:33.563979+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       251Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:34.066012+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       247Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:34.568048+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       9.9Gi       241Mi       210Mi       5.4Gi       5.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:35.070775+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       8.9Gi       1.2Gi       210Mi       5.4Gi       6.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:35.572717+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       7.0Gi       3.2Gi       210Mi       5.4Gi       8.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:36.074791+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       7.0Gi       3.2Gi       210Mi       5.4Gi       8.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:36.577040+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       7.0Gi       3.2Gi       210Mi       5.4Gi       8.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:37.079147+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       7.0Gi       3.2Gi       210Mi       5.4Gi       8.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:37.581421+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       7.0Gi       3.2Gi       210Mi       5.4Gi       8.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:38.083919+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       7.0Gi       3.2Gi       210Mi       5.4Gi       8.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    },
+    {
+      "at": "2026-10-09T13:30:38.585935+00:00",
+      "command": [
+        "free",
+        "-h"
+      ],
+      "exitCode": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:            15Gi       7.0Gi       3.2Gi       210Mi       5.4Gi       8.1Gi\nSwap:             0B          0B          0B\n",
+      "stderr": ""
+    }
+  ]
+}

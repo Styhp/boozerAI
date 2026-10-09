@@ -1,0 +1,10 @@
+import { LocalInputAdapter } from '/home/boozer/boozer-ai/dist/server/local-input.js';
+import { extractDependencies, ANALYSIS_KEY } from '/home/boozer/boozer-ai/dist/shared/extractor.js';
+const adapter = await LocalInputAdapter.select(process.argv[2]);
+adapter.confirm(adapter.projectId);
+const snap = await adapter.snapshot(adapter.projectId, { analysisKey: ANALYSIS_KEY });
+console.log('files:', JSON.stringify(snap.files.map(f => f.path)));
+console.log('inventory:', JSON.stringify(snap.inventory));
+const g = extractDependencies(snap);
+console.log('edges:', JSON.stringify(g.edges.map(e => ({ from: e.source ?? e.from, spec: e.specifier, target: e.target }))));
+console.log('coverage:', JSON.stringify(g.coverage));
