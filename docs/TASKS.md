@@ -31,7 +31,7 @@ Future owners below are proposed assignments, not evidence that work has started
 | 0.1 | Reconcile docs and propose architecture | Codex (Agent A) | All project docs read | README.md, AGENTS.md, PRODUCT.md, ARCHITECTURE.md, TASKS.md, SUBMISSION.md | Approved for 1.1 in 0.2; C2/C3 resolved; C1/C4 specified in 1.1 for 1.2 review |
 | 0.2 | Independent proposal review | Claude Code (Agent B) | 0.1 | Proposed S-choices, roadmap, safety contracts, schedule | Done: Approved for 1.1 with conditions C1–C4 (2026-10-09) |
 | 0.3 | Agent working rules and project skills | Claude Code | Human lead request, 2026-10-09 | AGENTS.md, CLAUDE.md, `.agents/skills/`, `.claude/skills/` | In review; Codex reviews. Does not change product, architecture or S-choices, so it does not block 0.2 |
-| 1.1 | Scaffold/configuration | Codex (Agent A, this session) | 0.2 Approved + human start approval | Shared types, server/client/test entry points | In progress: implementation and local gates complete; clean-checkout evidence being recorded |
+| 1.1 | Scaffold/configuration | Codex (Agent A, this session) | 0.2 Approved + human start approval | Shared types, server/client/test entry points | In review: clean-checkout gates pass; C1/C4 specified; Agent B 1.2 pending |
 | 1.2 | Independent scaffold review | Claude Code | 1.1 | Rerun scaffold gates; record accepted stack | Not started |
 | 1.3 | Original fixture and hand-written graph | Claude Code | 1.2 Approved | Snapshot/graph schemas; Codex reviews oracle | Not started |
 | 1.4 | Parser/resolver | Codex | 1.3 reviewed | Snapshot → graph; Claude reviews | Not started |
@@ -176,7 +176,7 @@ Work:
 
 Acceptance:
 
-- [ ] From a clean checkout on the dev Mac, the documented install, typecheck, and test commands succeed, with output recorded in the report.
+- [x] From a clean checkout on the dev Mac, the documented install, typecheck, and test commands succeed, with output recorded in the report. (Codex detached worktree at `1050b8d`: offline `npm ci --ignore-scripts --offline`, typecheck, network-denied test and build all exit 0.)
 - [x] The test suite runs with no network access. (Codex: `sandbox-exec -p '(version 1)(allow default)(deny network*)' npm test`; 1 file / 3 tests passed.)
 - [x] Starting the app makes no outbound network requests. (Codex: production/dev startup with external outbound denied by macOS; HTTP 200 on loopback, no external resources/calls in scaffold source. Separate external probe returned EPERM.)
 - [x] The scaffold contains no feature code and no copied tutorial code or assets. (Codex source inventory: static shell/host/configuration/types only; all authored in this session.)
@@ -216,7 +216,7 @@ Work: write a tiny, original JS/TS project of about 10–15 files at the path se
 
 Acceptance:
 
-- [ ] The expected graph was written by hand, with the line of every edge, before any extractor output existed.
+- [ ] The expected graph was written by hand, with the line/ID of every edge and the exact C1 coverage counts/reasons, before any extractor output existed.
 - [ ] A second agent checked the expected graph line by line against the fixture.
 - [ ] The fixture code is original and is never run.
 
@@ -226,7 +226,7 @@ Acceptance:
 
 - [ ] The extractor's output for the fixture equals the expected graph. The test fails on any missing or extra edge.
 - [ ] Every edge's evidence line contains its specifier text (automated check).
-- [ ] Unresolved and non-literal imports appear with a reason. None are dropped or guessed.
+- [ ] Unresolved, excluded and non-literal imports appear with C1 reason codes and matching coverage issue records. File/import counting invariants, parse-error/skip outcomes and zero-denominator presentation are verified. None are dropped or guessed.
 - [ ] Imports inside comments and strings produce no edges.
 - [ ] The extractor reads target files as text only, and the tripwire never fires. Code review confirms there is no `require`, `import`, or `eval` of target files.
 - [ ] The output is deterministic: two runs over identical input/configuration produce identical graph JSON, including stable snapshot identity; timestamps remain outside the deterministic graph.
@@ -247,7 +247,7 @@ Acceptance:
 - [ ] A summary panel shows snapshot status, counts, coverage and limitations.
 - [ ] **[Hardening]** Dashboard and navigation rail move between map and insights while preserving selection.
 - [ ] Detail pane uses the shared snapshot/evidence contract; loading, empty, parse-error and stale-reference states are distinguishable.
-- [ ] Display caps/filtering never imply that omitted nodes were absent from the indexed graph.
+- [ ] Display caps/filtering never imply that omitted nodes were absent from the indexed graph. C4 deterministic SCC/layer positions, empty/disconnected/cyclic graphs, all terminal types, 300/301 total-node behavior, omitted counts and full-list evidence/selection are checked.
 
 ### 1.6 Early local-model test
 
@@ -310,7 +310,7 @@ Acceptance:
 
 ## M4: Graph calculations, potential impact and insights
 
-- [ ] Selecting a file lists its direct and transitive importers, with depth and a clickable evidence chain.
+- [ ] Selecting a file lists direct importers by default (depth 1), with explicit depth expansion/full reachability, depthLimited status and a clickable shortest evidence chain. C1 direction/chain ordering, tie-breaking, type-only labels and invalid-query rejection are verified; the same iterative walk supports dependencies.
 - [ ] Hand-written expected impact sets for the fixture pass, including empty and cyclic graphs.
 - [ ] **[Hardening]** Hand-written cycle groups and degree/count summaries pass.
 - [ ] **[Hardening]** Insights and navigation rail link each finding to the same snapshot and source/evidence in the detail pane.
@@ -426,7 +426,7 @@ Later the same day: the human lead deferred JEV until after the hackathon, with 
 
 ### 1.1 — Codex (Agent A, this session), 2026-10-09
 
-**Status: Scaffold implemented; clean-checkout verification in progress. C1/C4 specified; independent 1.2 review still required.**
+**Status: In review — 1.1 complete, clean-checkout gates pass. C1/C4 specified; independent 1.2 review still required.**
 
 Files changed: `.gitignore` and local Git history; package manifest/lock and `.npmrc`; TypeScript/Vite/Vitest configuration and `index.html`; `src/shared/contracts.ts`; static server/client entries and CSS; `scripts/dev.mjs`; offline/scaffold tests; README.md, AGENTS.md current-phase paragraph, PRODUCT.md status, ARCHITECTURE.md, TASKS.md, SUBMISSION.md and `docs/DEPENDENCIES.json`. Existing skill files, symlinks and CLAUDE.md were preserved. No fixture, parser, graph calculation, map, ingestion, storage or model implementation.
 
@@ -439,7 +439,7 @@ Commands and actual results:
 - `sandbox-exec -p '(version 1)(allow default)(deny network*)' npm test`: exit 0, 1 file / 3 tests passed with all networking denied. Default test setup separately rejects socket/fetch attempts.
 - Startup harness first failed before launching the app: macOS sandbox rejected numeric IP syntax in its allow rule (exit 65). Corrected to `localhost:*`; a separate external-IP socket probe returned EPERM. `npm start` and `npm run dev` under denied external outbound returned loopback HTTP 200 at 4173 and 5173 respectively. Production hostile Host and Origin each returned 403; absent API and path escape each returned 404. Processes were stopped; no retained app listener. This is scaffold startup evidence, not M2 source authorization or offline browser acceptance.
 - `npm run test:model`: exit 1, “No test files found”. Expected, explicitly documented unavailable entry until 1.6 adds real-model cases; no inference/download and no benchmark claim.
-- Python Markdown check: 9 Markdown files, 34 local links, zero broken links/fence errors. `git diff --check`: exit 0. Clean-checkout commands/results will be added after the pinned candidate rerun.
+- Python Markdown check: 9 Markdown files, 34 local links, zero broken links/fence errors. `git diff --check`: exit 0. Clean-checkout rerun: detached worktree at candidate `1050b8d56e380682042a7e0d7fd1477b9a4db3df` was clean before/after. `npm ci --ignore-scripts --offline`: exit 0, 65 packages added from cache. `npm run typecheck`: exit 0. Network-denied `npm test`: exit 0, 1 file / 3 tests. Network-denied `npm run build`: exit 0, 15 modules and identical asset names/sizes. Startup rerun with external outbound denied: production HTML and bundled JS/CSS returned 200; dev UI at 5173 and Node host at 4173 both returned 200. The first clean startup harness stopped after `lsof` returned 1 despite a working HTTP listener; process inspection was unavailable in that harness, not an app failure. The corrected harness verified both endpoints and connection refusal at both ports after shutdown. Temporary worktree removed after verification. Final follow-up changes are documentation/evidence only; executable code is the tested candidate.
 
 Verified: original static shell/host, strict compilation, model-free offline test isolation, pinned package compatibility, C1 wire shapes and written C4 algorithm/display policy. Unverified: all future features, runtime contract validation, actual layout correctness/scale, browser experience, local inference, MSI, and submission rules. C1/C4 implementation proofs belong to their later producer/UI tasks.
 
