@@ -1,6 +1,6 @@
-# Architecture (proposed)
+# Architecture
 
-**Status:** scaffold approved in 1.2; C5 independently Approved by Claude at `dc22467`. Snapshot foundation and pure 1.4 parser/resolver are independently Approved; C7 (`22ba446`) and C8 (`c3fbbfb`) were rechecked Approved at `849367a`, with S-4 Accepted. Fixture output matches the hand-written oracle; C1/C4 remain the shared contracts. M2 local launcher/authenticated APIs/real-project UI are independently Approved at `715841c`. Map/impact are approved after C10; [M3 local engine/panel](reviews/2026-10-09-m3-engine-panel.md) is Approved with C9 after F1/F2 at `ace59be`. Human/MSI and secondary cloud gates remain separate. See [TASKS.md](TASKS.md), [M2 handoff](M2-WIRING-HANDOFF.md), [C5/M2 foundation review](reviews/2026-10-09-c5-and-m2-foundation.md) and [1.4 review](reviews/2026-10-09-1.4-parser.md).
+**Current branch:** the parser, local input/authenticated APIs, baseline local explanation engine and potential-impact implementation have independent review records. The force-directed graph workspace (including the proposed C4 amendment A1), browser refresh recovery, provider repair and Chat Boozer extensions are implemented but still await independent review. The model retains disclosed injection failures; human acceptance and newest-revision MSI rehearsal remain separate. See [TASKS.md](TASKS.md) and [BENCHMARKS.md](BENCHMARKS.md). Historical reviews linked below are pinned to the preserved pre-cleanup commit.
 
 ## Principles
 
@@ -153,7 +153,7 @@ Agent B's 1.5 checks: repeatable positions under input permutation, no overlappi
 
 ### C4 amendment A1: force-directed graph view (P-20, UX-G2). **Proposed; Codex reviews**
 
-Drafted by Claude Code (Agent B) on `feat/graph-workspace`, 2026-10-10. Until Codex accepts it, C4 above remains the accepted contract. The design source is [design/graph-workspace/SPEC.md](design/graph-workspace/SPEC.md) §5.
+Drafted by Claude Code (Agent B) on `feat/graph-workspace`, 2026-10-10. Until Codex accepts it, C4 above remains the accepted contract. The design source is [design/graph-workspace/SPEC.md](https://github.com/Styhp/boozerAI/blob/a5ece9d6da3eedbd9e6fb585b2565cfd90d2f7e7/docs/design/graph-workspace/SPEC.md) §5.
 
 1. **Default view.** At or under the 300-node cap, the graph area draws a hand-written force-directed layout on a `<canvas>` (`src/client/graph/engine.ts`, `GraphView.tsx`). It uses no package. React Flow and `map/layout.ts` stay only for the over-cap view in point 5.
 2. **Model.** There is one dot per `graph.files` entry, one per distinct package name (`pkg:<name>`), and one per excluded or unresolved edge (`gap:<edge.id>`). There is one line per `graph.edges` entry. Nothing else creates a line, and the model never changes the graph.
@@ -206,7 +206,7 @@ Implemented M2 routes, all bearer-authenticated with no cookies or CORS. POST bo
 | `POST /api/projects/:id/close` | `{}` → revoke capability, snapshots and pending work |
 | `POST /api/projects/:id/explanations` | Exact `{snapshotId, path}`, optionally `provider: 'local'`, or `provider: 'cloud'` plus a 64-character lowercase-hex `previewHash` → `application/x-ndjson` service events. Other fields/combinations are rejected. `path` is a current-snapshot key; provider/hash pass unchanged to the service |
 | `POST /api/projects/:id/explanations/preview` | Exact `{snapshotId, path}` → the `CloudPreview` object as JSON 200. Requires the current project/snapshot; the service validates the selected key. Errors: cloud-unavailable 404; stale-snapshot 409; invalid-selection/no-excerpt 400. No filesystem-path joins or network call |
-| `/api/projects/:id/notes` (M8-N) | `GET notes?snapshotId=…`; `POST notes/enable`, `notes/disable`, `notes`, `notes/:noteId`, `notes/:noteId/delete`, `notes/clear`. Same token/Host/Origin/JSON/8 KiB checks and exact field sets; require a confirmed, indexed project and the current snapshot. Full contract in [NOTES-HANDOFF.md](NOTES-HANDOFF.md) |
+| `/api/projects/:id/notes` (M8-N) | `GET notes?snapshotId=…`; `POST notes/enable`, `notes/disable`, `notes`, `notes/:noteId`, `notes/:noteId/delete`, `notes/clear`. Same token/Host/Origin/JSON/8 KiB checks and exact field sets; require a confirmed, indexed project and the current snapshot. Full contract in [NOTES-HANDOFF.md](https://github.com/Styhp/boozerAI/blob/a5ece9d6da3eedbd9e6fb585b2565cfd90d2f7e7/docs/NOTES-HANDOFF.md) |
 
 Only one index and one explanation run per session; refresh/close/disconnect abort pending work. Explanation transport has a 120-second bound and respects backpressure. Structured failures expose sanitized codes only. File IDs are renewed even on an unchanged-content refresh; [HttpProjectSource](../src/client/data/http-project-source.ts) additionally checks snapshot/path/hash and hashes the received source text before presenting it as current. Later archive/cache/agent routes must reuse this authorization.
 

@@ -1,87 +1,85 @@
 # Boozer AI
 
-Boozer AI is a codebase intelligence project for developers who need to understand unfamiliar or AI-generated JavaScript/TypeScript code. The design combines a parser-built dependency map with source inspection and on-device explanations that cite their input snippets.
+Understand unfamiliar JavaScript and TypeScript repositories with a dependency graph, source inspection, and a local AI assistant. Boozer reads code as text; the parser builds the graph, and the model explains the source excerpts it receives.
 
-## Status
+## What you can do
 
-**Local-project integration independently approved.** The launcher asks for confirmation before indexing, then the authenticated UI shows the pure parser's graph and snapshot-bound source. C5, C7 and C8 are independently resolved; map/impact are approved after C10. Agent B's local explanation engine/panel is Approved with C9 after its grounding/file-name corrections in the [M3 review](docs/reviews/2026-10-09-m3-engine-panel.md); the M2 route streams its events. Two wider prompt-injection cases still fail and are disclosed. Human browser acceptance and MSI verification remain open. Status and evidence are in [TASKS.md](docs/TASKS.md) and the [M2 handoff](docs/M2-WIRING-HANDOFF.md).
+- Explore files and imports in the graph and file tree.
+- Inspect source, open cited lines, and ask for a local file explanation.
+- Ask repository questions in **Chat Boozer**, beside **Details**. **Thinking…** appears while waiting, then **Replying…** as text streams. Expand **Code the AI was shown** to check its excerpts.
+- See potential change impact with the import chain as evidence.
+- Optionally save your own project notes outside the analyzed folder.
 
-Development describes the implemented local flow; later roadmap features remain delivery targets.
+The graph workspace and chat are implemented; their independent reviews remain open. Earlier parser, local-project integration, explanation engine and impact reviews are recorded in the [task status](docs/TASKS.md).
 
-## What it is meant to do
+## Run locally
 
-- **Dependency map from real parsing.** Edges come only from parsed import, export, and require statements. The AI never adds or removes edges.
-- **File inspection.** Click a file or an edge to see the source, with the import line highlighted.
-- **Source-grounded explanations.** A local model explains selected code from retrieved snippets. Every citation links to a file and line range.
-- **Local repo chat.** Ask questions about the confirmed repository, ask short follow-ups, and open cited source ranges. The current snapshot is searched as text; the chat uses the installed local model.
-- **Potential change impact.** Lists files that could be affected by a change, with the import chain as evidence. It shows possible impact, never guaranteed breakage.
-- **Local-first.** Parsing, the graph, and default explanations run on your machine. Internet is needed only for setup and for optional features such as GitHub import.
-- **Safe with untrusted code.** Analyzed repositories are treated as data: never executed, never installed, and instructions inside them are ignored.
+Use **Node.js 24.x** and **npm 11.x**. Local AI requires Ollama on `127.0.0.1:11434` with the already installed **qwen3:4b-instruct** model; exact runtime/model details are in the [disclosure register](docs/SUBMISSION.md).
 
-Input: explicitly selected local folders, confirmed before indexing. GitHub import is a later delivery phase.
-
-## Full roadmap and delivery
-
-The roadmap retains a dashboard, parser, graph canvas, detail pane, graph calculations, navigation rail and insights, ingestion pipeline, framework adapters, CommonJS and Express support, explanations with caching and tracing, evaluations, a read-only agent, landing page, and local folder and GitHub input. [PRODUCT.md](docs/PRODUCT.md) separates phases from safety exclusions. Local-folder map, inspection and potential-impact integration is independently approved; human/MSI acceptance and later features remain pending.
-
-The proposed first delivery is a small offline vertical slice: fixture and selected local folder → parsed map → inspection → local explanation → potential impact. JEV and OpenAI remain optional secondary cloud integrations. LangSmith is optional and off by default; local evaluation needs no cloud account. The full roadmap is not a promise to finish the tutorial before the deadline.
-
-## Reviewed scaffold
-
-Agent A (Codex) proposed TypeScript on Node.js 24 LTS, a loopback web server, React/Vite, React Flow, the TypeScript compiler parser, bounded local JSON storage, and Ollama over loopback. Scaffold stack choices and S-4 resolution are **Accepted** in [ARCHITECTURE.md](docs/ARCHITECTURE.md); later choices remain Proposed until their gates. The current input contract selects a project explicitly at local launch; authenticated browser requests use opaque project/file IDs. Demo snapshots, graphs and results stay in memory; JSON persistence is later work.
-
-Claude Code approved the scaffold in 1.2. C1 coverage/impact shapes live in `src/shared/contracts.ts`; C4 specifies original layered layout and list-first navigation above 300 nodes in ARCHITECTURE.md. Dependencies are pinned and disclosed in SUBMISSION.md. Approved local runtime/model setup is recorded separately; the app preloads the installed model and requests an explanation only when its button is clicked.
-
-Development targets the Intel Mac: macOS 15.7.7, i5-8500B, 32 GB RAM. The MSI demo machine is Ryzen 5, 16 GB RAM, RX 5500, ParrotOS (P-2). MSI testing is required before relying on it for **either recorded or live demos**. GPU acceleration/MSI performance remain unverified. Agent B's Mac measurements and disclosed injection failures are in [BENCHMARKS.md](docs/BENCHMARKS.md); 1.6 is approved with C9 before demo.
-
-## Development
-
-Use Node.js 24 LTS and npm 11 (verified here: Node 24.16.0, npm 11.13.0). Install dependencies in the **Boozer AI checkout only**, never in a project selected for analysis. Installation may download packages; application startup and default tests need no internet or model.
+Run these commands in the trusted **Boozer AI checkout**, never in an unfamiliar repository selected for analysis:
 
 ```sh
 npm ci --ignore-scripts
-npm run typecheck
 npm test
 npm run build
 npm start -- --project .
 ```
 
-The launcher automatically opens the default browser at `http://127.0.0.1:4173` with a launch fragment. Confirm the selected folder before source is read. `.` opens Boozer's own repo for the demo (P-14); another folder can be supplied explicitly. Stop with Ctrl-C. Only the basename appears in the UI; absolute roots and capabilities are not logged. Every API needs the per-launch bearer token. POSTs also require JSON and the exact same Origin; Host remains `127.0.0.1:4173`. The fragment is removed immediately and only its token is retained in tab-scoped sessionStorage. Refreshing the same tab reconnects to the existing project and analyzed graph while the server stays running; no confirmation or reindexing is repeated. Closing the project, a rejected token or a server restart ends that session; use a fresh launcher tab to reconnect. Browser session recovery may retain sessionStorage, but the token cannot outlive its server launch. Source and AI answers are not saved in browser storage. Starting without `--project` selects no folder.
+The launcher opens `http://127.0.0.1:4173`. Click **Read this folder** to confirm the selected repository. To analyze another folder:
 
-For development, run `npm run dev -- --project .`. It builds first, starts Vite plus the loopback Node host at 4173, watches server code and opens confirmation at 5173. Ports are fixed and an occupied port fails visibly. Vite proxies `/api` with the upstream Host rewritten to 4173 and the browser Origin preserved. Its watched child, `scripts/dev-host.mjs`, explicitly permits the additional exact Origin `http://127.0.0.1:5173`; production never reads an environment variable or CLI flag to enable it. A server rebuild revokes the old capability and opens a fresh confirmation. Visiting 5173 without an active tab session shows launcher guidance; the labeled fixture preview requires `?preview=fixture`; production bundles contain no fixture text or answer key.
+```sh
+npm start -- --project "/path/to/repository"
+```
 
-**AI configuration in this checkout.** The local Ollama model stays on loopback. A local explanation has a six-minute model deadline and ten seconds of HTTP grace, accommodating slow CPU generation on a loaded machine; slower requests end with a timeout message, while explicit Cancel ends with cancellation. The waiting message reflects that limit. This longer wait does not change the provisional latency target or guarantee fast generation.
+For development:
 
-For the MSI update, see [graph workspace setup](docs/MSI-GRAPH-SETUP.md). Use the graph branch after its separately authorized transfer; no new model download is needed.
+```sh
+npm run dev -- --project .
+```
 
-**Chat Boozer (M3-CHAT, pending independent review).** Click the **Chat Boozer** tab beside **Details**, above the right pane. The left ribbon's speech-bubble icon is also a shortcut. Type a question and press **Chat Boozer** (or Ctrl/⌘ + Enter). Name a file or symbol when possible. An optional selected file adds context. Switching tabs keeps the last details view and conversation; Arrow keys, Home and End switch tabs from the keyboard. **Thinking…** appears immediately while waiting for answer text, then **Replying…** while it streams; both disappear when the request ends. **Code the AI was shown** starts collapsed; expand it to inspect the exact excerpts. Answers stream with checked source links; opening a link activates Details, and returning to Chat Boozer keeps the conversation. **Cancel answer** stops generation; **Clear chat** removes it. The latest eight question/answer pairs live only in memory; project refresh/close and browser reload reset them. The last two user questions help follow-ups; earlier AI answers are not reused as evidence. Search uses only indexed JS/TS source excerpts and can miss relevant code, so it does not provide whole-repository knowledge. Missing analysis is counted. No new model, cloud request, embedding service, tools or saved transcript is used; only one AI answer can run at a time.
+Development opens port **5173**, with the backend on **4173**. Stop with Ctrl-C. Ports are fixed; stop the previous Boozer server before starting another.
 
-For optional OpenAI comparison, the server loads only `OPENAI_API_KEY` from this Boozer checkout's ignored `.env` before constructing the provider. Existing terminal exports, including an empty value, win; changes require a server restart. Vite does not load any env files. `.env.example` is the empty template; keep credentials private and never use a `VITE_` key. When configured, a selected file shows **Compare with cloud (optional)**. Preview the exact request, then press **Send to OpenAI** to send it; configuration and preview send nothing. A configured key does not prove provider access.
+**No folder button?** Select the folder with `--project`. Starting without it does not select a repository. Use the new tab opened by the launcher; opening the bare address in another tab has no active session.
 
-`npm test` is the model-free default suite; its setup rejects socket/fetch calls. `npm run test:model` is the separate real-model suite in `tests/model/`. It needs the approved local Ollama server on `127.0.0.1:11434` with `qwen3:4b-instruct` installed, and fails loudly without them. It never downloads anything or substitutes a fake answer. The product prompt's fixture canary passes in Agent B's recorded runs, but two wider injection phrasings still **fail**; a visible warning does not guarantee protection (see [BENCHMARKS.md](docs/BENCHMARKS.md)). `BOOZER_BENCHMARK=1 npm run test:model` also runs the multi-minute 1.6 benchmark.
+**Refresh:** the same tab reconnects to its analyzed project while the server stays running. A server restart needs its fresh launcher tab. Chat history resets on browser reload, project refresh or closure; it is kept only in memory.
 
-Shared types live in [src/shared/contracts.ts](src/shared/contracts.ts); server/client entry points are `src/server/index.ts` and `src/client/main.tsx`. The approved hand-written fixture/oracle is at `fixtures/basic/`; do not execute it. The pure [extractor](src/shared/extractor.ts) and [resolver](src/shared/resolver.ts) consume only supplied snapshots. There are no parser/model/storage stubs or cloud SDKs. See [dependency inventory](docs/DEPENDENCIES.json) for locked package versions/licenses, including platform-optional packages.
+For the existing MSI installation, follow [MSI setup](docs/MSI-GRAPH-SETUP.md).
 
-M2's [LocalInputAdapter](src/server/local-input.ts) is callable from server code or a plain script: `select(folder)`, `confirm(projectId)`, then `snapshot(projectId, { analysisKey: ANALYSIS_KEY })`; pass the result directly to `extractDependencies`. `ANALYSIS_KEY` and `extractDependencies` are exported by the [extractor module](src/shared/extractor.ts). `close()` revokes further operations. Defaults: 2,000 supported source candidates, 1 MiB per file, 20 MiB read total, 20,000 metadata entries and 64 directory levels; callers may lower the source limits. Known oversize files and every case-colliding sibling become counted skips before reads/traversal. Whole-run file-count/total-byte/entry/depth caps, cancellation and detected mid-read growth abort with sanitized codes and no partial result. Source stays in memory, is never executed or written, and graph evidence shares its snapshot ID. The input/parser, C7/C8 corrections and local launcher/API/browser integration are independently approved; human/MSI rehearsal remains separate.
+## Local AI and privacy
 
-**Project notes (optional, P-17).** In a file's detail pane, "Remember notes for this folder" turns on notes you write yourself, linked to lines of code. Boozer marks each note current, moved, stale or missing as the code changes; the model never sees them. They are saved outside the project, in `~/Library/Application Support/Boozer AI/` on macOS or `~/.local/share/boozer-ai/` on Linux. Nothing is written until you turn notes on. To stop notes for a folder on later launches, or to recover from a notes file Boozer reports as unreadable, quit Boozer and remove that folder's `notes-<key>.json` there.
+Reading, parsing, graph analysis, source inspection, default explanations and Chat Boozer run locally after setup. Analyzed repositories are treated as untrusted data: Boozer does not execute or install them, follow their instructions, or write into them. Source and graphs stay in memory. Optional notes use the app data directory outside the target.
 
-## Documentation
+Package/runtime/model setup needs downloads. Optional **OpenAI file comparison** needs internet and a server-side `OPENAI_API_KEY` in this checkout's ignored `.env` or launch environment. Copy the empty `.env.example` if configuring it. Restart after changes. The UI previews the exact outgoing request and sends only after **Send to OpenAI**. Local chat needs no API key; cloud comparison is a secondary feature with no automatic fallback. GitHub import, JEV and LangSmith integration are not implemented.
 
-| File | Contents |
+## Limits
+
+Static parsing can miss unsupported imports and framework relationships; Boozer counts missing analysis. Impact means **potentially affected**, never guaranteed breakage or safety. Chat searches indexed JS/TS source excerpts and can miss relevant code. Checked citations establish valid references, not correct claims.
+
+Local answers can take a minute or more on a busy CPU. The model deadline is six minutes, and **Cancel answer** remains available. Prompt injection is partly resisted: two of five wider test phrasings still failed in recorded model runs. See [validation and benchmarks](docs/BENCHMARKS.md).
+
+## Development and documentation
+
+```sh
+npm run typecheck
+npm test
+npm run build
+```
+
+The default suite is offline and model-free. `npm run test:model` separately exercises the installed local model and retains the known injection failures. `BOOZER_BENCHMARK=1 npm run test:model` opts into the longer benchmark; the historical Mac harness has a disclosed Linux observation failure.
+
+| Document | Purpose |
 |---|---|
-| [AGENTS.md](AGENTS.md) | Working rules for everyone building Boozer AI, human or AI agent |
-| [CLAUDE.md](CLAUDE.md) | Entry point for Claude Code; defers to AGENTS.md |
-| [.agents/skills/](.agents/skills/) | Shared agent procedures: independent review, local-model benchmark (linked into `.claude/skills/`) |
-| [docs/PRODUCT.md](docs/PRODUCT.md) | Users, problem, core journey, first-demo scope, product decisions |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Proposed components, data interfaces, local/cloud boundaries, stack choices |
-| [docs/TASKS.md](docs/TASKS.md) | Ordered milestones, owners, acceptance checks |
-| [docs/SUBMISSION.md](docs/SUBMISSION.md) | Hackathon deadline, rubric, deliverables, disclosure register |
+| [Product](docs/PRODUCT.md) | Scope, current behavior and product decisions |
+| [Architecture](docs/ARCHITECTURE.md) | Components, contracts and safety boundaries |
+| [Submission and disclosures](docs/SUBMISSION.md) | AI tools, models, APIs, dependencies and reused assets |
+| [Dependency inventory](docs/DEPENDENCIES.json) | Locked package versions and license metadata |
+| [Validation](docs/BENCHMARKS.md) | Recorded performance, failures and hardware limits |
+| [MSI setup](docs/MSI-GRAPH-SETUP.md) | Fetch, rebuild and verify this branch on MSI |
+| [One-minute demo](docs/DEMO.md) | A short recording sequence with real local output |
+| [Task status](docs/TASKS.md) | Current owners, pending reviews and verification |
 
-## Hackathon
-
-Built for a hackathon. Submission deadline: **2026-10-10 10:00 Manila time (UTC+8)**. See [docs/SUBMISSION.md](docs/SUBMISSION.md).
+Contributor rules are in [AGENTS.md](AGENTS.md). Historical handoffs, raw measurements and design references are preserved in Git history; they are omitted from the current documentation tree.
 
 ## License
 
-Not chosen yet (P-6 in [docs/PRODUCT.md](docs/PRODUCT.md)).
+The project license has not been chosen. Third-party package/model licenses and asset reuse are disclosed separately in [SUBMISSION.md](docs/SUBMISSION.md).

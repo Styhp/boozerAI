@@ -1,4 +1,0 @@
-files: ["src/main.ts"]
-inventory: {"found":3,"skipped":[{"path":"src/Foo.ts","reason":"case-collision"},{"path":"src/foo.ts","reason":"case-collision"}],"prunedDirectories":[]}
-edges: [{"from":"src/main.ts","spec":"./Foo","target":{"type":"excluded","path":"src/Foo.ts","reason":"case-collision"}}]
-coverage: {"files":{"found":3,"parsed":1,"skipped":2,"skips":[{"path":"src/Foo.ts","reason":"case-collision"},{"path":"src/foo.ts","reason":"case-collision"}],"prunedDirectories":[]},"imports":{"seen":1,"resolved":0,"external":0,"excluded":1,"failed":0,"issues":[{"edgeId":"src/main.ts#1","outcome":"excluded","reason":"case-collision"}]},"unsupported":[]}
