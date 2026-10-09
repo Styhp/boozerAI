@@ -1,6 +1,6 @@
 # Product
 
-**Status: scaffold, pure parser and server-only snapshot foundation independently approved; C5/C7/C8 resolved.** Boozer AI aims to explain unfamiliar JavaScript/TypeScript code through parser-built maps and local source-grounded answers. Agent B's map/impact code uses a dev fixture preview; launcher, authenticated APIs, real-project UI and application explanations remain pending. Browser/MSI experience is not yet verified.
+**Status: scaffold, parser and snapshot foundation independently approved; C5/C7/C8 resolved.** The launcher, authenticated APIs and real-project map/source flow are implemented and in independent M2 review. The map/impact code is approved after C10. Agent B's explanation engine/panel is implemented and awaits independent M3 review; wider injection tests still fail and are disclosed. Human browser acceptance and MSI rehearsal remain open.
 
 ## Users and problem
 

@@ -7,7 +7,8 @@ export default defineConfig({
     strictPort: true,
     allowedHosts: ['127.0.0.1'],
     cors: false,
-    proxy: { '/api': 'http://127.0.0.1:4173' },
+    // Rewrite only the upstream Host; retain the browser Origin for C5's exact check.
+    proxy: { '/api': { target: 'http://127.0.0.1:4173', changeOrigin: true } },
   },
   build: { outDir: 'dist/client', emptyOutDir: true },
 });

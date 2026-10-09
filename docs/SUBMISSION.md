@@ -99,9 +99,9 @@ No external snippet, tutorial implementation, design or asset was copied. The C4
 
 | State | Model/runtime | Purpose and evidence |
 |---|---|---|
-| Downloaded on the dev Mac 2026-10-09 (human-approved); benchmarked in 1.6, not yet used by the app | Ollama v0.40.2 + `qwen3:4b-instruct` | Full digest `0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0`, Q4_K_M, 4.0B parameters, 2.5 GB, Apache-2.0 per `ollama show --license`. Setup in the TASKS.md 1.6 record. Dev Mac CPU results, including a failed injection check, in [BENCHMARKS.md](BENCHMARKS.md). |
+| Downloaded on the dev Mac 2026-10-09 (human-approved); benchmarked in 1.6 and integrated for explicit local explanations | Ollama v0.40.2 + `qwen3:4b-instruct` | Full digest `0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0`, Q4_K_M, 4.0B parameters, 2.5 GB, Apache-2.0 per `ollama show --license`. Setup in the TASKS.md 1.6 record. Mac results and wider injection failures in [BENCHMARKS.md](BENCHMARKS.md). |
 | Proposed fallback only | `qwen2.5-coder:1.5b` | Consider only if first test fails quality/latency/memory requirements; separate download approval and exact variant verification required. |
-| Actually used as Boozer AI runtime | None recorded | The app has no model integration yet (M3). The 1.6 benchmark called the model directly from a test harness. Development-tool assistance above is separate. |
+| Actually used as Boozer AI runtime | Ollama v0.40.2 + `qwen3:4b-instruct` (same digest above), local | Agent B's M3 service/panel and Codex's authenticated streaming route are implemented and in independent review. Native app-route smoke over Boozer's own snapshot completed with explain-v3 and hash-bound snippets; [M2 evidence](M2-WIRING-HANDOFF.md). Wider injection tests still fail; no MSI/offline demo clearance. Development-tool assistance above is separate. |
 
 Official references checked 2026-10-09: [Ollama macOS requirements](https://docs.ollama.com/macos) lists x86 CPU-only support on macOS 14+; [Qwen candidate listing](https://ollama.com/library/qwen3:4b-instruct) supplies tag/size/quantization and an Apache-2.0 license label. Verify the actual downloaded artifact/license at authorized setup. Size is not a RAM estimate or a speed claim.
 
