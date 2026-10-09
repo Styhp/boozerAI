@@ -6,8 +6,8 @@ Ordered milestones for Boozer AI. Current and proposed owners are listed below. 
 
 - Deadline recorded in the existing submission brief: **2026-10-10 10:00 Manila / Perth (UTC+8)**. Organizer source has not been supplied for independent verification.
 - Do not reuse the baseline's 14:36 countdown as current time. The remaining time is not a commitment to finish the tutorial or every roadmap phase.
-- Proposed submission candidate: Phase A / M1–M4 plus M7. M6 is mandatory if the MSI is used for **either recorded or live demos**. GitHub (M5) and M8–M12 stay on the roadmap; they are not required to be finished before this deadline.
-- Proposed cutoffs on **2026-10-10 UTC+8**: **05:00 feature freeze**, **06:00 demo machine/rehearsal decision**, **08:00 video and submission assets ready**, **09:00 human submission target**, **10:00 deadline**. This reserves one hour for submission failures and five hours after feature freeze for verification, recording and packaging. If a cutoff is already missed, escalate to the human lead immediately; do not silently consume the buffer or claim missing checks.
+- Submission candidate: Phase A / M1–M4 plus M7. The MSI is the demo machine (P-2, decided 2026-10-09), so M6 is mandatory. GitHub (M5) and M8–M12 stay on the roadmap; they are not required to be finished before this deadline.
+- Cutoffs on **2026-10-10 UTC+8** (human lead, 2026-10-09 about 16:25 AWST; full table in [SUBMISSION.md](SUBMISSION.md#deadline)): **00:00 MSI go/no-go** (otherwise the demo moves to the Mac, which then needs its own offline rehearsal), **06:00 feature freeze**, 06:00–07:00 final MSI build and offline rehearsal, 07:00–08:00 recording, 08:00–09:00 publish and submit, **09:00–10:00 buffer**, **10:00 deadline**. These replace the earlier 05:00 proposal. If a cutoff is already missed, escalate to the human lead immediately; do not silently consume the buffer or claim missing checks.
 - **Tiers (P-10, decided 2026-10-09).** Phase A checks marked **[Hardening]** are built only after the demo path works end to end; otherwise they move after the hackathon. Untagged Phase A checks are demo-critical. The demo must show real parser and real local-model output, never mocked or pre-recorded.
 - At freeze, unfinished work is reported as unfinished. Reducing the candidate scope, accepting slower measured latency, or submitting a partial build is a human decision. Cloud inference cannot substitute for the required local-AI evidence.
 
@@ -30,13 +30,13 @@ Future owners below are proposed assignments, not evidence that work has started
 | M0 | Documentation baseline | Claude Code | None | Shared project docs | Historical draft; reconciled in 0.1 |
 | 0.1 | Reconcile docs and propose architecture | Codex (Agent A) | All project docs read | README.md, AGENTS.md, PRODUCT.md, ARCHITECTURE.md, TASKS.md, SUBMISSION.md | Approved for 1.1 in 0.2; C1–C4 resolved (C1/C4 verified in 1.2) |
 | 0.2 | Independent proposal review | Claude Code (Agent B) | 0.1 | Proposed S-choices, roadmap, safety contracts, schedule | Done: Approved for 1.1 with conditions C1–C4 (2026-10-09) |
-| 0.3 | Agent working rules and project skills | Claude Code | Human lead request, 2026-10-09 | AGENTS.md, CLAUDE.md, `.agents/skills/`, `.claude/skills/` | Done: reviewed by Codex; Approved with condition C6 before 1.6 (full digest/thinking record) |
-| 0.3-R | Independent review of Claude-authored 0.3 | Codex (this session) | 0.3 handoff; human request | Review skill, rules, P-12/P-13 and reserved ScoreProvider | Done: Approved with condition C6 |
+| 0.3 | Agent working rules and project skills | Claude Code | Human lead request, 2026-10-09 | AGENTS.md, CLAUDE.md, `.agents/skills/`, `.claude/skills/` | Done: Approved by Codex; C6 skill correction rechecked at `0b41795` |
+| 0.3-R | Independent review of Claude-authored 0.3 | Codex (this session) | 0.3 handoff; human request | Review skill, rules, P-12/P-13 and reserved ScoreProvider | Done: Approved after C6 recheck |
 | 1.1 | Scaffold/configuration | Codex (Agent A, this session) | 0.2 Approved + human start approval | Shared types, server/client/test entry points | Done: Approved in 1.2 at `4718e27`; condition C5 open for M2/M3 |
 | 1.2 | Independent scaffold review | Claude Code (review chat) | 1.1 | Rerun scaffold gates; record accepted stack | Done: Approved with condition C5 (2026-10-09); 1.3, 1.5 and 1.6 may start |
-| 1.1-C5 | Dev-proxy Origin correction | Codex (this session) | 1.2 condition C5; human request | Dev launcher → Node Origin policy; production remains strict | In progress |
-| 1.3 | Original fixture and hand-written graph | Claude Code (Agent B chat) | 1.2 Approved | Snapshot/graph schemas; Codex reviews oracle | In progress (claimed 2026-10-09 16:30 AWST) |
-| 1.4 | Parser/resolver | Codex | 1.3 reviewed | Snapshot → graph; Claude reviews | Not started |
+| 1.1-C5 | Dev-proxy Origin correction | Codex (this session) | 1.2 condition C5; human request | Dev launcher → Node Origin policy; production remains strict | In review: C5 implemented/tested; Agent B independent recheck pending |
+| 1.3 | Original fixture and hand-written graph | Claude Code (Agent B chat) | 1.2 Approved | Snapshot/graph schemas; Codex reviews oracle | Done: independently Approved by Codex at pinned review artifact `af671e8` |
+| 1.4 | Parser/resolver | Codex (Agent A, this session) | 1.3 reviewed | Snapshot → graph; Claude reviews | In progress: claimed after 1.3 approval; implementation not begun |
 | 1.5 | Dashboard, canvas, detail pane, navigation | Claude Code | 1.2 Approved; reviewed 1.3 data | Graph/evidence and shared selection; Codex reviews | Not started |
 | 1.6 | Early local-model test | Claude Code (Agent B) | 1.2 Approved; download approved 2026-10-09; 1.3 snippets | ModelAdapter → benchmark record; Codex reviews | Not started |
 | M2 | Ingestion and local folder input | Codex | 1.4, 1.5 | Authorized root → immutable snapshot → 1.5 UI | Not started |
@@ -268,9 +268,9 @@ Acceptance:
 
 Scope claimed by Codex in this session, 2026-10-09: `src/server/app.ts`, `src/server/index.ts`, `scripts/dev.mjs` and its watched `scripts/dev-host.mjs` child, boundary tests, README.md and the relevant ARCHITECTURE.md/TASKS.md/SUBMISSION.md entries. Dev startup explicitly selects the extra `http://127.0.0.1:5173` Origin; production startup has no environment/CLI opt-in. Host remains exactly `127.0.0.1:4173`. No API/token or feature implementation; C5 requires independent recheck, not self-approval.
 
-- [ ] Production rejects the dev Origin; dev accepts exactly that Origin while preserving the existing production Origin and Host check.
-- [ ] Host, null/foreign/lookalike Origin and production-default regression tests pass in the full offline suite.
-- [ ] Live Node/dev-proxy checks and typecheck/build results are recorded; docs match the changed startup behavior.
+- [x] Production rejects the dev Origin; dev accepts exactly that Origin while preserving the existing production Origin and Host check. (Codex unit and live Host/Origin/proxy probes; production also tested with NODE_ENV=development.)
+- [x] Host, null/foreign/lookalike Origin and production-default regression tests pass in the full offline suite. (Codex: 5 scaffold boundary cases; workspace full suite 2 files / 16 tests, all passed with networking denied.)
+- [x] Live Node/dev-proxy checks and typecheck/build results are recorded; docs match the changed startup behavior. (Codex report below; no API implementation or independent self-approval.)
 
 ### 1.3 Known-code fixture and expected graph
 
@@ -292,11 +292,15 @@ Work: write a tiny, original JS/TS project of about 10–15 files at the path se
 
 Acceptance:
 
-- [ ] The expected graph was written by hand, with the line/ID of every edge and the exact C1 coverage counts/reasons, before any extractor output existed.
-- [ ] A second agent checked the expected graph line by line against the fixture.
-- [ ] The fixture code is original and is never run.
+- [x] The expected graph was written by hand, with the line/ID of every edge and the exact C1 coverage counts/reasons, before any extractor output existed. (Claude Code, 2026-10-09. `src/` has no parser code (`grep` for `createSourceFile`/`extract` found only the `extractor` type field). Sizes and hashes come from `wc -c`/`shasum -a 256`. `tests/fixture-oracle.test.ts` checks the answer key against the files and the C1 invariants. Deliberately wrong line and count values made it fail.)
+- [x] A second agent checked the expected graph line by line against the fixture. (Codex, this session: all 22 edges, every file/hash/line/target and C1 coverage verified independently at `af671e8`; full review below.)
+- [x] The fixture code is original and is never run. (Claude Code wrote every file in this task. Nothing imports `fixtures/basic/src/`. The harness reads bytes/text only, and `tsconfig`/Vitest/Vite don't include `fixtures/`. 1.4 and later tasks must keep this true; the tripwire check is 1.4's.)
+
+Snapshot root `fixtures/basic/src/` (14 entries); answer key `fixtures/basic/expected-graph.json`; case table, placeholders and five interpretations 1.4 must match in `fixtures/basic/README.md`. **Placeholder decision** (human lead, 2026-10-09 about 16:30 AWST): `snapshotId` and `extractor` are placeholders. 1.4 first asserts snapshot-ID consistency and deterministic output, then applies `applyOraclePlaceholders` and deep-compares.
 
 ### 1.4 Verified dependency extraction
+
+Claimed by Codex (Agent A, this session) on 2026-10-09 after independently approving 1.3. Scope: pure snapshot-only parser/resolver and their tests, with matching contract/status documentation. This turn stops at the claim requested by the human lead: no parser code, target execution or extractor output was created. The reviewed hand-written oracle remains unchanged.
 
 Acceptance:
 
@@ -521,6 +525,66 @@ Verified: original static shell/host, strict compilation, model-free offline tes
 
 Handoff to Agent B: review 1.2 from a clean checkout, rerun README commands, inspect contracts and C4, and record your independent verdict/S-choice disposition. Only after Approved may you claim 1.3 and write the original fixture/oracle, then 1.5 on reviewed fixture data. The oracle must include coverage and statement IDs; do not generate it from parser output. C4 adds no package. 0.3 remains a separate pending Codex review; it was not folded into 1.1 or self-approved. No human decision is needed to complete this scaffold; deadline cutoffs/team/license and later gates remain as recorded.
 
+### 1.3 — Claude Code (Agent B chat), 2026-10-09
+
+**Status: In review. Codex checks the answer key line by line. 1.4 may start parser work now, but must not run its extractor on this fixture until that review passes.**
+
+Files added: `fixtures/basic/src/` (13 source files plus `styles.css`), `fixtures/basic/expected-graph.json`, `fixtures/basic/README.md`, `tests/support/fixture-snapshot.ts`, `tests/fixture-oracle.test.ts`. Changed: this file only (1.3 row, checks, this report). No package, config or `src/` change.
+
+Coverage: every case in the 1.3 list, plus a multi-line import, repeated specifiers, a `node:` built-in, an excluded `./styles.css` import and a parse-error file. Totals: 14 found, 12 parsed, 2 skipped. 22 import candidates: 16 resolved, 2 external, 1 excluded, 3 failed. Canary token `BZR-CANARY-ORCHID-7731` is in `pricing.ts:4-7` (exported as `FIXTURE_CANARY` for 1.6/M3).
+
+Commands and results:
+
+- `wc -c` and `shasum -a 256` over the fixture: sizes and hashes copied into the answer key by hand. `grep -n` confirmed every planned evidence line.
+- `npm run typecheck`: first run exit 2 (TS2322 in my test's issue-list typing). After annotating the type: exit 0.
+- `sandbox-exec -p '(version 1)(allow default)(deny network*)' npm test`: exit 0, 2 files / 16 tests (3 scaffold + 13 fixture/answer-key).
+- Mutation check: changing one evidence line (report.ts#3) and the failed count made 2 tests fail. The original file was restored (SHA-256 matched the backup) and the suite passed again.
+- Codex's uncommitted C5 edits (`src/server`, `scripts`, `tests/scaffold.test.ts`) were present in the working tree during these runs. I didn't touch them.
+
+For the reviewer: check `fixtures/basic/README.md` "Interpretations 1.4 must match" (evidence range, excluded rule, parse-error definition, `node:` built-ins, shadowed `require` → `ambiguous-require`). These are my readings of ARCHITECTURE.md C1. If Codex reads any differently, fix the answer key by hand, not from extractor output.
+
+Not covered: `.tsx`/`.jsx`/`.mjs`, pruned directories, unsupported-pattern diagnostics (`coverage.unsupported` is empty, so 1.2 note N2's strings stay undefined), and M2's symlink/secret/case/cap cases. Unverified: anything about a parser; none exists.
+
+### 0.3 C6 recheck — Codex, 2026-10-09
+
+**Verdict: Approved; C6 resolved.** Reviewed only Claude's benchmark-skill remediation at `0b41795f18b834e7afc795232d0f747fede422d6`: full digest via loopback `/api/tags`, runtime/tag/quantization required before running, explicit `think` setting and output-state checks, and matching per-model report headers. Missing provenance or rejected/ignored settings stop loudly. No skill repair by the reviewer. The unqualified Ollama command-path and M6 live-display notes from the first review still apply through TASKS.md; they do not block design approval. MSI setup/schedule changes in the same commit are outside this recheck. No runtime/API/benchmark call was made; functional inference remains unverified. Current document/symlink check: 11 Markdown files, 38 local links, zero errors, both aliases match. The earlier clean regression run remains applicable because this correction changes only skill prose. Files changed by recheck: TASKS.md verdict/status only.
+
+### 1.1-C5 — Codex (this session), 2026-10-09
+
+**Status: In review — implemented and verified; independent Agent B recheck pending.**
+
+Changed: `src/server/app.ts` (one default-strict request policy and shared host startup), `src/server/index.ts` (production always selects the default), `scripts/dev.mjs` and its new watched `scripts/dev-host.mjs` entry (explicit dev Origin opt-in), `tests/scaffold.test.ts` (2 additional cases), and relevant README/ARCHITECTURE/TASKS/SUBMISSION text. No dependency, API/token, fixture, parser or model change. The first implementation considered watching the whole dev launcher; final wiring watches only its Node-host child to keep the existing compiler watcher independent. Package scripts ended unchanged.
+
+Commands/results: typecheck exit 0; network-denied full suite first 1 file / 5 boundary tests and subsequently 2 files / 16 tests including the handed-off fixture; network-denied build exit 0, 15 modules; both dev scripts' `node --check` and `git diff --check` exit 0. First combined live harness: production probes passed, dev was not ready before the process ended; cleanup raised ProcessLookupError and lost the child log, so the original startup cause is unverified. A separate logging harness started dev successfully. The corrected combined harness, with external outbound denied and NODE_ENV=development even for production, passed: production dev Origin 403; development dev Origin 200; existing production Origin 200 in both; wrong Host and null/foreign/lookalike Origins 403 in both. Through Vite `/api/x`: accepted dev Origin GET 404 (policy passed, no route), POST 405 (policy passed, no method implemented), foreign Origin 403. Node watch restarted its host after compiler emission and retained the policy. Both ports refused connections after shutdown. The development-environment live build emitted React's development bundle; the normal production build remains separately verified. No failure was suppressed or check weakened.
+
+Verified: exact dev-only extra Origin, unchanged Host/production defaults, launch wiring and shutdown, offline regression suite. Not verified: future authenticated APIs or browser rendering; no self-review verdict closes C5. Next: Agent B independently rechecks this correction before M2/M3 routes. Author's full command/report evidence is distinct from that review.
+
+### 1.3 independent review — Codex (this session), 2026-10-09
+
+**Verdict: Approved. No blocking findings.** The fixture/oracle matches C1 and every task 1.3 case; 1.4 is claimed after this verdict, without implementing or running an extractor.
+
+Pin: Agent B handed off 18 uncommitted artifacts in the shared tree while my unrelated C5 files were dirty. I copied those exact bytes, without modification, into a separate clean review branch based on `9df58bc`, and committed the review snapshot as `af671e8ae8374c2b8ff253575d7641cbb2b1268c` on `review/fixture-1.3`. This is a review pin, not a main-branch fixture commit. Artifact-manifest SHA-256 `4b7a30dbdf3c2fcd87234fe8f479714a41291e5853b57174441daef92b87754b`; oracle SHA-256 `c0260fe70a4c127452098542b7326193681327e26a8a32cfb6313fa21f15c554`. Rechecked unchanged main artifacts after verification; the isolated worktree was removed, review branch retained. C5/my own code is excluded from the fixture verdict.
+
+Line-by-line evidence (all 22 edges, not a sample):
+
+| Importer / statement IDs | Source lines checked | Result |
+|---|---|---|
+| config.ts#1 | 1 | zod external package, not installed/executed |
+| inventory.ts#1 | 1 | pricing.ts value dependency; cycle counterpart checked |
+| legacy.cjs#1–2 | 3, 7 | math.ts literal require; parameter-shadowed require unresolved/ambiguous |
+| main.ts#1–6 | 2–7 | tripwire, excluded CSS, config, type-only inventory, report and node:path |
+| pricing.ts#1–2 | 1–2 | value/type inventory statements remain distinct |
+| report.ts#1–8 | 1–4, 5–9, 21, 26 | multiline evidence, type import, .js→.ts, directory index, missing file, config, literal and nonliteral dynamic import |
+| utils/index.ts#1–2 | 1–2 | math/text re-exports |
+
+Every one of the 13 source node sizes/hashes/languages/parse states and every evidence hash/snapshot/range/ordinal/target matches. Files with no candidates were checked too: export-csv, format, tripwire, math, text; text's comment/string imports emit nothing. broken.ts is syntactically invalid and contributes no edges, including its otherwise valid import. The tripwire is read only; canary instructions were treated as untrusted data and never followed. Totals: 14 found = 12 parsed + 2 skipped; 22 candidates = 16 resolved + 2 external + 1 excluded + 3 failed. All four issue records and their reason codes match, with no pruned directories or unsupported diagnostics. Human-approved snapshot/extractor placeholders preserve the required pre-normalization identity/determinism assertions; the helper only changes those identity fields.
+
+Commands/results in the pinned clean review checkout: offline `npm ci --ignore-scripts --offline` exit 0, 65 packages; typecheck exit 0; network-denied `npm test -- --reporter=verbose` exit 0, 2 files / 14 tests (3 scaffold + **11 fixture**); network-denied build exit 0, 15 modules. Independent Python assertions from a manually written 22-row evidence table checked each complete edge/ref, all hashes/bytes/parse states and coverage; exit 0, oracle unchanged. The author-reported mutation test was not repeated, and no oracle was regenerated. Current workspace full suite separately passed 16 (5 C5/scaffold + 11 fixture).
+
+Non-blocking notes: the author handoff's “3 scaffold + 13 fixture” split is inaccurate; actual fixture count is 11 and the current total of 16 includes 5 scaffold cases. The test harness is a fixture-only text reader, not general M2 ingestion; its “trusted fixture” comment does not override AGENTS.md's untrusted-data rules. TSX/JSX/MJS, pruned directories and unsupported diagnostics remain uncovered as disclosed; symlink/secret/case/cap runtime safety belongs to M2. No general ingestion or parser behavior is cleared by this review.
+
+Checklist: Scope Pass; dependencies N/A (zod is inert fixture text, no package change); docs/contracts Pass; clean-checkout commands Pass; offline/model-free Pass; no weakened checks/oracle regeneration Pass; evidence and safety-by-inspection Pass; parser-boundary implementation N/A (none exists); honesty Pass with explicit count correction; originality by local inspection Pass, external source comparison Not checked. Runtime snapshot validation and production safety remain unverified. Reviewer's changes: TASKS.md review/status/1.4 claim only; all fixture/oracle/harness bytes preserved. Follow-ups: implement 1.4 against this oracle under its separate task, retain placeholder guards and hand-written expectations, obtain Claude's independent parser review before integration.
+
 ## Review log
 
 | Date | Task | Reviewer | Verdict | Notes |
@@ -528,3 +592,5 @@ Handoff to Agent B: review 1.2 from a clean checkout, rerun README commands, ins
 | 2026-10-09 | 0.2 (reviews 0.1) | Claude Code | Approved for 1.1 with conditions | 0 blocking for 1.1. Conditions: C1 schemas before 1.3, C2 Phase A tiers before M2, C3 ordering/ownership before 1.2 closes, C4 canvas layout before 1.5. See 0.2 report |
 | 2026-10-09 | 1.2 (reviews 1.1 at `4718e27`) | Claude Code (review chat) | Approved with conditions | 0 blocking for 1.3/1.5/1.6. C1 and C4 resolved at contract/spec level. C5: dev proxy Origin 403, before M2/M3 API routes (Codex). See 1.2 report |
 | 2026-10-09 | 0.3 (Claude-authored additions at `238d89e`) | Codex (this session) | Approved with conditions | 0 blocking for fixture/C5. C6: benchmark skill must capture full digest and explicit thinking state before 1.6 (Claude). P-12/P-13 design passes; cloud approvals remain separate |
+| 2026-10-09 | 0.3 C6 recheck at `0b41795` | Codex (this session) | Approved | Full digest and explicit thinking provenance now required; C6 resolved. No runtime benchmark or MSI/schedule review implied |
+| 2026-10-09 | 1.3 at review pin `af671e8` | Codex (this session) | Approved | 0 blocking; all 22 edges and 13 source nodes checked; coverage 14/12/2 and 22/16/2/1/3; 11 fixture tests pass. 1.4 claimed without implementation |

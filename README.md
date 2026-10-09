@@ -25,11 +25,11 @@ The roadmap retains a dashboard, parser, graph canvas, detail pane, graph calcul
 
 The proposed first delivery is a small offline vertical slice: fixture and selected local folder → parsed map → inspection → local explanation → potential impact. JEV and OpenAI remain optional secondary cloud integrations. LangSmith is optional and off by default; local evaluation needs no cloud account. The full roadmap is not a promise to finish the tutorial before the deadline.
 
-## Scaffold awaiting review
+## Reviewed scaffold
 
-Agent A (Codex) proposes TypeScript on Node.js 24 LTS, a loopback web server, React/Vite, React Flow, the TypeScript compiler parser, bounded local JSON storage, and Ollama over loopback. All stack choices remain **Proposed** in [ARCHITECTURE.md](docs/ARCHITECTURE.md). The planned input contract selects a project explicitly at local launch; the browser will receive a project ID. The scaffold does not yet accept a project or expose file-reading APIs.
+Agent A (Codex) proposes TypeScript on Node.js 24 LTS, a loopback web server, React/Vite, React Flow, the TypeScript compiler parser, bounded local JSON storage, and Ollama over loopback. Scaffold stack choices are **Accepted** in [ARCHITECTURE.md](docs/ARCHITECTURE.md); later choices remain Proposed until their gates. The planned input contract selects a project explicitly at local launch; the browser will receive a project ID. The scaffold does not yet accept a project or expose file-reading APIs.
 
-Claude Code independently reviews this scaffold in 1.2 before fixture or UI implementation starts. C1 coverage/impact shapes live in `src/shared/contracts.ts`; C4 specifies original layered layout and list-first navigation above 300 nodes in ARCHITECTURE.md. Dependencies are pinned and disclosed in SUBMISSION.md. Runtime/model setup is recorded separately; no inference is performed by this scaffold.
+Claude Code approved the scaffold in 1.2; fixture and UI work may proceed under their recorded ownership and input-review gates. C1 coverage/impact shapes live in `src/shared/contracts.ts`; C4 specifies original layered layout and list-first navigation above 300 nodes in ARCHITECTURE.md. Dependencies are pinned and disclosed in SUBMISSION.md. Runtime/model setup is recorded separately; no inference is performed by this scaffold.
 
 Development targets the Intel Mac: macOS 15.7.7, i5-8500B, 32 GB RAM. The possible MSI demo machine is Ryzen 5, 16 GB RAM, RX 5500, ParrotOS. MSI testing is required before relying on it for **either recorded or live demos**. GPU acceleration and local-model performance remain unverified.
 
@@ -45,9 +45,9 @@ npm run build
 npm start
 ```
 
-Open `http://127.0.0.1:4173`. The only current screen says project analysis is not available yet. Stop with Ctrl-C. The static server rejects other Host/Origin values and has no APIs. Full token/project authorization is M2 work; this shell is not permission to expose target source.
+Open `http://127.0.0.1:4173`. The only current screen says project analysis is not available yet. Stop with Ctrl-C. The production static server accepts only Host `127.0.0.1:4173` and Origin `http://127.0.0.1:4173` (or no Origin), and has no APIs. Full token/project authorization is M2 work; this shell is not permission to expose target source.
 
-For development, run `npm run dev` and open `http://127.0.0.1:5173`. It performs the initial build, starts Vite plus the loopback Node host at 4173, and watches server code. Ports are fixed and an occupied port fails visibly. Vite uses local assets and loopback HMR; it is a development server, not the future authorized project server.
+For development, run `npm run dev` and open `http://127.0.0.1:5173`. It performs the initial build, starts Vite plus the loopback Node host at 4173, and watches server code. Ports are fixed and an occupied port fails visibly. Vite uses local assets and loopback HMR. Its watched Node child, `scripts/dev-host.mjs`, explicitly permits the additional exact Origin `http://127.0.0.1:5173`; the Host check stays `127.0.0.1:4173`. The production entry never reads an environment variable or CLI flag to enable this Origin. This is a development server; future project APIs still require M2 authorization.
 
 `npm test` is the model-free default suite; its setup rejects socket/fetch calls. `npm run test:model` is a separate entry for `tests/model/**/*.test.ts`, owned by 1.6; it currently exits nonzero because no real-model cases exist. It performs no inference or download. Never treat that absence as a successful benchmark.
 
