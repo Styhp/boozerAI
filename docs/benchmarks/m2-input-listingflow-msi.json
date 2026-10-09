@@ -1,0 +1,49 @@
+{
+  "at": "2026-10-09T22:16:11.853Z",
+  "node": "v24.16.0",
+  "records": [
+    {
+      "check": "ListingFlow requires confirmation before indexing",
+      "passed": true
+    },
+    {
+      "check": "Confirmed ListingFlow opens the graph workspace",
+      "passed": true
+    },
+    {
+      "check": "314 primary sources indexed; duplicate worktrees excluded and reported",
+      "passed": true
+    },
+    {
+      "check": "Reload restores the ListingFlow graph and file count",
+      "passed": true
+    }
+  ],
+  "summary": {
+    "sourceFiles": 314,
+    "sourceBytes": 1917789,
+    "prunedDirectories": 6,
+    "graphFiles": 314,
+    "graphEdges": 1461,
+    "coverage": {
+      "files": {
+        "found": 640,
+        "parsed": 314,
+        "skipped": 326
+      },
+      "imports": {
+        "seen": 1461,
+        "resolved": 276,
+        "external": 630,
+        "excluded": 1,
+        "failed": 554
+      },
+      "gapReasons": {
+        "not-found": 1,
+        "unsupported-alias": 553,
+        "unsupported-extension": 1
+      }
+    },
+    "confirmToWorkspaceMs": 1100
+  }
+}

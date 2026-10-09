@@ -12,10 +12,12 @@ export const DEFAULT_SNAPSHOT_LIMITS: SnapshotLimits = Object.freeze({
 const MAX_ENTRIES = 20_000;
 const MAX_DEPTH = 64;
 const IGNORED_DIRECTORIES = ['.git', 'node_modules', 'dist', 'build', 'coverage', '.next', '.vite', '.ssh', '.aws'];
+// Agent worktrees duplicate the project. Keep other tool files and ordinary worktrees folders.
+const IGNORED_DIRECTORY_SUFFIXES = ['.claude/worktrees'];
 const LANGUAGES: Readonly<Record<string, Language>> = {
   '.js': 'js', '.jsx': 'jsx', '.ts': 'ts', '.tsx': 'tsx', '.mjs': 'mjs', '.cjs': 'cjs',
 };
-const POLICY_VERSION = 'local-input-v2';
+const POLICY_VERSION = 'local-input-v3';
 const bytewise = (a: string, b: string) => Buffer.compare(Buffer.from(a), Buffer.from(b));
 const hash = (data: Buffer | string) => createHash('sha256').update(data).digest('hex');
 
@@ -272,7 +274,8 @@ export class LocalInputAdapter {
             if (entry.isSymbolicLink()) {
               skipped.push({ path, reason: 'symlink' });
             } else if (entry.isDirectory()) {
-              if (IGNORED_DIRECTORIES.includes(entry.name) || secretName(entry.name)) {
+              if (IGNORED_DIRECTORIES.includes(entry.name) || secretName(entry.name)
+                || IGNORED_DIRECTORY_SUFFIXES.some((suffix) => path === suffix || path.endsWith(`/${suffix}`))) {
                 pruned.push({ path, reason: 'ignored' });
               } else {
                 if (path.split('/').length > MAX_DEPTH) throw new InputError('depth-limit');
@@ -374,6 +377,7 @@ export class LocalInputAdapter {
     const identity = JSON.stringify({
       policy: POLICY_VERSION, analysisKey, limits,
       ignoredDirectories: IGNORED_DIRECTORIES, maxEntries: MAX_ENTRIES, maxDepth: MAX_DEPTH,
+      ignoredDirectorySuffixes: IGNORED_DIRECTORY_SUFFIXES,
       files: files.map(({ path, contentHash }) => [path, contentHash]), inventory,
     });
     return Object.freeze({

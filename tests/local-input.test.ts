@@ -204,6 +204,47 @@ describe('untrusted input exclusions and bounds', () => {
     expect(JSON.stringify(result)).not.toContain('PRIVATE_BYTES');
   });
 
+  it('prunes duplicate agent worktrees before traversal while retaining other tool and worktree source', async () => {
+    const root = await folder();
+    const kept = ['.claude/helpers/tool.ts', 'main.ts', 'nested/worktrees/source.ts', 'worktrees/source.ts'];
+    for (const path of kept) await put(root, path, 'export {};');
+    for (const directory of ['.claude/worktrees', 'nested/.claude/worktrees']) {
+      await put(root, `${directory}/copy/main.ts`, 'DO_NOT_READ_DUPLICATE_SOURCE');
+      await put(root, `${directory}/copy/extra.ts`, 'DO_NOT_READ_DUPLICATE_SOURCE');
+    }
+    const result = await snapshot(await selected(root), {
+      ...DEFAULT_SNAPSHOT_LIMITS, maxFiles: kept.length, maxTotalBytes: Buffer.byteLength('export {};') * kept.length,
+    });
+    expect(result.files.map(({ path }) => path)).toEqual(kept);
+    expect(result.inventory).toEqual({
+      found: kept.length, skipped: [], prunedDirectories: [
+        { path: '.claude/worktrees', reason: 'ignored' },
+        { path: 'nested/.claude/worktrees', reason: 'ignored' },
+      ],
+    });
+    expect(vi.mocked(opendir).mock.calls.map(([path]) => path).sort()).toEqual([
+      root, join(root, '.claude'), join(root, '.claude/helpers'), join(root, 'nested'),
+      join(root, 'nested/.claude'), join(root, 'nested/worktrees'), join(root, 'worktrees'),
+    ].sort());
+    expect(vi.mocked(open).mock.calls.map(([path]) => path).sort()).toEqual(kept.map((path) => join(root, path)));
+    expect(JSON.stringify(result)).not.toContain('DO_NOT_READ_DUPLICATE_SOURCE');
+  });
+
+  it('reports a symlink named .claude/worktrees without traversing or relabeling it as ignored', async () => {
+    const root = await folder();
+    const outside = await folder();
+    await put(outside, 'outside.ts', 'DO_NOT_READ_OUTSIDE');
+    await put(root, 'main.ts', 'export {};');
+    await mkdir(join(root, '.claude'));
+    await symlink(outside, join(root, '.claude/worktrees'), 'dir');
+    const result = await snapshot(await selected(root));
+    expect(result.files.map(({ path }) => path)).toEqual(['main.ts']);
+    expect(result.inventory).toEqual({
+      found: 2, skipped: [{ path: '.claude/worktrees', reason: 'symlink' }], prunedDirectories: [],
+    });
+    expect(vi.mocked(open).mock.calls.map(([path]) => path)).toEqual([join(root, 'main.ts')]);
+  });
+
   it('rejects file and nested directory symlink entries without following them', async () => {
     const root = await folder();
     const outside = await folder();
