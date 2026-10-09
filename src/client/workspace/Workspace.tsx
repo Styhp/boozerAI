@@ -2,22 +2,26 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DependencyGraph, FilePath } from '../../shared/contracts';
 import { DetailPane, type ExplanationControls } from '../components/DetailPane';
 import { MapCanvas } from '../components/MapCanvas';
+import { DEFAULT_FILTERS, type GraphFilters } from '../graph/engine';
+import { GraphView } from '../graph/GraphView';
 import { SummaryPanel } from '../components/SummaryPanel';
 import type { NotesSource } from '../data/project-source';
-import { layoutMap } from '../map/layout';
+import { NODE_CAP, layoutMap } from '../map/layout';
 import { describeTarget, selectedPath, sourceLines, type Selection, type SourceState } from '../map/model';
 import { Icon } from '../ui/Icon';
-import { buildTree, fileGapCounts, fileLinks, fileName, folderPaths, formatReadTime, gapCount, plural } from './model';
+import { buildTree, fileGapCounts, fileLinks, fileName, folderPaths, formatReadTime, gapCount, graphNodeCount, plural } from './model';
 import { Pane, PathCrumbs } from './Pane';
-import { Ribbon } from './Ribbon';
+import { Ribbon, type SideMode } from './Ribbon';
 import { Locality, Sidebar } from './Sidebar';
+import { RepoChatPanel, type RepoChatControls } from '../components/RepoChatPanel';
 
 // SPEC §4.1: below this container width the sidebar collapses the first time the pane opens.
 const AUTO_COLLAPSE_BELOW = 1360;
 
-// S1 shell: ribbon, sidebar + file tree, today's MapCanvas, and a sliding pane showing
-// today's summary (Overview) or DetailPane. The S2 engine replaces MapCanvas.
-export function Workspace({ graph, label, isPreview, readAt, selection, onSelection, source, explanation, notes,
+// Ribbon, sidebar + file tree, the force-directed graph (S2) and a sliding pane showing today's
+// summary (Overview) or DetailPane until S3. Above the 300-node cap the graph area keeps C4's
+// list-first MapCanvas with its folder filter (SPEC §5.9).
+export function Workspace({ graph, label, isPreview, readAt, selection, onSelection, source, explanation, notes, chat,
   cloudSends, onRefresh, onClose }: {
   graph: DependencyGraph;
   label: string;
@@ -28,15 +32,21 @@ export function Workspace({ graph, label, isPreview, readAt, selection, onSelect
   source: SourceState;
   explanation?: ExplanationControls | undefined;
   notes?: NotesSource | undefined;
+  chat?: RepoChatControls | undefined;
   cloudSends: number;
   onRefresh?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
 }) {
   const [sideOpen, setSideOpen] = useState(true);
+  const [side, setSide] = useState<SideMode>('files');
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   // Indexing has finished when this mounts, so the Overview opens at once (as after Skip, §6.2).
   const [paneOpen, setPaneOpen] = useState(true);
   const [view, setView] = useState<'overview' | 'detail'>('overview');
+  const [chatOpen, setChatOpen] = useState(false);
+  const [filters, setFilters] = useState<GraphFilters>(DEFAULT_FILTERS);
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  // Folder filter for the over-cap MapCanvas only.
   const [filter, setFilter] = useState('');
   const main = useRef<HTMLElement>(null);
 
@@ -47,14 +57,20 @@ export function Workspace({ graph, label, isPreview, readAt, selection, onSelect
 
   const tree = useMemo(() => buildTree(graph.files), [graph]);
   const gaps = useMemo(() => fileGapCounts(graph), [graph]);
-  const layout = useMemo(() => layoutMap(graph, filter), [graph, filter]);
+  const overCap = useMemo(() => graphNodeCount(graph) > NODE_CAP, [graph]);
+  const layout = useMemo(() => (overCap ? layoutMap(graph, filter) : null), [overCap, graph, filter]);
 
-  const showingDetail = paneOpen && view === 'detail' && selection !== null;
+  const showingChat = chatOpen && chat !== undefined;
+  const showingDetail = paneOpen && !showingChat && view === 'detail' && selection !== null;
   const current = showingDetail ? selectedPath(graph, selection) : null;
 
-  const open = (next: Selection) => { onSelection(next); setView('detail'); setPaneOpen(true); };
+  const open = (next: Selection) => { onSelection(next); setView('detail'); setChatOpen(false); setPaneOpen(true); };
   const openFile = (path: FilePath) => open({ kind: 'file', path });
   const toggleFolder = (path: string) => setCollapsed((all) => ({ ...all, [path]: all[path] !== true }));
+  const showSide = (mode: SideMode) => {
+    if (sideOpen && side === mode) { setSideOpen(false); return; }
+    setSide(mode); setSideOpen(true);
+  };
   const collapseAll = () => {
     const folders = folderPaths(tree);
     const allClosed = folders.every((path) => collapsed[path] === true);
@@ -65,14 +81,16 @@ export function Workspace({ graph, label, isPreview, readAt, selection, onSelect
   const detailPath = detail ? selectedPath(graph, selection) : null;
   const lines = detailPath !== null && source.status === 'loaded' && source.source.path === detailPath
     ? sourceLines(source.source.text).length : null;
-  const links = detailPath === null ? null : fileLinks(graph, detailPath);
-  const title = !detail ? 'Overview' : detailPath !== null ? fileName(detailPath) : terminalLabel(graph, selection);
+  const links = detailPath === null || showingChat ? null : fileLinks(graph, detailPath);
+  const title = showingChat ? 'Chat Boozer' : !detail ? 'Overview' : detailPath !== null ? fileName(detailPath) : terminalLabel(graph, selection);
 
   return <>
-    <Ribbon sideOpen={sideOpen} onFiles={() => setSideOpen((was) => !was)}
-      onOverview={() => { setView('overview'); setPaneOpen(true); }} onRefresh={onRefresh} onClose={onClose} />
-    <Sidebar open={sideOpen} label={label} files={graph.files} tree={tree} collapsed={collapsed} current={current} gaps={gaps}
-      cloudSends={cloudSends} onToggleFolder={toggleFolder} onCollapseAll={collapseAll} onClose={() => setSideOpen(false)} onOpen={openFile} />
+    <Ribbon sideOpen={sideOpen} side={side} onSide={showSide}
+      onOverview={() => { setView('overview'); setChatOpen(false); setPaneOpen(true); }} onRefresh={onRefresh} onClose={onClose}
+      onChat={chat === undefined ? undefined : () => { setChatOpen(true); setPaneOpen(true); }} chatOpen={paneOpen && showingChat} />
+    <Sidebar open={sideOpen} mode={side} label={label} files={graph.files} tree={tree} collapsed={collapsed} current={current} gaps={gaps}
+      search={filters.search} cloudSends={cloudSends} onSearch={(search) => setFilters((all) => ({ ...all, search }))}
+      onToggleFolder={toggleFolder} onCollapseAll={collapseAll} onClose={() => setSideOpen(false)} onOpen={openFile} onHover={setHoverId} />
     <main className="ws-main" ref={main}>
       <div className="ws-tabs"><div className="ws-tab"><Icon name="graph" /><span>Graph view</span></div></div>
       <div className="ws-viewhead">
@@ -80,12 +98,19 @@ export function Workspace({ graph, label, isPreview, readAt, selection, onSelect
           onClick={() => setSideOpen((was) => !was)}><Icon name="files" /></button>
         <div className="ws-viewhead-title"><b>{label}</b> · read {formatReadTime(readAt)}</div>
       </div>
-      <div className="ws-graph">
-        <MapCanvas layout={layout} selection={showingDetail ? selection : null} filter={filter} onFilter={setFilter} onSelect={open} />
-      </div>
+      {layout === null
+        ? <GraphView graph={graph} selectedPath={current} externalHoverId={hoverId} filters={filters} onFiltersChange={setFilters}
+            layoutKey={`${paneOpen}:${sideOpen}`} onOpen={openFile} />
+        : <div className="ws-graph">
+            <MapCanvas layout={layout} selection={showingDetail ? selection : null} filter={filter} onFilter={setFilter} onSelect={open} />
+          </div>}
     </main>
-    <Pane open={paneOpen} icon={detail ? 'file' : 'overview'} title={title}
-      crumbs={!detail ? <>{label} / <b>Overview</b></> : detailPath !== null ? <PathCrumbs path={detailPath} /> : <>{label} / <b>{title}</b></>}
+    <Pane open={paneOpen} icon={showingChat ? 'ai' : detail ? 'file' : 'overview'} title={title}
+      tabs={chat === undefined ? undefined : [
+        { id: 'ws-details-tab', label: 'Details', icon: detail ? 'file' : 'overview', selected: !showingChat, onSelect: () => setChatOpen(false) },
+        { id: 'ws-chat-tab', label: 'Chat Boozer', icon: 'ai', selected: showingChat, onSelect: () => setChatOpen(true) },
+      ]}
+      crumbs={showingChat || !detail ? <>{label} / <b>{title}</b></> : detailPath !== null ? <PathCrumbs path={detailPath} /> : <>{label} / <b>{title}</b></>}
       status={links !== null ? <>
         <span>Used by {links.usedBy}</span>
         <span>Uses {plural(links.uses, 'file')}</span>
@@ -98,7 +123,7 @@ export function Workspace({ graph, label, isPreview, readAt, selection, onSelect
         <Locality cloudSends={cloudSends} />
       </>}
       onClose={() => setPaneOpen(false)}>
-      {detail
+      {showingChat ? <RepoChatPanel graph={graph} chat={chat} contextPath={selectedPath(graph, selection)} onSelect={open} /> : detail
         ? <DetailPane graph={graph} selection={selection} source={source} onSelect={open} explanation={explanation} notes={notes} />
         : <div className="ws-note"><SummaryPanel graph={graph} sourceLabel={label} isPreview={isPreview} onSelect={open} /></div>}
     </Pane>

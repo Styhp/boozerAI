@@ -65,7 +65,7 @@ function InlineView({ parts, snippets, path, onSelect }: {
 
 function SnippetList({ snippets, path, onSelect }: { snippets: readonly Snippet[]; path: FilePath; onSelect: (s: Selection) => void }) {
   return (
-    <details className="snippets" open>
+    <details className="snippets">
       <summary>Code the AI was shown ({snippets.length})</summary>
       <p className="hint">The AI saw only these excerpts. Each [S#] link in the answer points to one of them.</p>
       <ol>
@@ -98,7 +98,7 @@ export function ExplanationPanel({ path, state, onExplain, onCancel, onSelect }:
           ? <button type="button" onClick={onCancel}>Cancel</button>
           : <button type="button" onClick={onExplain} title="Runs the approved AI model on this computer; nothing is sent online">
             {state.status === 'idle' ? 'Explain in plain English' : 'Explain again'}</button>}
-        {running && <span className="muted" role="status">The AI on this computer is writing… this can take up to a minute.</span>}
+        {running && <span className="muted" role="status">The AI on this computer is writing… this can take up to six minutes. You can cancel at any time.</span>}
       </div>
       <ExplanationResult path={path} state={state} onSelect={onSelect} />
     </section>

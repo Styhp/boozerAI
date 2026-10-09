@@ -1,10 +1,12 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { loadServerEnv } from './env.js';
 import { createExplanationService, type CloudComparison, type ExplanationService } from './explain/index.js';
 import { launchSession, openLaunchUrl } from './launcher.js';
 import { handleProjectApi } from './project-api.js';
 import type { ProjectSession } from './project-session.js';
+import type { RepoChatService } from '../shared/repo-chat.js';
 
 const origin = 'http://127.0.0.1:4173';
 const devOrigin = 'http://127.0.0.1:5173';
@@ -17,7 +19,7 @@ export function permitsRequest(host: string | undefined, requestOrigin: string |
 }
 
 // This reads only Boozer's built assets, never a selected target repository.
-export async function createApp(developmentProxy = false, api?: { session: ProjectSession; service: ExplanationService & CloudComparison }) {
+export async function createApp(developmentProxy = false, api?: { session: ProjectSession; service: ExplanationService & CloudComparison & Partial<RepoChatService> }) {
   const client = new URL('../client/', import.meta.url);
   const assets = new Map<string, { body: Buffer; type: string }>();
   assets.set('/', { body: await readFile(new URL('index.html', client)), type: 'text/html' });
@@ -53,8 +55,9 @@ export async function createApp(developmentProxy = false, api?: { session: Proje
 }
 
 export async function startHost(developmentProxy = false, args: readonly string[] = process.argv.slice(2)) {
+  loadServerEnv();
   const session = await launchSession(args);
-  const service: ExplanationService & CloudComparison = createExplanationService();
+  const service = createExplanationService();
   const preload = new AbortController();
   const server = createServer(await createApp(developmentProxy, { session, service }));
   const stop = () => {

@@ -13,7 +13,7 @@ export function FileRow({ file, current, gaps, onOpen }: TreeRowProps & { file: 
   const gapsHere = gaps.get(file.path) ?? 0;
   return (
     <li>
-      <button type="button" className="ws-tree-row is-file" title={file.path}
+      <button type="button" className="ws-tree-row is-file" title={file.path} data-hover-id={file.path}
         aria-current={current === file.path ? 'true' : undefined} onClick={() => onOpen(file.path)}>
         <span className="ws-tree-name">{fileName(file.path)}</span>
         {file.parse.status === 'error'

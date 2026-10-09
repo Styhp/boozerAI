@@ -25,6 +25,35 @@ const preview: CloudPreview = {
 };
 
 describe('M2 browser capability and HTTP ProjectSource', () => {
+  it('sends bounded questions/history through authenticated chat without source or cloud fields', async () => {
+    const event = { type: 'error', code: 'no-excerpt', message: 'Labeled chat double.' };
+    const transport = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify(event) + '\n', { headers: { 'Content-Type': 'application/x-ndjson' } }));
+    const source = new HttpProjectSource(new ProjectConnection('c'.repeat(64), transport), envelope);
+    const body = { snapshotId, question: 'What does this file do?', history: ['Where does the app start?'], contextPath: 'main.ts' };
+    const received = []; for await (const value of source.chat(body, new AbortController().signal)) received.push(value);
+    expect(received).toEqual([event]);
+    expect(transport.mock.lastCall![0]).toBe(`/api/projects/${id}/chat`);
+    expect(JSON.parse((transport.mock.lastCall as unknown as [string, RequestInit])[1].body as string)).toEqual(body);
+  });
+  it('does not transport cancelled, revoked, stale or malformed chat requests', async () => {
+    const transport = vi.fn(async () => { throw new Error('Must not transport.'); });
+    const source = new HttpProjectSource(new ProjectConnection('c'.repeat(64), transport), envelope);
+    const body = { snapshotId, question: 'Question', history: [] };
+    const cancelled = new AbortController(); cancelled.abort();
+    for await (const _event of source.chat(body, cancelled.signal)) { /* drain */ }
+    for (const change of [{ snapshotId: 'old' }, { contextPath: '../outside.ts' }, { question: 'x'.repeat(601) }]) {
+      for await (const _event of source.chat({ ...body, ...change }, new AbortController().signal)) { /* drain */ }
+    }
+    source.revoke(); for await (const _event of source.chat(body, new AbortController().signal)) { /* drain */ }
+    expect(transport).not.toHaveBeenCalled();
+  });
+  it('suppresses already buffered chat output if the project is revoked after response headers', async () => {
+    const transport = vi.fn(async () => new Response('{"type":"token","text":"late text"}\n', { headers: { 'Content-Type': 'application/x-ndjson' } }));
+    const source = new HttpProjectSource(new ProjectConnection('c'.repeat(64), transport), envelope);
+    const stream = source.chat({ snapshotId, question: 'Question', history: [] }, new AbortController().signal)[Symbol.asyncIterator]();
+    const next = stream.next(); source.revoke();
+    expect(await next).toMatchObject({ done: true });
+  });
   it('calls the default browser fetch without rebinding its receiver to the connection', async () => {
     const standalone = vi.spyOn(globalThis, 'fetch').mockImplementation(function (this: unknown) {
       expect(this === undefined || this === globalThis).toBe(true);

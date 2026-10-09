@@ -6,6 +6,7 @@ import type { ProjectSource } from './data/project-source';
 import { selectedPath, type Selection, type SourceState } from './map/model';
 import { GateCard } from './workspace/GateCard';
 import { Workspace } from './workspace/Workspace';
+import { useRepoChat } from './data/use-repo-chat';
 
 type GraphState =
   | { status: 'loading' }
@@ -41,6 +42,7 @@ export function App({ project, onRefresh, onClose }: {
   }, [project]);
 
   const graph = graphState.status === 'loaded' ? graphState.graph : null;
+  const chat = useRepoChat(project, graph?.snapshotId ?? null);
   const path = graph === null ? null : selectedPath(graph, selection);
   useEffect(() => {
     if (project === null || path === null) { setSource({ status: 'idle' }); return; }
@@ -95,7 +97,7 @@ export function App({ project, onRefresh, onClose }: {
   return (
     <Workspace graph={graphState.graph} label={project.label} isPreview={project.isPreview} readAt={graphState.readAt}
       selection={selection} onSelection={setSelection} source={source} notes={project.notes} cloudSends={cloudSends}
-      onRefresh={onRefresh} onClose={onClose}
+      onRefresh={onRefresh} onClose={onClose} chat={chat}
       explanation={selection?.kind === 'file' ? {
         state: explanations.get(selection.path) ?? { status: 'idle' },
         onExplain: () => { void explain(selection.path); },

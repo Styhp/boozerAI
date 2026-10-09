@@ -98,7 +98,9 @@ describe('explanation panel', () => {
 
   it('shows clear states for idle, running and a missing runtime, with no invented answer', () => {
     expect(panel({ status: 'idle' })).toContain('Explain in plain English');
-    expect(panel({ status: 'running', snippets, text: 'Partial' })).toContain('Cancel');
+    const running = panel({ status: 'running', snippets, text: 'Partial' });
+    expect(running).toContain('Cancel');
+    expect(running).toContain('up to six minutes');
     const missing = panel({ status: 'error', code: 'runtime-unavailable', message: 'No local Ollama runtime is answering on 127.0.0.1:11434.', snippets: [], text: '' });
     expect(missing).toContain('Local model runtime not available');
     const noExcerpt = panel({ status: 'error', code: 'no-excerpt', message: 'No exact excerpt of this file fits the explanation budget (its first line is too long), so nothing was sent to the model.', snippets: [], text: '' });

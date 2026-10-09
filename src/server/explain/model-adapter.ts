@@ -1,4 +1,4 @@
-import type { ExplanationErrorCode, RuntimeStatus } from '../../shared/explanation.js';
+import { LOCAL_EXPLANATION_TIMEOUT_MS, type ExplanationErrorCode, type RuntimeStatus } from '../../shared/explanation.js';
 
 // The only code that talks to a model runtime (AGENTS.md code boundaries). Fixed loopback
 // endpoint, one allowlisted model by exact digest, no tools, no pull/install API, no
@@ -14,7 +14,6 @@ export const APPROVED_MODEL = {
 // preload uses the same num_ctx so Ollama doesn't reload the model for the first request.
 export const GENERATION = { temperature: 0, seed: 1006, num_ctx: 4096, num_predict: 300 } as const;
 const KEEP_ALIVE = '30m';
-const DEFAULT_TIMEOUT_MS = 180_000;
 
 export interface ChatMessage { readonly role: 'system' | 'user'; readonly content: string }
 
@@ -42,14 +41,15 @@ type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export function createOllamaAdapter(options: { fetch?: Fetch; timeoutMs?: number } = {}): ModelAdapter {
   const fetchImpl: Fetch = options.fetch ?? ((input, init) => globalThis.fetch(input, init));
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const timeoutMs = options.timeoutMs ?? LOCAL_EXPLANATION_TIMEOUT_MS;
 
   const call = async (path: string, init: RequestInit, signal: AbortSignal | undefined, timeout: number) => {
     const signals = [AbortSignal.timeout(timeout), ...(signal ? [signal] : [])];
+    const requestSignal = AbortSignal.any(signals);
     try {
-      return await fetchImpl(`${OLLAMA_ENDPOINT}${path}`, { ...init, redirect: 'error', signal: AbortSignal.any(signals) });
+      return await fetchImpl(`${OLLAMA_ENDPOINT}${path}`, { ...init, redirect: 'error', signal: requestSignal });
     } catch (error) {
-      throw toModelError(error, signal);
+      throw toModelError(error, requestSignal);
     }
   };
 
@@ -93,13 +93,14 @@ export function createOllamaAdapter(options: { fetch?: Fetch; timeoutMs?: number
     },
 
     async *stream(messages, signal) {
+      const requestSignal = AbortSignal.any([AbortSignal.timeout(timeoutMs), ...(signal ? [signal] : [])]);
       const response = await call('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: APPROVED_MODEL.tag, messages, stream: true, think: false, keep_alive: KEEP_ALIVE, options: GENERATION,
         }),
-      }, signal, timeoutMs);
+      }, requestSignal, timeoutMs);
       if (response.status === 404) throw new ModelError('model-missing', `The approved model ${APPROVED_MODEL.tag} is not installed.`);
       if (!response.ok || response.body === null) throw new ModelError('runtime-error', `The runtime returned HTTP ${response.status}.`);
 
@@ -133,7 +134,7 @@ export function createOllamaAdapter(options: { fetch?: Fetch; timeoutMs?: number
           }
         }
       } catch (error) {
-        throw toModelError(error, signal);
+        throw toModelError(error, requestSignal);
       }
       throw new ModelError('runtime-error', 'The runtime closed the stream before finishing.');
     },
@@ -142,7 +143,9 @@ export function createOllamaAdapter(options: { fetch?: Fetch; timeoutMs?: number
 
 function toModelError(error: unknown, signal: AbortSignal | undefined): ModelError {
   if (error instanceof ModelError) return error;
-  if (signal?.aborted) return new ModelError('cancelled', 'The explanation was cancelled.');
+  if (signal?.aborted) return signal.reason instanceof DOMException && signal.reason.name === 'TimeoutError'
+    ? new ModelError('timeout', 'The local model did not finish in time.')
+    : new ModelError('cancelled', 'The explanation was cancelled.');
   if (error instanceof DOMException && error.name === 'TimeoutError') return new ModelError('timeout', 'The local model did not finish in time.');
   if (error instanceof SyntaxError) return new ModelError('runtime-error', 'The runtime sent malformed output.');
   return new ModelError('runtime-unavailable', 'No local Ollama runtime is answering on 127.0.0.1:11434.');

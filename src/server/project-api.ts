@@ -1,9 +1,10 @@
 import { once } from 'node:events';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { ExplainRequestBody } from '../shared/explanation.js';
+import { LOCAL_EXPLANATION_TIMEOUT_MS, type ExplainRequestBody } from '../shared/explanation.js';
 import type { CloudComparison, ExplanationService } from './explain/index.js';
 import { ApiError, ProjectSession } from './project-session.js';
 import { NotesError, routeNotes } from './project-notes.js';
+import { isRepoChatRequest, type RepoChatService } from '../shared/repo-chat.js';
 
 const MAX_BODY = 8_192;
 const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -53,8 +54,9 @@ function explanationBody(input: Record<string, unknown>): ExplainRequestBody {
   throw new ApiError(400, 'invalid-body');
 }
 
-export async function handleProjectApi(request: IncomingMessage, response: ServerResponse, session: ProjectSession, service: ExplanationService & CloudComparison, development: boolean): Promise<void> {
+export async function handleProjectApi(request: IncomingMessage, response: ServerResponse, session: ProjectSession, service: ExplanationService & CloudComparison & Partial<RepoChatService>, development: boolean): Promise<void> {
   const controller = new AbortController();
+  let timedOut = false;
   const disconnected = () => { if (!response.writableEnded) controller.abort(); };
   response.on('close', disconnected);
   request.on('aborted', disconnected);
@@ -86,7 +88,7 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
       return;
     }
     // --- end project notes hook ---
-    const route = /^\/api\/projects\/([0-9a-f-]{36})\/(confirm|graph|files\/([0-9a-f-]{36})|refresh|close|explanations|explanations\/preview)$/.exec(pathname ?? '');
+    const route = /^\/api\/projects\/([0-9a-f-]{36})\/(confirm|graph|files\/([0-9a-f-]{36})|refresh|close|explanations|explanations\/preview|chat)$/.exec(pathname ?? '');
     if (route === null) throw new ApiError(404, 'not-found');
     const id = route[1]!;
     const action = route[2]!;
@@ -129,10 +131,39 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
       }
       json(response, 200, result.preview); return;
     }
+    if (action === 'chat') {
+      if (!isRepoChatRequest(input)) throw new ApiError(400, 'invalid-body');
+      const current = session.current(id, input.snapshotId);
+      if (input.contextPath !== undefined && !current.snapshot.files.some((file) => file.path === input.contextPath)) throw new ApiError(404, 'invalid-file');
+      if (service.chat === undefined) throw new ApiError(404, 'chat-unavailable');
+      const chat = session.beginChat(id, input.snapshotId, controller.signal);
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        controller.abort(new DOMException('The chat request timed out.', 'TimeoutError'));
+      }, LOCAL_EXPLANATION_TIMEOUT_MS + 10_000);
+      timeout.unref();
+      try {
+        response.writeHead(200, { 'Content-Type': 'application/x-ndjson', 'Cache-Control': 'no-store' });
+        response.flushHeaders();
+        let terminal = false;
+        for await (const event of service.chat({ ...input, ...chat })) {
+          if (chat.signal.aborted) break;
+          if (!response.write(`${JSON.stringify(event)}\n`)) await once(response, 'drain', { signal: chat.signal });
+          if (event.type === 'done' || event.type === 'error') { terminal = true; break; }
+        }
+        if (!terminal && !response.destroyed) response.write(`${JSON.stringify({ type: 'error', code: timedOut ? 'timeout' : chat.signal.aborted ? 'cancelled' : 'runtime-error',
+          message: timedOut ? 'The local model did not finish within the request time limit.' : 'The chat ended before completion.' })}\n`);
+        response.end();
+      } finally { clearTimeout(timeout); chat.finish(); }
+      return;
+    }
     if (action !== 'explanations') throw new ApiError(405, 'method-not-allowed');
     const selection = explanationBody(input);
     const explanation = session.beginExplanation(id, selection.snapshotId, selection.path, controller.signal);
-    const timeout = setTimeout(() => controller.abort(), 120_000);
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort(new DOMException('The explanation request timed out.', 'TimeoutError'));
+    }, selection.provider === 'cloud' ? 120_000 : LOCAL_EXPLANATION_TIMEOUT_MS + 10_000);
     timeout.unref();
     try {
       response.writeHead(200, { 'Content-Type': 'application/x-ndjson', 'Cache-Control': 'no-store' });
@@ -147,13 +178,13 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
         if (!response.write(`${JSON.stringify(event)}\n`)) await once(response, 'drain', { signal: explanation.signal });
         if (event.type === 'done' || event.type === 'error') { terminal = true; break; }
       }
-      if (!terminal && !response.destroyed) response.write(`${JSON.stringify({ type: 'error', code: explanation.signal.aborted ? 'cancelled' : 'runtime-error', message: 'The explanation ended before completion.' })}\n`);
+      if (!terminal && !response.destroyed) response.write(`${JSON.stringify({ type: 'error', code: timedOut ? 'timeout' : explanation.signal.aborted ? 'cancelled' : 'runtime-error', message: timedOut ? 'The model did not finish within the request time limit.' : 'The explanation ended before completion.' })}\n`);
       response.end();
     } finally { clearTimeout(timeout); explanation.finish(); }
   } catch (error) {
     if (!response.destroyed) {
       if (response.headersSent) {
-        response.end(`${JSON.stringify({ type: 'error', code: controller.signal.aborted ? 'cancelled' : 'runtime-error', message: 'The explanation failed.' })}\n`);
+        response.end(`${JSON.stringify({ type: 'error', code: timedOut ? 'timeout' : controller.signal.aborted ? 'cancelled' : 'runtime-error', message: timedOut ? 'The model did not finish within the request time limit.' : 'The explanation failed.' })}\n`);
       } else {
         const failure = error instanceof ApiError ? error : new ApiError(500, 'request-failed');
         json(response, failure.status, { error: { code: failure.code } });

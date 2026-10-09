@@ -3,6 +3,7 @@ dist/
 coverage/
 .vite/
 .env*
+!.env.example
 *.log
 .DS_Store
 models/

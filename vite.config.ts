@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  // Application credentials belong exclusively to the Node host.
+  envDir: false,
   server: {
     host: '127.0.0.1',
     port: 5173,

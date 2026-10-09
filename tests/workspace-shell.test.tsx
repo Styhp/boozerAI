@@ -56,8 +56,8 @@ describe('workspace shell (S1)', () => {
   it('lists every indexed file in the tree, with parse-error and gap flags', () => {
     const html = render();
     expect(html.match(/class="ws-tree-row is-file"/g)).toHaveLength(13);
-    expect(html).toContain('title="broken.ts"><span class="ws-tree-name">broken.ts</span><span class="ws-flag is-error">parse error</span>');
-    expect(html).toContain('title="report.ts"><span class="ws-tree-name">report.ts</span><span class="ws-flag is-gap">2 gaps</span>');
+    expect(html).toContain('title="broken.ts" data-hover-id="broken.ts"><span class="ws-tree-name">broken.ts</span><span class="ws-flag is-error">parse error</span>');
+    expect(html).toContain('title="report.ts" data-hover-id="report.ts"><span class="ws-tree-name">report.ts</span><span class="ws-flag is-gap">2 gaps</span>');
     expect(html).toContain('<span class="ws-tree-name">utils</span>');
   });
 
@@ -73,6 +73,14 @@ describe('workspace shell (S1)', () => {
     const html = render({ cloudSends: 2 });
     expect(html).not.toContain('On this computer');
     expect(html.match(/<span class="ws-loc is-external">2 requests sent online<\/span>/g)).toHaveLength(2);
+  });
+
+  it('draws the force graph with its legend and hint under the 300-node cap (S2)', () => {
+    const html = render();
+    expect(html).toContain('<canvas role="img" aria-label="Graph of files and their imports. Use the file tree for a keyboard-friendly list."></canvas>');
+    expect(html).toContain('<span>Bigger dot = more files use it (not more important)</span>');
+    expect(html).toContain('<div class="ws-graph-hint">Point at a dot to see what it connects to · click to open it</div>');
+    expect(html).not.toContain('Folder or path filter');
   });
 
   it('shows Refresh and Close project only with a project server', () => {

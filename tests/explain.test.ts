@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { DependencyGraph } from '../src/shared/contracts.js';
 import { PROMPT_VERSION, type ExplanationEvent } from '../src/shared/explanation.js';
 import { extractDependencies } from '../src/shared/extractor.js';
@@ -46,6 +46,26 @@ async function collect(events: AsyncIterable<ExplanationEvent>) {
 }
 
 describe('ModelAdapter', () => {
+  it('classifies a deadline during streamed body reads as timeout rather than runtime failure', async () => {
+    const deadline = new AbortController();
+    const timer = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(deadline.signal);
+    let streaming!: () => void;
+    const started = new Promise<void>((resolve) => { streaming = resolve; });
+    const fetch = async (_url: string, init?: RequestInit) => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        init!.signal!.addEventListener('abort', () => controller.error(new DOMException('body aborted', 'AbortError')), { once: true });
+        streaming();
+      },
+    }));
+    try {
+      const chunks = (async () => {
+        for await (const _ of createOllamaAdapter({ fetch }).stream([])) { /* drain */ }
+      })();
+      await started;
+      deadline.abort(new DOMException('deadline', 'TimeoutError'));
+      await expect(chunks).rejects.toMatchObject({ code: 'timeout' });
+    } finally { timer.mockRestore(); }
+  });
   it('talks only to the fixed loopback endpoint with fixed, capped settings and no redirects', async () => {
     const ollama = fakeOllama({ chat: answer('ok [S1]') });
     const adapter = createOllamaAdapter({ fetch: ollama.fetch });

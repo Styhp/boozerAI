@@ -4,31 +4,56 @@ import type { NoteCreateBody, NoteEditBody, NotesResponse } from '../../shared/n
 import type { FileResponse, GraphResponse, SessionResponse } from '../../shared/project-api';
 import { readExplanationEvents } from './explanation-stream';
 import { sha256Hex, type NotesSource, type ProjectSource } from './project-source';
+import { isRepoChatRequest, type RepoChatRequest } from '../../shared/repo-chat';
 
 export class ProjectApiError extends Error {
   constructor(readonly status: number, readonly code: string) { super(`Project request failed: ${code}`); }
 }
 
-export function takeCapability(location: Pick<Location, 'hash' | 'pathname' | 'search'>, history: Pick<History, 'replaceState'>): string | null {
+type CapabilityStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+const CAPABILITY_KEY = 'boozer.local-capability';
+
+export function clearCapability(storage?: CapabilityStorage, expected?: string): void {
+  try {
+    // A late response from an old connection cannot erase a newly launched session.
+    if (expected === undefined || storage?.getItem(CAPABILITY_KEY) === expected) storage?.removeItem(CAPABILITY_KEY);
+  } catch { /* Storage can be blocked; never prevent revocation of in-memory authority. */ }
+}
+
+export function takeCapability(location: Pick<Location, 'hash' | 'pathname' | 'search'>, history: Pick<History, 'replaceState'>, storage?: CapabilityStorage): string | null {
   const hash = location.hash;
-  if (hash !== '') history.replaceState(null, '', `${location.pathname}${location.search}`);
-  const params = new URLSearchParams(hash.slice(1));
-  const cap = params.get('cap');
-  return [...params.keys()].length === 1 && cap !== null && /^[0-9a-f]{64}$/.test(cap) ? cap : null;
+  if (hash !== '') {
+    history.replaceState(null, '', `${location.pathname}${location.search}`);
+    clearCapability(storage);
+    const params = new URLSearchParams(hash.slice(1));
+    const cap = params.get('cap');
+    if ([...params.keys()].length !== 1 || cap === null || !/^[0-9a-f]{64}$/.test(cap)) return null;
+    try { storage?.setItem(CAPABILITY_KEY, cap); } catch { /* The launch still works when browser storage is blocked. */ }
+    return cap;
+  }
+  try {
+    const cap = storage?.getItem(CAPABILITY_KEY);
+    if (typeof cap === 'string' && /^[0-9a-f]{64}$/.test(cap)) return cap;
+  } catch { /* No stored authority is available. */ }
+  clearCapability(storage);
+  return null;
 }
 
 type ApiFetch = (input: string, init: RequestInit) => Promise<Response>;
 
-// Capability stays in this closure and is never attached to a URL or stored on disk.
+// Requests use only bearer headers. Local bootstrap retains the launch token in
+// tab-scoped sessionStorage; the server remains the authority for its lifetime.
 export class ProjectConnection {
   #capability: string;
   readonly #fetch: ApiFetch;
+  readonly #onRevoked: () => void;
   #revoked = false;
   #cloud: CloudStatus = { available: false };
 
-  constructor(capability: string, transport: ApiFetch = (input, init) => fetch(input, init)) {
+  constructor(capability: string, transport: ApiFetch = (input, init) => fetch(input, init), onRevoked: () => void = () => undefined) {
     this.#capability = capability;
     this.#fetch = transport;
+    this.#onRevoked = onRevoked;
   }
 
   async request(path: string, method = 'GET', body?: unknown, signal?: AbortSignal): Promise<Response> {
@@ -39,6 +64,7 @@ export class ProjectConnection {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }), ...(signal === undefined ? {} : { signal }),
     });
     if (!response.ok) {
+      if (response.status === 401) this.#revoke();
       let code = 'request-failed';
       try {
         const failure = await response.json() as { error?: { code?: unknown } };
@@ -59,11 +85,26 @@ export class ProjectConnection {
     this.#cloud = session.cloud;
     return session;
   }
+  async resume(): Promise<SessionResponse & { response: GraphResponse | null }> {
+    const session = await this.session();
+    if (session.project?.state !== 'ready') return { ...session, response: null };
+    const response = await (await this.request(`/api/projects/${session.project.id}/graph`)).json() as GraphResponse;
+    if (this.#revoked) throw new ProjectApiError(401, 'revoked');
+    if (response.projectId !== session.project.id) throw new ProjectApiError(409, 'stale-snapshot');
+    return { ...session, response };
+  }
   async confirm(id: string): Promise<GraphResponse> { return (await this.request(`/api/projects/${id}/confirm`, 'POST', {})).json() as Promise<GraphResponse>; }
   async refresh(id: string, snapshotId: string): Promise<GraphResponse> { return (await this.request(`/api/projects/${id}/refresh`, 'POST', { snapshotId })).json() as Promise<GraphResponse>; }
   async close(id: string): Promise<void> {
     try { await this.request(`/api/projects/${id}/close`, 'POST', {}); }
-    finally { this.#revoked = true; this.#capability = ''; }
+    finally { this.#revoke(); }
+  }
+  #revoke(): void {
+    if (this.#revoked) return;
+    this.#revoked = true;
+    this.#capability = '';
+    this.#cloud = { available: false };
+    this.#onRevoked();
   }
 }
 
@@ -178,6 +219,28 @@ export class HttpProjectSource implements ProjectSource {
       const stale = error instanceof ProjectApiError && error.code === 'stale-snapshot';
       const cancelled = signal.aborted || this.#abort.signal.aborted;
       yield { type: 'error', code: cancelled ? 'cancelled' : stale ? 'stale-snapshot' : 'runtime-error', message: cancelled ? 'Explanation cancelled.' : stale ? 'Refresh and select the file again.' : 'Could not request an explanation.' };
+    }
+  }
+
+  async *chat(body: RepoChatRequest, signal: AbortSignal): AsyncIterable<ExplanationEvent> {
+    if (signal.aborted || this.#abort.signal.aborted) { yield { type: 'error', code: 'cancelled', message: 'Chat cancelled.' }; return; }
+    if (!isRepoChatRequest(body) || body.snapshotId !== this.#initialSnapshot
+      || (body.contextPath !== undefined && !this.#response.files.some((entry) => entry.path === body.contextPath))) {
+      yield { type: 'error', code: 'stale-snapshot', message: 'Ask about a file in the current project snapshot.' }; return;
+    }
+    try {
+      const response = await this.#connection.request(`/api/projects/${this.#id}/chat`, 'POST', body, AbortSignal.any([signal, this.#abort.signal]));
+      if (response.body === null || response.headers.get('Content-Type') !== 'application/x-ndjson') throw new Error();
+      for await (const event of readExplanationEvents(response.body)) {
+        if (signal.aborted || this.#abort.signal.aborted) return;
+        yield event;
+      }
+    } catch (error) {
+      const cancelled = signal.aborted || this.#abort.signal.aborted;
+      const stale = error instanceof ProjectApiError && error.code === 'stale-snapshot';
+      const busy = error instanceof ProjectApiError && error.code === 'explanation-running';
+      yield { type: 'error', code: cancelled ? 'cancelled' : stale ? 'stale-snapshot' : 'runtime-error',
+        message: cancelled ? 'Chat cancelled.' : stale ? 'The snapshot changed. Start a new chat.' : busy ? 'Another AI answer is running. Wait for it or cancel it first.' : 'Could not ask the local model.' };
     }
   }
 }

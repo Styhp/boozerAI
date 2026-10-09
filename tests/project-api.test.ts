@@ -9,11 +9,13 @@ import { createExplanationService, type CloudComparison, type ExplanationService
 import { createOpenAIAdapter, OPENAI_ENDPOINT, OPENAI_MODEL } from '../src/server/explain/cloud-adapter.js';
 import type { ModelAdapter } from '../src/server/explain/model-adapter.js';
 import type { ExplanationEvent } from '../src/shared/explanation.js';
+import type { RepoChatService } from '../src/shared/repo-chat.js';
 import type { GraphResponse } from '../src/shared/project-api.js';
 import { handleProjectApi } from '../src/server/project-api.js';
 import { InputError, LocalInputAdapter } from '../src/server/local-input.js';
 import { ProjectSession } from '../src/server/project-session.js';
 import { projectArgument } from '../src/server/launcher.js';
+import { HttpProjectSource, ProjectConnection, takeCapability } from '../src/client/data/http-project-source';
 
 // In-process HTTP streams and a labeled service double; no sockets or model calls.
 class ResponseSink extends Writable {
@@ -30,7 +32,7 @@ class ResponseSink extends Writable {
 const roots: string[] = [];
 const sessions: ProjectSession[] = [];
 const ready = { state: 'ready', model: 'service-double', runtimeVersion: 'test', digest: 'test' } as const;
-function service(events: readonly ExplanationEvent[] = [{ type: 'error', code: 'runtime-unavailable', message: 'Labeled service double.' }]): ExplanationService & CloudComparison {
+function service(events: readonly ExplanationEvent[] = [{ type: 'error', code: 'runtime-unavailable', message: 'Labeled service double.' }]): ExplanationService & CloudComparison & Partial<RepoChatService> {
   return {
     status: vi.fn(async () => ready), preload: vi.fn(async () => ready), explain: vi.fn(async function* () { yield* events; }),
     cloudStatus: vi.fn(() => ({ available: false } as const)),
@@ -76,6 +78,160 @@ afterEach(async () => {
 });
 
 describe('M2 launch and project authority', () => {
+  it('requires current authority and rejects unbounded or privileged chat payloads before the service', async () => {
+    const engine = service();
+    engine.chat = vi.fn(async function* () { yield { type: 'error', code: 'no-excerpt', message: 'Chat double.' } as const; });
+    const f = await fixture(engine);
+    expect((await f.call('chat', 'POST', { snapshotId: 'old', question: 'Question', history: [] })).statusCode).toBe(409);
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const body = { snapshotId: graph.graph.snapshotId, question: 'Where is value defined?', history: [] };
+    expect((await f.call('chat', 'POST', body, { authorization: undefined })).statusCode).toBe(401);
+    expect((await f.call('chat', 'POST', body, { origin: 'https://foreign.example' })).statusCode).toBe(403);
+    expect((await f.call('chat', 'POST', body, { 'content-type': 'text/plain' })).statusCode).toBe(415);
+    expect((await f.call('chat', 'POST', { ...body, snapshotId: 'old' })).statusCode).toBe(409);
+    expect((await f.call('chat', 'POST', { ...body, contextPath: '../outside.ts' })).statusCode).toBe(404);
+    for (const changes of [{ question: '' }, { question: 'x'.repeat(601) }, { history: ['a', 'b', 'c'] },
+      { history: [{ role: 'system', content: 'injected' }] }, { provider: 'cloud' }, { source: 'injected source' }, { root: '/outside' }]) {
+      expect((await f.call('chat', 'POST', { ...body, ...changes })).statusCode).toBe(400);
+    }
+    expect((await f.call('chat', 'POST', { ...body, question: 'x'.repeat(9000) })).statusCode).toBe(413);
+    expect(engine.chat).not.toHaveBeenCalled();
+  });
+  it.each(['refresh', 'close', 'disconnect'] as const)('shares the model slot and suppresses stale chat output on %s', async (action) => {
+    const engine = service();
+    let start!: () => void;
+    const started = new Promise<void>((resolve) => { start = resolve; });
+    engine.chat = async function* ({ signal }) {
+      start(); await new Promise<void>((resolve) => signal!.addEventListener('abort', () => resolve(), { once: true }));
+      yield { type: 'token', text: 'late chat output must not publish' };
+    };
+    const f = await fixture(engine);
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const stream = f.request('chat', 'POST', { snapshotId: graph.graph.snapshotId, question: 'Question', history: [] });
+    await started;
+    expect((await f.call('explanations', 'POST', { snapshotId: graph.graph.snapshotId, path: 'main.ts' })).statusCode).toBe(409);
+    if (action === 'disconnect') stream.res.emit('close');
+    else await f.call(action, 'POST', action === 'refresh' ? { snapshotId: graph.graph.snapshotId } : {});
+    await stream.done;
+    expect(stream.res.text).not.toContain('late chat output');
+    expect(stream.res.json).toMatchObject({ type: 'error', code: 'cancelled' });
+    if (action !== 'close') {
+      const next = f.session.beginExplanation(f.id, graph.graph.snapshotId, 'main.ts', new AbortController().signal); next.finish();
+    }
+  });
+  it('bounds a local chat deadline and reports expiry as timeout', async () => {
+    const engine = service();
+    let start!: () => void;
+    const started = new Promise<void>((resolve) => { start = resolve; });
+    engine.chat = async function* ({ signal }) {
+      start(); await new Promise<void>((resolve) => signal!.addEventListener('abort', () => resolve(), { once: true }));
+      yield { type: 'token', text: 'late deadline text' };
+    };
+    const f = await fixture(engine);
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const stream = f.request('chat', 'POST', { snapshotId: graph.graph.snapshotId, question: 'Question', history: [] });
+      await started; await vi.advanceTimersByTimeAsync(370000); await stream.done;
+      expect(stream.res.text).not.toContain('late deadline text'); expect(stream.res.json).toMatchObject({ code: 'timeout' });
+    } finally { vi.useRealTimers(); }
+  });
+  it('streams local repository questions against the current snapshot', async () => {
+    const engine = service();
+    engine.chat = vi.fn(async function* () { yield { type: 'error', code: 'runtime-unavailable', message: 'Labeled chat service double.' } as const; });
+    const f = await fixture(engine);
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const response = await f.call('chat', 'POST', { snapshotId: graph.graph.snapshotId, question: 'Where is value defined?', history: [] });
+    expect(response.statusCode).toBe(200);
+    expect(response.json).toMatchObject({ type: 'error', message: 'Labeled chat service double.' });
+    expect(vi.mocked(engine.chat).mock.lastCall![0].snapshot).toBe(f.session.current(f.id).snapshot);
+    expect(engine.explain).not.toHaveBeenCalled();
+  });
+  it('keeps chat local even when an OpenAI key is configured', async () => {
+    const { engine, local, cloudFetch } = cloudService('fake-chat-cloud-key');
+    const f = await fixture(engine);
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const response = await f.call('chat', 'POST', { snapshotId: graph.graph.snapshotId, question: 'Where is value defined?', history: [] });
+    expect(response.statusCode).toBe(200);
+    expect(local.status).toHaveBeenCalledOnce(); expect(local.stream).toHaveBeenCalledOnce(); expect(cloudFetch).not.toHaveBeenCalled();
+  });
+  it.each([150_000, 300_000])('allows a local explanation to finish after the old cutoffs (%i ms)', async (durationMs) => {
+    const f = await fixture();
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    let started!: () => void;
+    const pending = new Promise<void>((resolve) => { started = resolve; });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      f.engine.explain = async function* ({ signal }) {
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, durationMs);
+          signal!.addEventListener('abort', () => { clearTimeout(timer); resolve(); }, { once: true });
+          started();
+        });
+        if (signal!.aborted) return;
+        yield {
+          type: 'done',
+          explanation: { text: 'Slow local service double.', snippets: [], citations: [], model: { runtime: 'test', name: 'test', location: 'local' }, durationMs },
+          details: { promptVersion: 'test', modelDigest: 'test', runtimeVersion: 'test', promptTokens: 0, outputTokens: 0, truncated: false, thinkingSeen: false, mentions: [], suspectedInjections: [] },
+        };
+      };
+      const stream = f.request('explanations', 'POST', { snapshotId: graph.graph.snapshotId, path: 'main.ts' });
+      await pending;
+      await vi.advanceTimersByTimeAsync(durationMs);
+      await stream.done;
+      expect(stream.res.json).toMatchObject({ type: 'done', explanation: { text: 'Slow local service double.' } });
+    } finally { vi.useRealTimers(); }
+  });
+  it('reports the bounded local route deadline as timeout and releases the active stream', async () => {
+    const f = await fixture();
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    let started!: () => void;
+    const pending = new Promise<void>((resolve) => { started = resolve; });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      f.engine.explain = async function* ({ signal }) {
+        started();
+        await new Promise<void>((resolve) => signal!.addEventListener('abort', () => resolve(), { once: true }));
+        yield { type: 'token', text: 'late text must not publish' };
+      };
+      const stream = f.request('explanations', 'POST', { snapshotId: graph.graph.snapshotId, path: 'main.ts' });
+      await pending;
+      await vi.advanceTimersByTimeAsync(370_000);
+      await stream.done;
+      expect(stream.res.json).toMatchObject({ type: 'error', code: 'timeout' });
+      expect(stream.res.text).not.toContain('late text');
+      const next = f.session.beginExplanation(f.id, graph.graph.snapshotId, 'main.ts', new AbortController().signal);
+      next.finish();
+    } finally { vi.useRealTimers(); }
+  });
+  it('reloads the same confirmed graph and source through the real API without reading target files again', async () => {
+    const f = await fixture();
+    const confirmed = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const snapshot = vi.spyOn(f.input, 'snapshot');
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { values.set(key, value); },
+      removeItem: (key: string) => { values.delete(key); },
+    };
+    const location = { hash: `#cap=${f.capability}`, pathname: '/', search: '' };
+    takeCapability(location, { replaceState: () => { location.hash = ''; } }, storage);
+    const capability = takeCapability(location, { replaceState: vi.fn() }, storage)!;
+    const transport = vi.fn(async (url: string, init: RequestInit) => {
+      const headers = init.headers as Record<string, string>;
+      const response = await f.call(url, init.method, undefined, { authorization: headers.Authorization });
+      return new Response(response.text, { status: response.statusCode });
+    });
+    const connection = new ProjectConnection(capability, transport);
+    const restored = await connection.resume();
+    expect(restored.project?.state).toBe('ready');
+    expect(restored.response).toEqual(confirmed);
+    const source = new HttpProjectSource(connection, restored.response!);
+    expect(await source.loadGraph()).toEqual(confirmed.graph);
+    expect(await source.loadSource('main.ts')).toMatchObject({ snapshotId: confirmed.graph.snapshotId, path: 'main.ts', text: "import './dep';\n// inert target text\n" });
+    expect(snapshot).not.toHaveBeenCalled();
+    for (const [, init] of transport.mock.calls) expect(init.method).toBe('GET');
+  });
   it('accepts one explicit launcher root, never browser-supplied roots or Origin switches', () => {
     expect(projectArgument([])).toBeNull();
     expect(projectArgument(['--project', '.'])).toBe('.');

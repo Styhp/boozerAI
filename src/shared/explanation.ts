@@ -1,7 +1,10 @@
 import type { Explanation, FilePath, Snippet } from './contracts.js';
 
-// M3 explanation wire types (P-15). Types only, so the browser can import them without
-// any server code. The route streams ExplanationEvent values as NDJSON: one JSON object
+// The HTTP route allows a little additional time for readiness and terminal delivery.
+export const LOCAL_EXPLANATION_TIMEOUT_MS = 360_000;
+
+// M3 explanation wire contracts (P-15), importable without any server code.
+// The route streams ExplanationEvent values as NDJSON: one JSON object
 // per line, Content-Type `application/x-ndjson`.
 
 // v1 (docs/benchmarks/m3-explain-v1-dev-mac.jsonl) had no word limit and hit the 300-token cap.

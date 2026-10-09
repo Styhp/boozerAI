@@ -119,11 +119,17 @@ export class ProjectSession {
   beginExplanation(id: string, snapshotId: string, path: string, signal: AbortSignal) {
     const current = this.current(id, snapshotId);
     if (!current.snapshot.files.some((file) => file.path === path)) throw new ApiError(404, 'invalid-file');
+    return { ...this.beginChat(id, snapshotId, signal), selected: path };
+  }
+
+  // Chat and explanations share the same active-model slot and revocation lifecycle.
+  beginChat(id: string, snapshotId: string, signal: AbortSignal) {
+    const current = this.current(id, snapshotId);
     if (this.#streams.size > 0) throw new ApiError(409, 'explanation-running');
     const controller = new AbortController();
     this.#streams.add(controller);
     return {
-      snapshot: current.snapshot, graph: current.response.graph, selected: path,
+      snapshot: current.snapshot, graph: current.response.graph,
       signal: AbortSignal.any([signal, controller.signal]),
       finish: () => { this.#streams.delete(controller); },
     };

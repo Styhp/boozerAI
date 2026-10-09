@@ -1,23 +1,40 @@
 import { useEffect, useState } from 'react';
 import type { ProjectStatus } from '../shared/project-api';
 import { App } from './App';
-import { HttpProjectSource, ProjectConnection } from './data/http-project-source';
+import { HttpProjectSource, ProjectApiError, ProjectConnection } from './data/http-project-source';
 import { GateCard } from './workspace/GateCard';
 
 type State =
-  | { status: 'loading' | 'closed' | 'empty' }
+  | { status: 'loading' | 'closed' | 'empty' | 'expired' }
   | { status: 'selected'; project: ProjectStatus }
   | { status: 'indexing'; project: ProjectStatus }
   | { status: 'ready'; project: ProjectStatus; source: HttpProjectSource; snapshotId: string }
   | { status: 'failed'; project: ProjectStatus | null; message: string };
 
+export function LaunchHelp() {
+  return <GateCard title="Open Boozer from its launcher.">
+    <p className="bz-read">This tab has no active session. The server may have restarted, the project was closed, or this address was opened in a new tab.</p>
+    <p className="bz-read">From Boozer's terminal, stop the old server with Ctrl+C if it is still running, then run:</p>
+    <div className="bz-snip"><pre>npm start -- --project &lt;folder&gt;</pre></div>
+    <p className="bz-meta">Use the new tab that opens. Refreshing that tab keeps your project connected while the server is running. Development uses npm run dev instead.</p>
+  </GateCard>;
+}
+
 export function ProjectGate({ connection }: { connection: ProjectConnection }) {
   const [state, setState] = useState<State>({ status: 'loading' });
   useEffect(() => {
     let current = true;
-    connection.session().then(
-      ({ project }) => { if (current) setState(project === null ? { status: 'empty' } : { status: 'selected', project }); },
-      (error: unknown) => { if (current) setState({ status: 'failed', project: null, message: String(error) }); },
+    connection.resume().then(
+      ({ project, response }) => {
+        if (!current) return;
+        if (project === null) setState({ status: 'empty' });
+        else if (response !== null) setState({ status: 'ready', project, source: new HttpProjectSource(connection, response), snapshotId: response.graph.snapshotId });
+        else if (project.state === 'indexing') setState({ status: 'failed', project: null, message: 'Boozer is still reading this folder. Wait a moment, then refresh the page again.' });
+        else setState({ status: 'selected', project });
+      },
+      (error: unknown) => { if (current) setState(error instanceof ProjectApiError && error.status === 401
+        ? { status: 'expired' }
+        : { status: 'failed', project: null, message: 'Could not reconnect to Boozer. Check that its server is running, then refresh this tab.' }); },
     );
     return () => { current = false; };
   }, [connection]);
@@ -43,6 +60,7 @@ export function ProjectGate({ connection }: { connection: ProjectConnection }) {
     catch { setState({ status: 'failed', project: null, message: 'Could not confirm server shutdown. Stop the launcher to revoke the session.' }); }
   }
 
+  if (state.status === 'expired') return <LaunchHelp />;
   if (state.status === 'ready') {
     return <App project={state.source} onRefresh={() => void index(state.project, state.snapshotId)} onClose={() => void close(state.project)} />;
   }
