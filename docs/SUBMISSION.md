@@ -1,150 +1,86 @@
-# Submission
+# Submission and disclosures
 
-## Deadline
+Boozer AI helps developers understand unfamiliar or AI-generated JavaScript/TypeScript code through a parser-built dependency graph, source inspection, local explanations, repository chat and potential impact with evidence chains.
 
-**2026-10-10, 10:00 Manila time (PHT, UTC+8)**, which is 2026-10-10 02:00 UTC. The existing brief says no extensions. Deadline, rubric and rules below are carried forward from the baseline; an organizer source has not been supplied for independent verification. The human lead should confirm them before submission.
+## Hackathon rules and submission
 
-- Planning uses Australia/Perth (AWST, UTC+8), the same offset as Manila. The old 14:36 countdown is not a current time estimate.
-- **Schedule.** The human lead decided on 2026-10-09 about 16:25 AWST: maximize build time, keep the 09:00–10:00 buffer, and demo on the MSI (P-2). Claude Code set these times to fit those decisions; the human lead may adjust them. They replace the earlier 05:00 proposal.
+The organizer's **Rules and tools** slide supplied by the human lead allows AI coding tools and open-source models/libraries, requires disclosure of tools, models, frameworks, APIs and existing code/assets, and permits cloud APIs as secondary components. Core Local AI must not depend entirely on cloud AI. The slide also says the project must be substantially built during the hackathon and prohibits help from people outside it. No specific model, OS or hardware is required. This register records known assistance and reuse; the human lead confirms team eligibility and final submission statements.
 
-  | When (UTC+8) | What |
-  |---|---|
-  | Tonight, in parallel with the build | MSI setup and a first run of the current build ([MSI-SETUP.md](MSI-SETUP.md)). An agent drafts the final README and submission answers before the freeze. |
-  | **00:00** | **MSI go/no-go.** If the MSI can't run the app and the local model by now, the demo moves to the Mac, which then needs its own offline rehearsal. |
-  | **06:00** | **Feature freeze.** After this, only fixes for demo-breaking bugs found in rehearsal, until 06:45. |
-  | 06:00–06:20 | Final build onto the MSI; run the tests there. |
-  | 06:20–07:00 | Offline rehearsal on the MSI, with Wi-Fi off. |
-  | 07:00–08:00 | Record the demo video. |
-  | 08:00–09:00 | Publish and submit: make the repo public, post the video on X or LinkedIn, finalize the answers, submit. |
-  | **09:00–10:00** | **Buffer.** No planned work. The 10:00 deadline has no extensions. |
+The existing brief records **2026-10-10, 10:00 Manila/Perth (UTC+8)** as the deadline, a public GitHub repository, a demo video and an X or LinkedIn video post as deliverables. Its rubric is Usefulness 25%, Local AI 25%, Technical execution 20%, Innovation 15%, Product/demo quality 15%. These deadline/deliverable/rubric details were not independently verified from the supplied FAQ slide. The [historical brief](https://github.com/Styhp/boozerAI/blob/a5ece9d6da3eedbd9e6fb585b2565cfd90d2f7e7/docs/SUBMISSION.md) retains the original schedule and checklist.
 
-  The freeze can't move later than 06:00 without cutting rehearsal or recording. About three hours of post-freeze work remain even with the MSI prepared in advance.
-- If a cutoff is missed, the human lead must choose a smaller honest submission or another course; do not assume the whole tutorial can fit. Later roadmap phases remain planned.
-- Public uploads/posts and submission actions require human authorization. An asset being ready does not authorize publishing it.
+Repository: [Styhp/boozerAI](https://github.com/Styhp/boozerAI), branch `feat/graph-workspace`. It was verified private during this documentation cleanup. Pushing this branch does not change visibility or submit the project. Team names, project license, final video/post URLs and submission receipt remain unrecorded here.
 
-## Judging rubric
+## What runs locally
 
-| Criterion | Weight | What the demo must show |
+Project confirmation and bounded source reads, static parsing, dependency graph, source inspection, impact/insights, local file explanations and **Chat Boozer**. Optional user-written notes are saved outside the analyzed repository. Source/graphs and chat answers otherwise stay in memory. Core use after setup does not require a cloud account.
+
+Setup downloads require internet. Optional OpenAI file comparison requires internet, configuration and an explicit send after payload preview. It is never a fallback for local failures. GitHub import, JEV scoring and LangSmith export remain planned, with no installed service/SDK or app traffic to those services.
+
+Local AI matters because repository source can stay on the user's machine and answers remain available without an inference service. Citations expose the source the model saw; they do not guarantee factual accuracy.
+
+## AI assistance used during development
+
+Development assistants are separate from the local model used by the app.
+
+| Tool | Actual contribution | Version record |
 |---|---|---|
-| Usefulness | 25% | A developer gets a checkable answer about unfamiliar code faster than by reading it alone |
-| Local AI | 25% | Explanations generated on-device with networking off, with the model, hardware, and timings stated |
-| Technical execution | 20% | A parser-built graph checked against a known fixture, validated citations, and safe handling of untrusted input |
-| Innovation | 15% | Evidence-bound AI: parser-owned edges, visible explanation snippets and checked citation references, and potential impact with its chain; citation validity does not prove claim correctness |
-| Product and demo quality | 15% | A clear, short journey: open, map, inspect, explain, check impact, verify |
+| Codex (Agent A) | Documentation, scaffold/configuration, parser/resolver, ingestion/authenticated HTTP, integration, independent reviews of Claude-authored work, browser refresh recovery, provider repair, local repository chat, pane tabs/waiting feedback, native folder picker, MSI worktree/graph repairs, local recording preparation, packaging and documentation integration/cleanup | Exact underlying development-model/runtime version not independently recorded |
+| Claude Code (Agent B and separate review sessions) | Initial documentation and working rules/skills, fixture/oracle, UI, local-model measurements, explanation engine/panel, impact and project notes, graph workspace, independent reviews of Codex-authored work | Claude Code 2.1.226 / Claude Opus 5.5 (`claude-opus-5-5`), self-reported on 2026-10-09 |
+| ChatGPT / “boozer” | Product/planning assistance reported by the human lead | Exact model/version not supplied |
+| Claude Design | Human lead's graph-workspace design session on 2026-10-09/10 | Exact version not recorded |
 
-## Required deliverables
+These tools are not dependencies of Boozer's local inference. Commits and the [historical task register](https://github.com/Styhp/boozerAI/blob/a5ece9d6da3eedbd9e6fb585b2565cfd90d2f7e7/docs/TASKS.md) retain development chronology, ownership, reviews and failures.
 
-| Item | Status | Notes |
+## Runtime model and API
+
+| Component | Exact configured version/model | Use and license record |
 |---|---|---|
-| Project name | Done | Boozer AI |
-| Project description | Draft | See draft answers below |
-| Team | Missing | See P-6 |
-| Public GitHub repository | Created, **private** until 08:00 | [Styhp/boozerAI](https://github.com/Styhp/boozerAI). Created by the human lead on 2026-10-09; description and topics set. Kept private on purpose for MSI sync (human lead's decision). `main` first pushed at commit `c3847f2`. The human lead makes it public at 08:00. Still to do: license (P-6). Commit author email stays as is (human lead's decision). |
-| Demo video | Not recorded | The recording/live-demo machine depends on P-2; MSI reliance requires M6 for either use |
-| X or LinkedIn post with the video (URL) | Not posted | |
-| What runs locally | Draft | See below; must match the final build |
-| What requires internet | Draft | See below; must match the final build |
-| Why local AI matters | Draft | See below |
+| Ollama | 0.40.2; loopback `127.0.0.1:11434` | Local runtime for file explanations and chat; MIT per recorded runtime metadata |
+| Qwen | `qwen3:4b-instruct`, Q4_K_M, 4.0B parameters, about 2.5 GB | Actually downloaded and used after approval; Apache-2.0 per recorded `ollama show --license` check |
+| OpenAI API | Configured model `gpt-6-luna`; fixed `https://api.openai.com/v1/chat/completions` endpoint | Optional file comparison using native server-side fetch, no SDK. Exact response model is recorded when returned; configuration alone does not prove live access. Provider terms apply |
 
-## Draft answers
+Boozer verifies the approved local model's full digest:
 
-These describe planned behavior. Revise them to match what was actually built before submitting.
+```text
+0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0
+```
 
-**Description.** Boozer AI helps developers understand unfamiliar or AI-generated JavaScript/TypeScript code. It parses the code to build a dependency map, lets you inspect files, explains selected code with an on-device model that cites the exact source lines it used, and shows which files could be affected by a change.
+The current local adapter uses a 4096-token context and a 300-token output cap. Model/runtime details and historical measurements are in [BENCHMARKS.md](BENCHMARKS.md); benchmark settings can differ from current app settings.
 
-**Runs locally.** Reading the project, parsing, the dependency graph, impact analysis, the UI, and AI explanations. Explanations use a local model whose runtime and model are still to be chosen (S-7).
+## Frameworks, libraries and development tools
 
-**Requires internet.** Setup downloads (app dependencies, runtime if missing, and local model) happen before offline use. Later GitHub input uses the internet for each explicit import. Optional OpenAI/JEV requests (JEV severity and scores are planned for after the hackathon) and optional LangSmith trace export use the internet only when enabled and explicitly requested; they are not prerequisites for local explanations or local evaluation. No such integration is implemented yet.
+The lockfile pins artifacts and integrity hashes. [DEPENDENCIES.json](DEPENDENCIES.json) records **89 locked package/license entries**, including optional packages for platforms not installed on the Mac. This is a metadata inventory, not a legal assessment.
 
-**Why local AI matters.** The code people most need help understanding is often private, and many teams aren't allowed to send it to a cloud service. A local model lets developers ask about that code without it leaving their machine. It also works offline and costs nothing per request. The planned design provides parsed facts and source snippets and checks citation references. This reduces unsupported references; it does not guarantee that model claims are correct.
-
-## Rules
-
-- AI coding tools and open-source components are allowed but must be disclosed.
-- The project must be substantially built during the hackathon. Our commit history is the evidence, so commit regularly once git is initialized.
-- External human help is prohibited.
-- Write original code and design; do not copy tutorial implementations or assets. No reused external code/assets have been identified in the current documentation-only workspace. Disclose any later reuse with source, license and exact usage; do not invent copying claims.
-
-## Disclosure register: actual assistance and use
-
-Record actual contributions as they occur. Development assistants are separate from runtime models. Unknown versions/model identities stay unknown until verified; do not substitute a proposed runtime model for a development assistant's identity.
-
-| Item | Category | Version / source | Actual contribution | License / terms record | Added (date, by) |
-|---|---|---|---|---|---|
-| Claude Code | AI development tool | Claude Code 2.1.226 running Claude Opus 5.5 (`claude-opus-5-5`), self-reported 2026-10-09 | Initial README, AGENTS.md, CLAUDE.md and project documentation baseline (M0); agent working rules and project skills (0.3). Independent proposal review 0.2 completed; scaffold review 1.2 remains pending | Tool/provider terms | 2026-10-09, Codex reconciliation; version and 0.3 added by Claude Code |
-| ChatGPT / boozer | AI planning assistance | As identified by human lead; exact model/version and transcript not supplied | Product/planning assistance reported by human lead; no runtime integration implied | Tool/provider terms; model identity unverified | 2026-10-09, Codex at human request |
-| Ollama | Local model runtime | v0.40.2, official GitHub release `ollama-darwin.tgz`, checksum verified; installed in `~/.local/opt/ollama-v0.40.2` on the dev Mac | Installed and server verified on loopback, for task 1.6. No Boozer code uses it yet | MIT (Homebrew formula metadata; confirm in the release's LICENSE) | 2026-10-09, Claude Code after human approval |
-| Codex (Agent A) | AI development tool | Current Codex session; exact underlying model version not independently recorded | Read project docs; reconciled roadmap, proposed stack/interfaces/security/storage, delivery gates, hardware plan and disclosure register; checked public technical documentation and local document consistency. Task 1.1 adds original static server/client scaffold, pinned configuration, offline tests, C1 contracts and C4 layout specification. Task 0.3 independent review and C6 recheck completed; C5 dev-proxy Origin correction with tests; independent fixture/oracle review and 1.4 claim. No parser/analysis implementation or model inference in this session; independent C5 recheck remains separate | Tool/provider terms | 2026-10-09, Codex |
-| Athelstan design tokens | Reused design values (P-20) | The human lead's private repository `athelstan-platform` @ `962f69d` (tokens.css, glass-tokens.css) | Colour, spacing, radius, glass and shadow values copied into [tokens.json/tokens.css](design/graph-workspace/assets/tokens.json) for the graph-workspace redesign, which was designed in the human lead's Claude Design session. No components, icons, fonts, logo or wallpapers reused | The human lead confirmed on 2026-10-10 that they own `athelstan-platform` and approve reusing its token values in Boozer | 2026-10-10, Claude Code at human request |
-
-**Additional Codex assistance, M2-RELOAD (2026-10-10).** Original tab-session recovery and ready-graph reconnection in the graph-workspace checkout, 17 browser-lifecycle regressions and one real-API reload regression, matching docs, and actual local browser refresh/source verification. Full offline suite 312/0/0 and typecheck/build pass. No new package, external asset or cloud call; independent review remains separate. Only the local launcher capability is kept in tab-scoped sessionStorage; source, graphs and AI answers are not saved there.
-
-Task 1.1 installs the direct packages below for the scaffold. No application cloud service or model inference is used. Reading public documentation is research, not an application cloud integration. Add exact package/runtime versions, sources and licenses when actually installed or used. The checked-in package-lock.json pins direct/transitive artifacts with integrity hashes; [DEPENDENCIES.json](DEPENDENCIES.json) records all 89 locked package/license entries, including optional binaries for other platforms. 65 packages were added on the Intel Mac; uninstalled optional records do not claim local execution. Installation uses --ignore-scripts. All 89 records have license metadata; this is metadata inventory, not a legal assessment.
-
-## Scaffold dependencies and tools actually used (1.1, Codex, 2026-10-09)
-
-| Item | Exact version | Contribution / source | License metadata |
+| Component | Version | Role | License metadata |
 |---|---|---|---|
-| Node.js | 24.16.0, pre-existing | Runtime, HTTP server, file/child-process primitives; nodejs.org | MIT plus bundled third-party notices |
-| npm | 11.13.0, pre-existing | Package install and lockfile; npmjs.com | Artistic-2.0 |
-| Git | 2.39.5 (Apple Git-154), pre-existing | Local history only; git-scm.com | GPL-2.0 |
-| TypeScript | 6.0.3 | Strict typecheck/server compilation; parser API reserved for 1.4; npm registry `typescript` | Apache-2.0 |
-| React / React DOM | 19.3.0 / 19.3.0 | Original static client shell; npm registry `react`, `react-dom` | MIT |
-| React Flow | @xyflow/react 12.12.0 | Installed S-5 canvas dependency; no map implemented yet; npm registry | MIT |
-| Vite | 8.3.4 | Local UI build/dev server; npm registry | MIT |
-| Vitest | 5.0.3 | Offline scaffold tests and separate model entry; npm registry | MIT |
-| @types/node | 24.19.1 | Node declarations; npm registry | MIT |
-| @types/react / @types/react-dom | 19.3.0 / 19.3.0 | Client declarations; npm registry | MIT |
+| Node.js | 24.16.0 | HTTP server and app runtime | MIT plus bundled third-party notices |
+| npm | 11.13.0 | Package installation and lockfile | Artistic-2.0 |
+| Git | 2.39.5 (Apple Git-154), recorded Mac version | Source history | GPL-2.0 |
+| TypeScript | 6.0.3 | Compiler API parser, typechecking and compilation | Apache-2.0 |
+| React / React DOM | 19.3.0 / 19.3.0 | Client UI | MIT |
+| React Flow (`@xyflow/react`) | 12.12.0 | Retained map component/dependency; current force-graph bundle excludes it | MIT |
+| Vite | 8.3.4 | Development server and client build | MIT |
+| Vitest | 5.0.3 | Offline and separate real-model tests | MIT |
+| `@types/node` | 24.19.1 | Node declarations | MIT |
+| `@types/react` / `@types/react-dom` | 19.3.0 / 19.3.0 | React declarations | MIT |
 
-No external snippet, tutorial implementation, design or asset was copied. The C4 layout is an original specification; no layout library was added. Package licenses/versions come from registry and lock metadata. Official Vite/Vitest compatibility and React Flow layout documentation were consulted; local command evidence is in TASKS.md.
+The graph workspace uses an original plain-TypeScript force engine without an additional layout package. No model creates dependency edges.
 
-## Runtime models: proposed versus actually used
+## Existing code and assets
 
-| State | Model/runtime | Purpose and evidence |
-|---|---|---|
-| Downloaded on the dev Mac 2026-10-09 (human-approved); benchmarked in 1.6 and integrated for explicit local explanations | Ollama v0.40.2 + `qwen3:4b-instruct` | Full digest `0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0`, Q4_K_M, 4.0B parameters, 2.5 GB, Apache-2.0 per `ollama show --license`. Setup in the TASKS.md 1.6 record. Mac results and wider injection failures in [BENCHMARKS.md](BENCHMARKS.md). |
-| Proposed fallback only | `qwen2.5-coder:1.5b` | Consider only if first test fails quality/latency/memory requirements; separate download approval and exact variant verification required. |
-| Actually used as Boozer AI runtime | Ollama v0.40.2 + `qwen3:4b-instruct` (same digest above), local | Codex's authenticated local stream is independently Approved in M2; Agent B's local service/panel is Approved with C9 after grounding/file-name fixes in [M3 review](reviews/2026-10-09-m3-engine-panel.md). Native app-route smoke over Boozer's own snapshot completed with explain-v3 and hash-bound snippets; [M2 evidence](M2-WIRING-HANDOFF.md). P-18 later changed the prompt to explain-v4 (plain words first); its dev-Mac real-model run is in [BENCHMARKS.md](BENCHMARKS.md), and the MSI has not rerun it. Two wider injection tests still fail; no MSI/offline demo clearance or secondary cloud integration claim. Development-tool assistance above is separate. |
+**Athelstan design tokens:** colour, spacing, radius, glass and shadow values come from the human lead's private `athelstan-platform` repository at `962f69d` (`tokens.css`, `glass-tokens.css`). The human lead confirmed ownership and approved reuse on 2026-10-10. Values are used in [Boozer's tokens](../src/client/styles/tokens.css). No Athelstan components, icons, fonts, logo or wallpapers were reused.
 
-Official references checked 2026-10-09: [Ollama macOS requirements](https://docs.ollama.com/macos) lists x86 CPU-only support on macOS 14+; [Qwen candidate listing](https://ollama.com/library/qwen3:4b-instruct) supplies tag/size/quantization and an Apache-2.0 license label. Verify the actual downloaded artifact/license at authorized setup. Size is not a RAM estimate or a speed claim.
+**Reference consulted:** Claude Code read the planning/agent-workflow files of `adrianhajdin/cartograph` on the human lead's request, 2026-10-09. Working-rule ideas were rewritten in our own words. No code, text, skills or assets were copied; no license was present when checked. This is reference consultation rather than reused implementation.
 
-## Stack and later integrations
+No other pre-existing code/asset reuse is identified in the current register. The project license remains the human lead's open decision (P-6).
 
-- Local scaffold packages are recorded above. The parser and Ollama integration remain planned. The demo keeps snapshots, graphs and results in memory. The only disk write is opt-in project notes (P-17), saved in the app data folder outside the analyzed project; other local persistence is later M8 hardening.
-- Secondary cloud: OpenAI and JEV, both off by default and subject to explicit cloud approval. JEV service identity/API/data terms remain unresolved (P-11).
-- Optional tracing: LangSmith, off by default. Traces can expose prompts/snippets, outputs, tool inputs/results, identifiers, timing, model settings/token usage, errors and metadata. Only an explicit previewed/redacted export may transmit data. See [ARCHITECTURE.md](ARCHITECTURE.md) for the proposed payload controls. Local traces and evaluations do not require LangSmith.
+## Validation and remaining submission checks
 
-## Reused code and assets
+[Benchmarks](BENCHMARKS.md) retain measured performance and failures. In particular, two wider injection phrasings still fail; warning detection and valid citations do not make the model safe or correct. Historical MSI Vulkan measurements do not establish readiness of this new graph/chat revision or recorder/offline rehearsal.
 
-None identified or introduced in this documentation task. Codex consulted official documentation for compatibility and design facts; it did not copy an implementation or assets. No tutorial source or asset was imported. Record source, license, adapted portions and where used if reuse occurs later; acknowledge the AI documentation/planning assistance above independently of code reuse.
+- [ ] Human: confirm organizer deadline/deliverables, team eligibility and project license.
+- [ ] Human: rehearse the actual final machine with networking off and recorder/display workload; show real local output and honest measured timing.
+- [ ] Human: approve any repository visibility change or public video/social publication, then record working links and submission receipt.
+- [ ] Reviewer: independently review the graph-workspace/reload/provider/chat changes listed in [TASKS.md](TASKS.md).
 
-**Athelstan design tokens (P-20, 2026-10-10).** The graph-workspace redesign reuses colour, spacing, radius, glass and shadow values from the human lead's own `athelstan-platform` repository, with the owner's approval. See the register row above.
-
-**References consulted, not reused.** On 2026-10-09, at the human lead's request, Claude Code read the agent-workflow and planning files of [adrianhajdin/cartograph](https://github.com/adrianhajdin/cartograph): `CLAUDE.md`, `AGENTS.md`, `docs/project-doc.md`, all ten `docs/specs/` phase specs, and the `.agents/skills` + `.claude/skills` symlink layout. Engineering lessons from the specs are queued as 0.2 review findings in TASKS.md, written in our own words. Some working-rule ideas were rewritten in our own words in AGENTS.md (0.3): fresh-context orientation, agent versus human checks, not weakening checks, "absent beats approximate", and single code paths for risky capabilities. No text, code, specs, skills or assets were copied. The repository published no license when checked, so its contents must not be copied.
-
-## Hardware and demo evidence
-
-- Development spec supplied by human lead: Intel macOS 15.7.7, i5-8500B, 32 GB RAM. CPU inference is the proposed first test; no timings have been measured here.
-- Possible demo machine: MSI Bravo 15, Ryzen 5, 16 GB RAM, RX 5500, ParrotOS. Exact OS/CPU/driver/runtime details and GPU acceleration are unverified.
-- **M6 must pass before relying on MSI for either recording or live demonstration.** Test the actual display/recorder workload. A successful Mac test does not clear the MSI, and a successful recording check does not automatically clear an untested live setup.
-- Every benchmark must state date, machine, OS, runtime version, exact model tag/digest and quantization, conditions and measured results including failures. Never infer GPU acceleration from hardware specifications.
-
-## Final submission checklist (not completed)
-
-- [ ] Human lead confirms organizer rules/deadline/rubric and team/license (P-6).
-- [ ] Implemented and verified capabilities replace planned language in final answers; unfinished roadmap items stay visibly planned.
-- [ ] Full offline model-free suite and separate real local-model evaluation results are recorded; failures and limitations disclosed.
-- [ ] Chosen machine passes the offline demo rehearsal; M6 passes for each intended MSI use or MSI is not relied on.
-- [ ] Video shows real local inference with networking off, model/runtime/hardware attribution and measured timing.
-- [ ] Actual AI assistance, package licenses, runtime models and any reused code/assets are disclosed separately from proposals.
-- [ ] Tested setup/run commands and local-versus-internet behavior match the delivered build.
-- [ ] Human authorizes publication; repository, video and required social post exist and their links work.
-- [ ] Human submits by the 09:00 target, verifies receipt and records actual time; 10:00 deadline buffer is retained or any miss explicitly reported.
-
-**Additional Codex assistance, M2-AI-REPAIR (2026-10-10).** Brought the already approved server-only M2-ENV loader/startup/tests and Vite env isolation into the graph-workspace checkout; privately reused only the human’s existing app configuration in its ignored owner-only env file. Extended the bounded local model deadline to six minutes with ten seconds of HTTP grace after retaining a failed three-minute browser run on the heavily loaded dev Mac; corrected streamed timeout classification/waiting copy, with offline regressions and local browser checks. No new dependency, model, external asset or cloud transmission. This is runtime repair rather than benchmark or injection-resistance evidence; final gates and actual local-model outcome are recorded in TASKS.md.
-
-**Additional Codex assistance, M3-CHAT (2026-10-10).** Original local repository question/answer chat: bounded lexical retrieval of current snapshot source, a separate repo-chat-v1 prompt, the existing local ModelAdapter/validators/escaped renderer, authenticated streaming API, in-memory transcript and chat pane/ribbon integration. No new dependency, external source/asset, runtime/model download, cloud request, tool loop or persisted transcript. Source references are checked, not proof of claim correctness; deterministic search and prompt-injection limitations remain. Actual terminal/browser/model outcomes and pending independent review are recorded in TASKS.md.
-
-**Additional Codex assistance, M3-CHAT-TABS (2026-10-10).** Human-requested visible Details / Repo chat tabs above the right pane, preservation of the last details view when switching, keyboard tab navigation and original token-based styling. No new dependency, external asset, model/API change, cloud request or saved transcript. Validation and the pending independent review are recorded in TASKS.md.
-
-**Additional Codex assistance, M3-CHAT-FEEDBACK (2026-10-10).** Human-requested Chat Boozer naming, immediate Thinking/Replying waiting feedback beside each active answer and initially collapsed source excerpts in the shared answer renderer. Original UI-only changes and existing display-check updates; no prompt, model/runtime, retrieval, API, deadline, dependency, external asset, cloud transmission or persistence change. Actual verification and pending independent review are recorded in TASKS.md.
+The complete original submission checklist, including unresolved checks, remains in the versioned historical brief linked above; none is represented as completed by this cleanup.

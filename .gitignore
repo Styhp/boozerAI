@@ -11,3 +11,12 @@ models/
 *.ggml
 *.safetensors
 *.onnx
+
+# Historical development records retained locally, outside the current GitHub tree.
+docs/benchmarks/
+docs/design/
+docs/reviews/
+docs/*-HANDOFF.md
+docs/M6-MSI.md
+docs/MSI-SETUP.md
+docs/SUBMISSION-DRAFT.md

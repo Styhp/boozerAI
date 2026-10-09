@@ -1,59 +1,53 @@
-# One-minute MSI demo
+# One-minute demo
 
-The human lead requested a **60-second video**, initially with natural AI narration; the human then chose a **silent version for now** when no API key was configured on 2026-10-10 (UTC+8). This replaces the earlier 3–4-minute storyboard. M7 publication and submission remain with the human lead.
+Record the actual app and local model. Use the actual MSI setup and the checks below; previous recording evidence does not clear the merged revision or Wi-Fi-off rehearsal. Runtime/model attribution and limitations belong in the video description and [submission disclosures](SUBMISSION.md).
 
-## Current production
+## Prepare
 
-Codex (MSI demo session) recorded the real production app at application commit `8d52d37`, opening Boozer AI's own repository. Footage and production files are local at `/home/boozer/Videos/BoozerAI/`; video binaries and credentials do not belong in Git. The screen capture uses installed Chromium on an isolated X11 display and ffmpeg at 1920×1080, 30 fps, without desktop audio.
+Stop only the identified previous Boozer server with Ctrl-C in its terminal; keep Ollama running. In the trusted Boozer checkout, with the local model already available:
 
-The app reads the chosen folder through its normal input/parser/session routes. Chat runs through the real local model adapter, using Ollama 0.40.2 and `qwen3:4b-instruct` on the MSI. No fake model replies, substituted source text or graph edges are used.
+```sh
+cd ~/boozer-ai
+export PATH="$HOME/.local/opt/node-v24.16.0-linux-x64/bin:$HOME/.local/opt/ollama-v0.40.2/bin:$PATH"
+npm test
+npm run build
+npm start -- --project .
+```
 
-## Narration
+Use the launcher's new tab. Do not confirm the folder until recording starts. To demonstrate another repository, replace `.` with its folder. **Choose folder** and **Open another folder** are also implemented; every new selection requires confirmation.
 
-> Ever opened a codebase and had no idea where to start? Meet Boozer AI.
->
-> Open a local project, and its imports become an interactive map. Pick a file to explore the code and the connections around it.
->
-> Got a question? Just ask Boozer. Here, we're asking which errors the folder picker can report. The answer streams from a model running right here on this laptop.
->
-> And you don't have to take its word for it. Click a citation to jump straight to the source lines. You can also see which files might be affected by a change, and follow the imports behind that connection.
->
-> That's Boozer AI: a way into unfamiliar code, with the evidence right beside you.
+## Recording sequence
 
-The exact text and speech request are prepared in `narration.txt` and `speech-request.json` in the local video directory. The proposed voice was OpenAI Cedar, with conversational delivery directions. The human approved the narration-only cloud request, but the generator stopped locally because this device had neither the ignored `.env` nor an exported key. **No cloud request was sent.** The human then requested the silent version. If narration is added later, use the already prepared request and put **AI-generated narration** visibly in that version. The current silent cut contains action captions and no audio track.
+| Time | Action | Suggested narration |
+|---|---|---|
+| 0–10 s | Click **Read this folder**; let indexing finish | “Boozer reads a repository locally and builds this map from parsed imports.” |
+| 10–20 s | Select a file, inspect source and relationships | “Each relationship comes from code, and I can inspect its source.” |
+| 20–30 s | Open **Chat Boozer** and ask about a named function in the selected file | “I can ask the local model about the code. Thinking shows that it is working.” |
+| 30–45 s | Show the streamed answer; expand **Code the AI was shown**, then open a citation | “These are the source excerpts the model saw, with links back to the lines.” |
+| 45–55 s | Show potential impact and an import chain | “These files could be affected through their imports. This is potential impact.” |
+| 55–60 s | Close on the graph | “The graph and chat work locally. Checked citations help me verify answers, but do not guarantee correctness.” |
 
-## Storyboard
+Generation may exceed the available minute. If editing out waiting time, label the cut with the actual duration from that take; do not speed up footage or use a canned answer as live inference. Show Thinking/Replying honestly. Rehearse one narrow question before recording. A timeout or incorrect answer is not a successful local-AI demonstration.
 
-| Approximate time | Actual footage |
-|---|---|
-| 0–4.5 s | Recorded confirmation and reading state for the chosen local project |
-| 4.5–17.8 s | Recorded animated graph, hover/click, selected folder-picker file and chat navigation |
-| 17.8–25.1 s | Type the question and show the entire real local generation wait |
-| 25.1–31.7 s | Finished answer, source-link caution, model/runtime and 4.0-second label |
-| 31.7–38.5 s | Click the citation; inspect highlighted constructor source |
-| 38.5–44.2 s | Potentially affected files and the incompleteness warning |
-| 44.2–49.13 s | Click the import-evidence link and inspect its highlighted source |
-| 49.13–60 s | Recorded graph hover/drag/movement with closing caption |
+The written description should identify the actual machine, Ollama 0.40.2, `qwen3:4b-instruct` / Q4_K_M, AI development tools and Athelstan token reuse. Disclose that two of five wider injection phrasings failed in recorded tests; see [BENCHMARKS.md](BENCHMARKS.md). Only claim networking-off operation or GPU performance if measured in the recorded setup.
 
-The entire video is app footage: **no slides, screenshots, freeze frames or sped-up generation**. Editing joins three actual X11 recordings, adds action captions, and gently zooms toward the chat/source pane for readability. The main 44.63-second take remains continuous, including its entire generation wait.
+## Rehearse before the take
 
-## Rehearsal evidence and limits
+1. Complete GitHub sync while online. Use the newly opened launcher tab and click **Read this folder**. Confirm the graph and missing-analysis counts appear.
+2. Start the recorder. Disable Wi-Fi and any other internet connection; retain loopback/Ollama. Show the network indicator and run `curl -sS --connect-timeout 3 --max-time 5 https://example.com` in a terminal. It must fail. A browser-only network block does not establish system-wide offline operation.
+3. Click a file dot, then a visible faded dot elsewhere: Details must change to each file. Hover, drag, zoom and Fit graph. For an over-cap project, choose a small folder or search; a complete subset under 300 nodes should animate, and Clear should restore the full list.
+4. Select `src/server/folder-picker.ts`. In **Chat Boozer**, ask **Which error codes are declared in FolderPickerError? Answer in one sentence.** Observe **Thinking…**, then **Replying…**, then a completed local answer. Record the displayed duration from this take; do not borrow earlier timings.
+5. Check the five codes against the constructor: `picker-unavailable`, `picker-busy`, `picker-timeout`, `picker-failed`, `cancelled`. Expand **Code the AI was shown**, click the valid citation and inspect the highlighted source. Returning to Chat Boozer should retain the answer. Inspect potential impact and an import-evidence link.
+6. Refresh the same browser tab while the server stays running: the graph reconnects without confirmation; chat clears as documented. Rehearse once more after refresh before the real take. Check source/captions at recording resolution and free memory during generation (`free -h`). Keep raw footage and failed takes.
 
-The chosen question is: **Which error codes are declared in FolderPickerError? Answer in one sentence.** The focused rehearsal returned all five literal constructor codes and one valid citation. Clicking that citation highlighted lines 2–13 of `src/server/folder-picker.ts`, including the constructor. Its UI showed 7.8 seconds while ffmpeg was recording; this is an observed rehearsal duration, not a formal M6 benchmark or a general latency claim.
+If any answer is incorrect, truncated, times out or follows an injected instruction, record that failure and retry a suitable narrow question; do not edit failure into success. Two of five wider injection phrasings remain known failures. Agent browser checks are implementation evidence; human acceptance and independent review are separate.
 
-Discarded rehearsal: asking what happens when a user cancels the picker produced a misleading error-vs-null explanation despite valid citation links. A second broad error-code question included unsupported absence claims beyond its correct list. Neither answer belongs in the final cut. The actual take was checked: its answer lists exactly the five constructor codes with one valid `[S1]` citation, highlights lines 2–13, and displays 4.0 seconds. The impact panel lists three direct importing files, then the clicked chain opens the import in `src/server/project-session.ts`.
+## Previous recording, preserved locally
 
-Wi-Fi remains on: the human could not disable it. This video must not claim a Wi-Fi-off rehearsal, injection resistance, complete analysis, guaranteed impact, or submission readiness. Existing M6 gates and independent review statuses remain open. The graph's incompleteness warnings and the answer's citation caution remain visible; a valid source link is not proof that an AI claim is correct.
+The pre-merge MSI handoff reports `/home/boozer/Videos/BoozerAI/BoozerAI-demo-60s-silent.mp4`: 60 seconds, 1920×1080, 30 fps, H.264, no audio. It includes an uninterrupted local generation wait, a five-code answer with `[S1]`, highlighted `folder-picker.ts` lines 2–13 and an import-source click. The recorded UI displayed 4.0 seconds; an earlier focused rehearsal displayed 7.8 seconds. These are historical take observations, not current measurements or general latency claims.
 
-## Delivery checks
+Raw footage, captions and edit metadata remain in that local video directory. The earlier narration generator failed its missing-key precheck; no speech API call was sent and the human chose silent delivery. Discarded rehearsals included an incorrect cancellation explanation and unsupported absence claims. Wi-Fi remained on; human viewing remains pending. The [full earlier demo record](https://github.com/Styhp/boozerAI/blob/8042c07/docs/DEMO.md) and [handoff](https://github.com/Styhp/boozerAI/blob/8042c07/docs/TASKS.md#m7-demo-handoff--codex-msi-demo-session-2026-10-10-utc8) preserve details. No video publication is authorized by this integration task.
 
-- Verify the actual take's entire answer against the constructor and click its citation.
-- Check final video duration, resolution, codecs, absence of an audio track for this silent version, and representative frames.
-- Preserve raw footage and metadata for the human lead.
-- Human acceptance covers readability and final viewing. Voice naturalness is unverified because no voice was generated.
-- Do not upload, publish, push, or mark the complete M7 submission done without separate authorization.
+## This integration check
 
-
-## Rendered artifact
-
-`/home/boozer/Videos/BoozerAI/BoozerAI-demo-60s-silent.mp4`: 60.000000 seconds, 1,800 frames, 1920×1080, 30 fps, H.264, 6,166,453 bytes, no audio stream. Full decode succeeded and representative final frames were inspected. Companion captions: `BoozerAI-demo-60s.srt`. Raw recordings and edit metadata remain in the same local folder. Human viewing acceptance remains pending.
+The merged MSI source passed 383 offline tests and the build. The compiled app was checked in installed Chromium: graph clicks including faded nodes, hover/pan/zoom/Fit, Thinking/Replying, a correct five-code local answer, citation lines 2–13 and same-tab refresh all passed. The local answer displayed 7.2 seconds with Ollama 0.40.2 / qwen3:4b-instruct / Q4_K_M; this is a single UI observation. **Wi-Fi was enabled and no recorder was running.** Repeat the numbered rehearsal with the actual recorder and internet disabled before claiming an offline recording. See TASKS.md for commands, evidence and probe failures.

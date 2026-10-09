@@ -32,7 +32,9 @@ Skills follow this file. If a skill and AGENTS.md conflict, AGENTS.md wins; fix 
 
 ## Current phase
 
-The project has a human-authorized scaffold in task 1.1. Proposal review 0.2 is Approved for 1.1 with conditions, now all resolved. Scaffold review 1.2 is **Approved with condition C5** (dev-proxy Origin, before M2/M3 API routes), so the fixture (1.3), UI (1.5) and local-model (1.6) tracks may start. Each still needs its owner to claim it in TASKS.md. Codex (Agent A) owns scaffolding/integration; Claude Code (Agent B) reviews Codex's work and owns the tracks assigned in TASKS.md. Runtime installation and model downloads need specific human approval; separately approved Mac setup is recorded in TASKS.md. This scaffold authorization does not authorize later feature work or additional runtime/model downloads.
+The local app is implemented on `feat/graph-workspace`. Baseline parser, ingestion/authenticated HTTP, local explanation engine and impact have independent review records. The graph-workspace/C4 amendment and reload/provider/chat extensions remain pending independent review; full latest-revision MSI/offline/recording acceptance is open. [TASKS.md](docs/TASKS.md) lists current owners/status and links to the preserved original acceptance checks, handoffs and review log.
+
+The human lead authorized this public-documentation cleanup and push of the existing graph branch. That authorization does not authorize new features, repository visibility changes, cloud calls, additional runtime/model downloads or system installation. Existing separately approved runtime/model setup remains in the historical task record.
 
 ## Task ownership
 
