@@ -5,7 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ExplanationService } from '../src/server/explain/index.js';
+import { createExplanationService, type CloudComparison, type ExplanationService } from '../src/server/explain/index.js';
+import { createOpenAIAdapter, OPENAI_ENDPOINT, OPENAI_MODEL } from '../src/server/explain/cloud-adapter.js';
+import type { ModelAdapter } from '../src/server/explain/model-adapter.js';
 import type { ExplanationEvent } from '../src/shared/explanation.js';
 import type { GraphResponse } from '../src/shared/project-api.js';
 import { handleProjectApi } from '../src/server/project-api.js';
@@ -28,10 +30,23 @@ class ResponseSink extends Writable {
 const roots: string[] = [];
 const sessions: ProjectSession[] = [];
 const ready = { state: 'ready', model: 'service-double', runtimeVersion: 'test', digest: 'test' } as const;
-function service(events: readonly ExplanationEvent[] = [{ type: 'error', code: 'runtime-unavailable', message: 'Labeled service double.' }]): ExplanationService {
-  return { status: vi.fn(async () => ready), preload: vi.fn(async () => ready), explain: vi.fn(async function* () { yield* events; }) };
+function service(events: readonly ExplanationEvent[] = [{ type: 'error', code: 'runtime-unavailable', message: 'Labeled service double.' }]): ExplanationService & CloudComparison {
+  return {
+    status: vi.fn(async () => ready), preload: vi.fn(async () => ready), explain: vi.fn(async function* () { yield* events; }),
+    cloudStatus: vi.fn(() => ({ available: false } as const)),
+    previewCloud: vi.fn(() => ({ type: 'error', code: 'cloud-unavailable', message: 'No cloud provider is configured for this launch.' } as const)),
+  };
 }
-async function fixture() {
+function cloudService(key = '') {
+  const local: ModelAdapter = {
+    status: vi.fn(async () => ready), preload: vi.fn(async () => ready),
+    stream: vi.fn(async function* () { throw new Error('The local model must not run during preview.'); }),
+  };
+  const cloudFetch = vi.fn(async (_url: string, _init?: RequestInit): Promise<Response> => { throw new Error('The cloud must not run during preview or a mismatching send.'); });
+  const engine = createExplanationService(local, createOpenAIAdapter({ apiKey: key, fetch: cloudFetch }));
+  return { engine, local, cloudFetch };
+}
+async function fixture(engine = service()) {
   const root = await mkdtemp(join(await realpath(tmpdir()), 'boozer-api-'));
   roots.push(root);
   await writeFile(join(root, 'main.ts'), "import './dep';\n// inert target text\n");
@@ -41,7 +56,6 @@ async function fixture() {
   const session = new ProjectSession(input, 'Inert test project');
   sessions.push(session);
   const capability = new URLSearchParams(new URL(session.launchUrl(false)).hash.slice(1)).get('cap')!;
-  const engine = service();
   const id = input.projectId;
   const request = (action: string, method = 'GET', value?: unknown, headers: Record<string, string | undefined> = {}, development = false) => {
     const req = Readable.from(value === undefined ? [] : [Buffer.from(typeof value === 'string' ? value : JSON.stringify(value))]) as unknown as IncomingMessage;
@@ -71,7 +85,7 @@ describe('M2 launch and project authority', () => {
     const f = await fixture();
     const read = vi.spyOn(f.input, 'snapshot');
     const status = await f.call('/api/session');
-    expect(status.json).toEqual({ project: { id: f.id, label: 'Inert test project', state: 'selected' } });
+    expect(status.json).toEqual({ project: { id: f.id, label: 'Inert test project', state: 'selected' }, cloud: { available: false } });
     expect(status.text).not.toContain(f.root);
     expect(status.text).not.toContain(f.capability);
     expect((await f.call('graph')).statusCode).toBe(409);
@@ -82,7 +96,7 @@ describe('M2 launch and project authority', () => {
   it('rejects missing/wrong capabilities on every read, write and unknown API', async () => {
     const f = await fixture();
     for (const authorization of [undefined, 'Bearer wrong', `bearer ${f.capability}`, `Bearer ${f.capability} `]) {
-      for (const [path, method] of [['/api/session', 'GET'], ['graph', 'GET'], ['confirm', 'POST'], ['refresh', 'POST'], ['close', 'POST'], ['explanations', 'POST'], ['/api/unknown', 'GET']]) {
+      for (const [path, method] of [['/api/session', 'GET'], ['graph', 'GET'], ['confirm', 'POST'], ['refresh', 'POST'], ['close', 'POST'], ['explanations', 'POST'], ['explanations/preview', 'POST'], ['/api/unknown', 'GET']]) {
         const response = await f.call(path!, method!, {}, { authorization });
         expect(response.statusCode).toBe(401);
       }
@@ -212,8 +226,6 @@ describe('authorized ExplanationService transport', () => {
     expect((await f.call('explanations', 'POST', { ...body, snapshotId: 'old' })).json).toEqual({ error: { code: 'stale-snapshot' } });
     expect((await f.call('explanations', 'POST', { ...body, path: '../private.ts' })).json).toEqual({ error: { code: 'invalid-file' } });
     expect(f.engine.explain).not.toHaveBeenCalled();
-    expect((await f.call('explanations/preview', 'POST', { snapshotId: body.snapshotId, path: body.path })).statusCode).toBe(404);
-    expect((await f.call('/api/session')).json).not.toHaveProperty('cloud');
   });
   it('streams service events as NDJSON without changing parser graph', async () => {
     const f = await fixture();
@@ -261,5 +273,158 @@ describe('authorized ExplanationService transport', () => {
     expect(aborted).toBe(true);
     expect(stream.res.text).not.toContain(f.root);
     expect(stream.res.json).toMatchObject({ type: 'error', code: 'cancelled' });
+  });
+});
+
+describe('P-16 authenticated cloud preview transport', () => {
+  const key = 'sk-fake-route-test-key-never-real';
+  it('publishes only safe cloud status after authorization without reading source or calling a model', async () => {
+    const { engine, local, cloudFetch } = cloudService(key);
+    const f = await fixture(engine);
+    const read = vi.spyOn(f.input, 'snapshot');
+    const status = vi.spyOn(engine, 'cloudStatus');
+    expect((await f.call('/api/session', 'GET', undefined, { authorization: undefined })).statusCode).toBe(401);
+    expect(status).not.toHaveBeenCalled();
+    const response = await f.call('/api/session');
+    expect(response.json).toEqual({ project: f.session.descriptor(), cloud: { available: true, provider: 'OpenAI', model: OPENAI_MODEL, endpoint: OPENAI_ENDPOINT } });
+    for (const secret of [key, f.capability, f.root, 'DO NOT READ']) expect(response.text).not.toContain(secret);
+    expect(status).toHaveBeenCalledTimes(1);
+    expect(read).not.toHaveBeenCalled();
+    expect(local.status).not.toHaveBeenCalled();
+    expect(local.preload).not.toHaveBeenCalled();
+    expect(cloudFetch).not.toHaveBeenCalled();
+  });
+  it('returns the exact preview object from the current in-memory snapshot without sending or rereading files', async () => {
+    const { engine, local, cloudFetch } = cloudService(key);
+    const f = await fixture(engine);
+    const indexed = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const current = f.session.current(f.id);
+    const before = JSON.stringify(current);
+    const expected = engine.previewCloud({ snapshot: current.snapshot, graph: current.response.graph, selected: 'main.ts' });
+    if (expected.type !== 'preview') throw new Error('Expected an offline preview.');
+    const preview = vi.spyOn(engine, 'previewCloud');
+    const read = vi.spyOn(f.input, 'snapshot');
+    await writeFile(join(f.root, 'main.ts'), 'CHANGED ON DISK AFTER SNAPSHOT');
+    const response = await f.call('explanations/preview', 'POST', { snapshotId: indexed.graph.snapshotId, path: 'main.ts' });
+    expect(response.statusCode).toBe(200);
+    expect(response.json).toEqual(expected.preview);
+    expect(response.headers.get('Content-Type')).toBe('application/json; charset=utf-8');
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    const received = preview.mock.lastCall![0];
+    expect(received.snapshot).toBe(current.snapshot);
+    expect(received.graph).toBe(current.response.graph);
+    expect(received.selected).toBe('main.ts');
+    expect(received.signal).toBeInstanceOf(AbortSignal);
+    expect(response.json.payloadJson).toContain('inert target text');
+    for (const secret of [key, f.capability, f.root, 'DO NOT READ', 'CHANGED ON DISK']) expect(response.text).not.toContain(secret);
+    expect(JSON.stringify(current)).toBe(before);
+    expect(read).not.toHaveBeenCalled();
+    expect(local.status).not.toHaveBeenCalled();
+    expect(local.stream).not.toHaveBeenCalled();
+    expect(cloudFetch).not.toHaveBeenCalled();
+  });
+  it('requires token, exact Origin/JSON, exact body, project and current snapshot before previewing', async () => {
+    const f = await fixture();
+    const preview = vi.mocked(f.engine.previewCloud);
+    expect((await f.call('explanations/preview', 'POST', { snapshotId: 'old', path: 'main.ts' })).json).toEqual({ error: { code: 'not-indexed' } });
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const body = { snapshotId: graph.graph.snapshotId, path: 'main.ts' };
+    expect((await f.call('explanations/preview', 'POST', body, { authorization: undefined })).statusCode).toBe(401);
+    for (const origin of [undefined, 'null', 'http://evil.example', 'http://127.0.0.1:5173', 'http://localhost:4173']) {
+      expect((await f.call('explanations/preview', 'POST', body, { origin })).statusCode).toBe(403);
+    }
+    expect((await f.call('explanations/preview', 'POST', body, { 'content-type': 'text/plain' })).statusCode).toBe(415);
+    expect((await f.call('explanations/preview', 'POST', 'x'.repeat(8_193))).statusCode).toBe(413);
+    for (const value of [{}, { snapshotId: body.snapshotId }, { ...body, path: '' }, { ...body, snapshotId: null }, { ...body, provider: 'cloud' }, { ...body, previewHash: 'a'.repeat(64) }, { ...body, root: f.root }, [], 'null', '{']) {
+      const response = await f.call('explanations/preview', 'POST', value);
+      expect(response.statusCode).toBe(400);
+      expect(response.json).toEqual({ error: { code: 'invalid-body' } });
+    }
+    expect((await f.call(`/api/projects/${randomUUID()}/explanations/preview`, 'POST', body)).json).toEqual({ error: { code: 'invalid-project' } });
+    expect((await f.call('explanations/preview', 'POST', { ...body, snapshotId: 'old' })).json).toEqual({ error: { code: 'stale-snapshot' } });
+    expect((await f.call('explanations/preview?x=y', 'POST', body)).statusCode).toBe(400);
+    expect((await f.call('explanations/preview', 'GET')).statusCode).toBe(405);
+    expect(preview).not.toHaveBeenCalled();
+    // The dev exception remains explicit, with the same production Host restriction in app.ts.
+    expect((await f.call('explanations/preview', 'POST', body, { origin: 'http://127.0.0.1:5173' }, true)).json).toEqual({ error: { code: 'cloud-unavailable' } });
+    expect(preview).toHaveBeenCalledTimes(1);
+  });
+  it('maps unavailable, invalid-selection, no-excerpt and stale-snapshot errors without model calls', async () => {
+    for (const configured of [false, true]) {
+      const { engine, local, cloudFetch } = cloudService(configured ? key : '');
+      const f = await fixture(engine);
+      await writeFile(join(f.root, 'long.ts'), `//${'x'.repeat(20_000)}\n`);
+      const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+      const body = { snapshotId: graph.graph.snapshotId, path: 'main.ts' };
+      const unavailable = await f.call('explanations/preview', 'POST', body);
+      expect(unavailable.statusCode).toBe(configured ? 200 : 404);
+      if (!configured) expect(unavailable.json).toEqual({ error: { code: 'cloud-unavailable' } });
+      if (configured) {
+        for (const path of ['../private.ts', '/etc/passwd', 'credentials.ts', '%2e%2e/private.ts']) {
+          const response = await f.call('explanations/preview', 'POST', { ...body, path });
+          expect(response.statusCode).toBe(400);
+          expect(response.json).toEqual({ error: { code: 'invalid-selection' } });
+        }
+        const noExcerpt = await f.call('explanations/preview', 'POST', { ...body, path: 'long.ts' });
+        expect(noExcerpt.statusCode).toBe(400);
+        expect(noExcerpt.json).toEqual({ error: { code: 'no-excerpt' } });
+      }
+      const stale = await f.call('explanations/preview', 'POST', { ...body, snapshotId: 'old' });
+      expect(stale.statusCode).toBe(409);
+      expect(stale.json).toEqual({ error: { code: 'stale-snapshot' } });
+      expect(local.status).not.toHaveBeenCalled();
+      expect(local.stream).not.toHaveBeenCalled();
+      expect(cloudFetch).not.toHaveBeenCalled();
+    }
+  });
+  it('rejects a mismatching confirmed hash before any model call and passes the fixed service message unchanged', async () => {
+    const { engine, local, cloudFetch } = cloudService(key);
+    const f = await fixture(engine);
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const response = await f.call('explanations', 'POST', { snapshotId: graph.graph.snapshotId, path: 'main.ts', provider: 'cloud', previewHash: 'a'.repeat(64) });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('application/x-ndjson');
+    expect(response.json).toEqual({ type: 'error', code: 'preview-mismatch', message: 'The request differs from the preview you confirmed. Preview it again before sending.' });
+    expect(local.status).not.toHaveBeenCalled();
+    expect(local.stream).not.toHaveBeenCalled();
+    expect(cloudFetch).not.toHaveBeenCalled();
+  });
+  it('sends the exact preview payload only on an explicit matching-hash explanation, using a fake provider', async () => {
+    const { engine, local, cloudFetch } = cloudService(key);
+    const f = await fixture(engine);
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const body = { snapshotId: graph.graph.snapshotId, path: 'main.ts' };
+    const preview = (await f.call('explanations/preview', 'POST', body)).json;
+    expect(cloudFetch).not.toHaveBeenCalled();
+    cloudFetch.mockResolvedValueOnce(new Response([
+      `data: ${JSON.stringify({ model: 'reported-model-double', choices: [{ delta: { content: 'It imports dep.ts [S1].' }, finish_reason: null }] })}\n\n`,
+      `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] })}\n\n`,
+      'data: [DONE]\n\n',
+    ].join('')));
+    const response = await f.call('explanations', 'POST', { ...body, provider: 'cloud', previewHash: preview.previewHash });
+    expect(response.statusCode).toBe(200);
+    const events: ExplanationEvent[] = response.text.trim().split('\n').map((line) => JSON.parse(line));
+    expect(events.map((event) => event.type)).toEqual(['snippets', 'token', 'done']);
+    expect(events.at(-1)).toMatchObject({ type: 'done', explanation: { model: { location: 'cloud', name: 'reported-model-double' } } });
+    expect(cloudFetch).toHaveBeenCalledTimes(1);
+    expect(cloudFetch.mock.calls[0]).toEqual([OPENAI_ENDPOINT, expect.objectContaining({ body: preview.payloadJson, redirect: 'error', signal: expect.any(AbortSignal) })]);
+    expect(response.text).not.toContain(key);
+    expect(local.status).not.toHaveBeenCalled();
+    expect(local.stream).not.toHaveBeenCalled();
+  });
+  it('invalidates previews on refresh/close and sanitizes unexpected preview exceptions', async () => {
+    const f = await fixture();
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const body = { snapshotId: graph.graph.snapshotId, path: 'main.ts' };
+    vi.mocked(f.engine.previewCloud).mockImplementationOnce(() => { throw new Error(`private exception: ${f.root}`); });
+    const failed = await f.call('explanations/preview', 'POST', body);
+    expect(failed.statusCode).toBe(500);
+    expect(failed.json).toEqual({ error: { code: 'request-failed' } });
+    await writeFile(join(f.root, 'main.ts'), 'export const changed = 1;\n');
+    await f.call('refresh', 'POST', { snapshotId: body.snapshotId });
+    expect((await f.call('explanations/preview', 'POST', body)).json).toEqual({ error: { code: 'stale-snapshot' } });
+    await f.call('close', 'POST', {});
+    expect((await f.call('explanations/preview', 'POST', body)).statusCode).toBe(401);
+    expect(f.engine.previewCloud).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,5 +1,5 @@
 import type { DependencyGraph } from '../../shared/contracts';
-import type { ExplanationEvent, ExplainRequestBody } from '../../shared/explanation';
+import type { CloudPreview, CloudStatus, ExplanationEvent, ExplainRequestBody } from '../../shared/explanation';
 import type { FileResponse, GraphResponse, SessionResponse } from '../../shared/project-api';
 import { readExplanationEvents } from './explanation-stream';
 import { sha256Hex, type ProjectSource } from './project-source';
@@ -23,6 +23,7 @@ export class ProjectConnection {
   #capability: string;
   readonly #fetch: ApiFetch;
   #revoked = false;
+  #cloud: CloudStatus = { available: false };
 
   constructor(capability: string, transport: ApiFetch = (input, init) => fetch(input, init)) {
     this.#capability = capability;
@@ -48,7 +49,15 @@ export class ProjectConnection {
     return response;
   }
 
-  async session(): Promise<SessionResponse> { return (await this.request('/api/session')).json() as Promise<SessionResponse>; }
+  get cloudStatus(): CloudStatus { return this.#revoked ? { available: false } : this.#cloud; }
+
+  async session(): Promise<SessionResponse> {
+    const session = await (await this.request('/api/session')).json() as SessionResponse;
+    if (this.#revoked) throw new ProjectApiError(401, 'revoked');
+    // Availability is fixed at launch. Cache the authenticated status for each source.
+    this.#cloud = session.cloud;
+    return session;
+  }
   async confirm(id: string): Promise<GraphResponse> { return (await this.request(`/api/projects/${id}/confirm`, 'POST', {})).json() as Promise<GraphResponse>; }
   async refresh(id: string, snapshotId: string): Promise<GraphResponse> { return (await this.request(`/api/projects/${id}/refresh`, 'POST', { snapshotId })).json() as Promise<GraphResponse>; }
   async close(id: string): Promise<void> {
@@ -60,6 +69,7 @@ export class ProjectConnection {
 export class HttpProjectSource implements ProjectSource {
   readonly isPreview = false;
   readonly label: string;
+  readonly cloud?: NonNullable<ProjectSource['cloud']>;
   readonly #connection: ProjectConnection;
   readonly #id: string;
   readonly #initialSnapshot: string;
@@ -72,9 +82,42 @@ export class HttpProjectSource implements ProjectSource {
     this.#id = response.projectId;
     this.#initialSnapshot = response.graph.snapshotId;
     this.label = response.label;
+    if (connection.cloudStatus.available) {
+      this.cloud = {
+        status: async () => this.#abort.signal.aborted ? { available: false } : connection.cloudStatus,
+        preview: (body) => this.#previewCloud(body),
+      };
+    }
   }
 
   revoke(): void { this.#abort.abort(); }
+
+  async #previewCloud(body: ExplainRequestBody): Promise<CloudPreview> {
+    if (this.#abort.signal.aborted) throw new Error('Cloud preview cancelled.');
+    if (body.snapshotId !== this.#initialSnapshot || !this.#response.files.some((entry) => entry.path === body.path)) {
+      throw new Error('Refresh and select the file again.');
+    }
+    try {
+      const response = await this.#connection.request(`/api/projects/${this.#id}/explanations/preview`, 'POST',
+        { snapshotId: body.snapshotId, path: body.path }, this.#abort.signal);
+      const preview = await response.json() as CloudPreview;
+      if (this.#abort.signal.aborted) throw new Error();
+      if (!this.#connection.cloudStatus.available) throw new ProjectApiError(401, 'revoked');
+      return preview;
+    } catch (error) {
+      if (this.#abort.signal.aborted) throw new Error('Cloud preview cancelled.');
+      const messages: Readonly<Record<string, string>> = {
+        'cloud-unavailable': 'No cloud provider is configured for this launch.',
+        'stale-snapshot': 'Refresh and select the file again.',
+        'invalid-selection': 'Select a source file in the current snapshot.',
+        'no-excerpt': 'No exact excerpt of this file fits the explanation budget, so nothing was sent.',
+        'unauthorized': 'The project session has ended. Restart the launcher.',
+        'revoked': 'The project session has ended. Restart the launcher.',
+      };
+      const message = error instanceof ProjectApiError && Object.hasOwn(messages, error.code) ? messages[error.code] : undefined;
+      throw new Error(message ?? 'Could not preview the cloud request.');
+    }
+  }
 
   async loadGraph(): Promise<DependencyGraph> {
     const result = await this.#connection.request(`/api/projects/${this.#id}/graph`, 'GET', undefined, this.#abort.signal);
