@@ -1,7 +1,7 @@
 import { isBuiltin } from 'node:module';
 import type { EdgeTarget, FilePath, FileSkip, SnapshotFile } from './contracts.js';
 
-export const RESOLVER_VERSION = 'snapshot-relative-v1';
+export const RESOLVER_VERSION = 'snapshot-relative-v2';
 const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'] as const;
 
 /** A text/path index only: no compiler host, filesystem lookup or target config. */
@@ -43,10 +43,9 @@ export class SnapshotResolver {
     candidates.push(...extensions.map((extension) => `${path === '' ? '' : `${path}/`}index${extension}`));
     for (const candidate of candidates) {
       if (this.#files.has(candidate)) return { type: 'file', path: candidate };
+      const reason = this.#skips.get(candidate);
+      if (reason !== undefined) return { type: 'excluded', path: candidate, reason };
     }
-    // The hand-written oracle permits exclusion only for an exact inventoried entry.
-    const reason = this.#skips.get(path);
-    return reason === undefined ? { type: 'unresolved', reason: 'not-found' }
-      : { type: 'excluded', path, reason };
+    return { type: 'unresolved', reason: 'not-found' };
   }
 }

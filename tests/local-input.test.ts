@@ -376,6 +376,29 @@ describe('untrusted input exclusions and bounds', () => {
     expect(graph.coverage.imports).toMatchObject({ seen: 1, excluded: 1, failed: 0 });
   });
 
+  it('reports native exclusions through extensionless, JS-mapped and directory-index imports', async () => {
+    const root = await folder();
+    await put(root, 'main.ts', ["import './credentials';", "import './data.js';", "import './vendor';", "import './large';"].join('\n'));
+    await put(root, 'credentials.ts', 'DO_NOT_READ_PRIVATE_CONTENT');
+    await put(root, 'data.ts', Buffer.from([0]));
+    await put(root, 'vendor/index.ts', Buffer.from([0]));
+    await put(root, 'large.ts', Buffer.alloc(DEFAULT_SNAPSHOT_LIMITS.maxFileBytes + 1, 32));
+    const adapter = await selected(root);
+    const result = await adapter.snapshot(adapter.projectId, { analysisKey: ANALYSIS_KEY });
+    const graph = extractDependencies(result);
+    expect(graph.edges.map(({ target }) => target)).toEqual([
+      { type: 'excluded', path: 'credentials.ts', reason: 'secret-name' },
+      { type: 'excluded', path: 'data.ts', reason: 'binary' },
+      { type: 'excluded', path: 'vendor/index.ts', reason: 'binary' },
+      { type: 'excluded', path: 'large.ts', reason: 'oversize' },
+    ]);
+    expect(graph.coverage.files).toMatchObject({ found: 5, parsed: 1, skipped: 4 });
+    expect(graph.coverage.imports).toMatchObject({ seen: 4, excluded: 4, failed: 0 });
+    expect(JSON.stringify(result)).not.toContain('DO_NOT_READ_PRIVATE_CONTENT');
+    expect(vi.mocked(open).mock.calls.map(([path]) => path)).not.toContain(join(root, 'credentials.ts'));
+    expect(vi.mocked(open).mock.calls.map(([path]) => path)).not.toContain(join(root, 'large.ts'));
+  });
+
   it('accepts exactly the per-file cap and counts oversize candidates against the whole-run file cap', async () => {
     const root = await folder();
     await put(root, 'exact.js', Buffer.alloc(DEFAULT_SNAPSHOT_LIMITS.maxFileBytes, 32));

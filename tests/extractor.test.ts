@@ -104,8 +104,32 @@ describe('literal resolution and unsupported outcomes', () => {
     }, [{ path: 'skipped', reason: 'ignored' }]);
     expect(extractDependencies(snapshot).edges.map(({ target }) => target)).toEqual([
       { type: 'file', path: 'exact.js' }, { type: 'file', path: 'extension.ts' }, { type: 'file', path: 'typed.ts' },
-      { type: 'file', path: 'folder/index.ts' }, { type: 'file', path: 'skipped.ts' },
+      { type: 'file', path: 'folder/index.ts' }, { type: 'excluded', path: 'skipped', reason: 'ignored' },
     ]);
+  });
+
+  it('checks skips at every extension, JS-to-TS and index candidate in the same precedence order', () => {
+    const graph = extractDependencies(memorySnapshot({
+      'main.ts': ["import './credentials';", "import './data.js';", "import './folder';", "import './large';",
+        "import './shadow';", "import './collision';", "import './later';", "import './missing';"].join('\n'),
+      'shadow.tsx': '', 'later.ts': '',
+    }, [
+      { path: 'credentials.ts', reason: 'secret-name' }, { path: 'data.ts', reason: 'binary' },
+      { path: 'folder/index.ts', reason: 'unreadable' }, { path: 'large.ts', reason: 'oversize' },
+      { path: 'shadow.ts', reason: 'oversize' }, { path: 'collision.ts', reason: 'case-collision' },
+      { path: 'later.tsx', reason: 'binary' },
+    ]));
+    expect(graph.edges.map(({ target }) => target)).toEqual([
+      { type: 'excluded', path: 'credentials.ts', reason: 'secret-name' },
+      { type: 'excluded', path: 'data.ts', reason: 'binary' },
+      { type: 'excluded', path: 'folder/index.ts', reason: 'unreadable' },
+      { type: 'excluded', path: 'large.ts', reason: 'oversize' },
+      { type: 'excluded', path: 'shadow.ts', reason: 'oversize' },
+      { type: 'excluded', path: 'collision.ts', reason: 'case-collision' },
+      { type: 'file', path: 'later.ts' }, { type: 'unresolved', reason: 'not-found' },
+    ]);
+    expect(graph.coverage.imports).toMatchObject({ seen: 8, resolved: 1, excluded: 6, failed: 1 });
+    assertCoverage(graph);
   });
 
   it('does not guess missing/excluded files or aliases; rejects absolute/root escapes', () => {
