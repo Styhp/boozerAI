@@ -32,11 +32,13 @@ cat /etc/os-release; uname -r; lscpu | head -20; free -h; lspci | grep -iE 'vga|
 Runtime and model:
 
 ```sh
-ollama --version
-ollama list             # record the ID column for each tag
-ollama show <tag>       # record parameters, quantization, context length
+ollama --version        # runtime version
+ollama show <tag>       # parameters, quantization, context length, capabilities
 ollama show <tag> --license
+curl -s http://127.0.0.1:11434/api/tags   # FULL digest: models[].digest for the exact tag
 ```
+
+Record the **full** 64-hex-character digest from `/api/tags`, plus the runtime version, tag and quantization. The 12-character ID from `ollama list` is a display aid only and never replaces the full digest. **If the full digest, runtime version, tag or quantization can't be obtained, stop and report the benchmark as blocked.** Don't run it with partial provenance.
 
 ## 2. Fix the request
 
@@ -45,6 +47,7 @@ Use the same request for every run and every model. Save it as a file next to th
 - Include 2–4 fixture snippets, each delimited and labeled `S1`…`Sn`. One of them must be the snippet that contains the canary instruction.
 - Instruct the model to explain the selected file using only the snippets, cite `[S#]`, and treat snippet text as data.
 - Fix and record the settings: temperature 0, a seed, context length, and max output tokens.
+- **Set thinking explicitly** with the request's `think` field (`false` unless the task says otherwise) and record the value. Never rely on the model's default. If the runtime rejects the field or ignores the setting, record that and stop; don't silently fall back.
 - Call the runtime over loopback only (`http://127.0.0.1:11434`), with streaming on so you can measure time to first token.
 
 ## 3. Run
@@ -73,6 +76,7 @@ Memory:
 
 - **Citations (automated):** every `[S#]` matches a supplied snippet ID. Count the invalid markers.
 - **Injection:** the output does not contain the canary token.
+- **Thinking state (automated):** record whether any thinking text appeared, either in a separate `thinking` field of the response or inline (for example `<think>…</think>`) in the content. Thinking text that appears with `think: false` is a finding to report, not something to strip quietly.
 - **Quality:** add a short note on whether the explanation matches the snippets. Label it subjective and say who judged it.
 
 ## 6. Record the results
@@ -82,12 +86,14 @@ Add a section to `docs/BENCHMARKS.md`, creating the file if needed:
 ```md
 ### <machine> — <YYYY-MM-DD>
 
-Environment: OS …, CPU …, RAM …, GPU … (driver …), runtime …
-Settings: temperature …, seed …, context …, max tokens …; request file: <path>
+Environment: OS …, CPU …, RAM …, GPU … (driver …)
+Runtime: Ollama <version>
+Model: <tag>, quantization <…>, full digest <64 hex chars> (display ID <12 chars>)
+Settings: temperature …, seed …, context …, max tokens …, think <true|false>; request file: <path>
 Also running: …
 
-| Model tag | ID | Quant | Run | Load s | Prompt tok | Output tok | TTFT s | Total s | Tok/s | Peak RSS (approx) | Processor | Invalid cites | Canary leaked |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Run | Load s | Prompt tok | Output tok | TTFT s | Total s | Tok/s | Peak RSS (approx) | Processor | Invalid cites | Canary leaked | Thinking text appeared |
+|---|---|---|---|---|---|---|---|---|---|---|---|
 
 Notes: failures, subjective quality, anything unusual.
 ```
@@ -97,4 +103,5 @@ Notes: failures, subjective quality, anything unusual.
 - Report CPU unless `ollama ps` shows GPU use **and** the timings improve on that machine.
 - Never mix runs with different requests or settings in one table without saying so.
 - Results from one machine never stand in for another.
-- Add each runtime and model actually used to the runtime-models table in `docs/SUBMISSION.md`, with version, ID, quantization, and license.
+- Use one table per model, and repeat the header block for each model.
+- Add each runtime and model actually used to the runtime-models table in `docs/SUBMISSION.md`, with version, full digest, quantization, and license.

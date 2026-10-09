@@ -72,6 +72,7 @@ Later phases remain on the roadmap even if they miss the hackathon. In particula
 | P-8 | LangSmith is optional and off by default; local evaluation remains possible. | Trace payloads can contain code, prompts, outputs, and metadata; explicit export consent is required. |
 | P-9 | Test the MSI before relying on it for recorded or live demos. | Neither suitability nor GPU acceleration has been verified. |
 | P-10 | Phase A splits into demo-critical and **[Hardening]** tiers (TASKS.md, 0.2 condition C2). The demo must show real parser and real local-model output: never mocked, canned or pre-recorded. (Human lead, 2026-10-09, after 0.2.) | Hardening items (persistence, race detection, content secret scanning, the evaluation report, dashboard/rail/insights) produce no demo output and remove no judged capability. Real output is a submission rule. |
+| P-2 | **The MSI Bravo 15 is the demo machine.** (Human lead, 2026-10-09, about 16:25 AWST.) M6 must pass for each use, recording and live. The Mac is the fallback only after its own offline rehearsal, decided at the 00:00 MSI go/no-go (SUBMISSION.md). | The human lead's choice. MSI setup runs tonight in parallel with the build, so it doesn't consume post-freeze time. Steps are in [MSI-SETUP.md](MSI-SETUP.md). |
 | P-12 | Severity and scores are in scope as an optional JEV cloud feature, **deferred until after the hackathon**, with space reserved in the design. (Human lead, 2026-10-09, in a later Claude Code session.) | JEV is the candidate for structured decisions, but its API is unknown (P-11) and the consent, preview and guardrail work doesn't fit the remaining time. |
 
 ### P-12 guardrails (proposed by Claude Code; Codex reviews in 0.3)
@@ -89,7 +90,6 @@ Later phases remain on the roadmap even if they miss the hackathon. In particula
 
 | ID | Question | Proposed default | Decide by |
 |---|---|---|---|
-| P-2 | Which machine records or presents the demo? | Use MSI only after M6 passes for that use. Otherwise use the Mac only after its own rehearsal passes. | Before booking or recording either demo |
 | P-3 | File-level or selected-range explanations first? | File-level first; ranges remain later scope. | Before M3 |
 | P-5 | Acceptable CPU latency? | Provisional, unmeasured target: first token within 10 s and complete answer within 60 s. Record failures honestly; tune only after measurement. | After 1.6 and before the demo |
 | P-6 | Team names and repository license? | Human lead supplies team list and chooses license. | Before publication |

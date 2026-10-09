@@ -5,7 +5,20 @@
 **2026-10-10, 10:00 Manila time (PHT, UTC+8)**, which is 2026-10-10 02:00 UTC. The existing brief says no extensions. Deadline, rubric and rules below are carried forward from the baseline; an organizer source has not been supplied for independent verification. The human lead should confirm them before submission.
 
 - Planning uses Australia/Perth (AWST, UTC+8), the same offset as Manila. The old 14:36 countdown is not a current time estimate.
-- Proposed internal cutoffs on **2026-10-10 UTC+8**, pending human acceptance: feature freeze **05:00**; machine/rehearsal decision **06:00**; video and assets ready **08:00**; submission target **09:00**. This leaves **one hour before the 10:00 deadline** and five hours after feature freeze for verification/recording/packaging.
+- **Schedule.** The human lead decided on 2026-10-09 about 16:25 AWST: maximize build time, keep the 09:00–10:00 buffer, and demo on the MSI (P-2). Claude Code set these times to fit those decisions; the human lead may adjust them. They replace the earlier 05:00 proposal.
+
+  | When (UTC+8) | What |
+  |---|---|
+  | Tonight, in parallel with the build | MSI setup and a first run of the current build ([MSI-SETUP.md](MSI-SETUP.md)). An agent drafts the final README and submission answers before the freeze. |
+  | **00:00** | **MSI go/no-go.** If the MSI can't run the app and the local model by now, the demo moves to the Mac, which then needs its own offline rehearsal. |
+  | **06:00** | **Feature freeze.** After this, only fixes for demo-breaking bugs found in rehearsal, until 06:45. |
+  | 06:00–06:20 | Final build onto the MSI; run the tests there. |
+  | 06:20–07:00 | Offline rehearsal on the MSI, with Wi-Fi off. |
+  | 07:00–08:00 | Record the demo video. |
+  | 08:00–09:00 | Publish and submit: make the repo public, post the video on X or LinkedIn, finalize the answers, submit. |
+  | **09:00–10:00** | **Buffer.** No planned work. The 10:00 deadline has no extensions. |
+
+  The freeze can't move later than 06:00 without cutting rehearsal or recording. About three hours of post-freeze work remain even with the MSI prepared in advance.
 - If a cutoff is missed, the human lead must choose a smaller honest submission or another course; do not assume the whole tutorial can fit. Later roadmap phases remain planned.
 - Public uploads/posts and submission actions require human authorization. An asset being ready does not authorize publishing it.
 
