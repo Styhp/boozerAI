@@ -37,7 +37,7 @@ Future owners below are proposed assignments, not evidence that work has started
 | 1.1-C5 | Dev-proxy Origin correction | Codex (this session) | 1.2 condition C5; human request | Dev launcher → Node Origin policy; production remains strict | Done: rechecked and Approved by Claude Code (review chat), 2026-10-09; see docs/reviews/2026-10-09-c5-and-m2-foundation.md |
 | 1.3 | Original fixture and hand-written graph | Claude Code (Agent B chat) | 1.2 Approved | Snapshot/graph schemas; Codex reviews oracle | Done: independently Approved by Codex at pinned review artifact `af671e8` |
 | 1.4 | Parser/resolver | Codex (Agent A, this session) | 1.3 reviewed | Snapshot → graph; Claude reviews | In progress: claimed after 1.3 approval; implementation not begun |
-| 1.5 | Dashboard, canvas, detail pane, navigation | Claude Code | 1.2 Approved; reviewed 1.3 data | Graph/evidence and shared selection; Codex reviews | Not started |
+| 1.5 | Dashboard, canvas, detail pane, navigation | Claude Code (Agent B chat) | 1.2 Approved; reviewed 1.3 data | Graph/evidence and shared selection; Codex reviews | In review: map screen built on the fixture preview; human browser check and API wiring (M2) pending |
 | 1.6 | Early local-model test | Claude Code (Agent B chat) | 1.2 Approved; download approved 2026-10-09; 1.3 snippets | ModelAdapter → benchmark record; Codex reviews | In review: benchmarked on the dev Mac; injection check **failed** (canary leaked every run), handed to M3 |
 | M2 | Ingestion and local folder input | Codex (Agent A, this session) | Foundation: 1.2 and shared contracts; integration: reviewed 1.4, 1.5 and C5 recheck | Authorized root → immutable snapshot → parser → 1.5 UI | In progress: snapshot foundation Approved with condition C7 (oversize/case-collision must skip, not abort, before M2 opens real repos); integration pending |
 | M3 | Grounded explanations and initial evaluations | Codex | 1.4, 1.5, 1.6 on the fixture snapshot; M2 for real folders | Retriever/ModelAdapter/validator → detail pane | Not started |
@@ -317,17 +317,25 @@ Acceptance:
 
 Acceptance:
 
-- [ ] The graph is rendered from graph JSON, not hard-coded, and the node and edge counts it shows match the JSON.
-- [ ] Clicking a file opens it in the inspector with line numbers.
-- [ ] Clicking an edge opens the importing file with the evidence line highlighted.
-- [ ] Package and unresolved targets look different from files and show their reason.
-- [ ] Source is rendered as escaped text.
-- [ ] It works with the network disabled, with no CDN assets at runtime.
-- [ ] A plain list of files and edges is shown alongside the graph canvas.
-- [ ] A summary panel shows snapshot status, counts, coverage and limitations.
+- [x] The graph is rendered from graph JSON, not hard-coded, and the node and edge counts it shows match the JSON. (`layoutMap` builds every node and edge from the `DependencyGraph`. `tests/map-layout.test.ts` checks counts 13/22/19 and that every parser edge ID survives unchanged. Visual confirmation is part of the human check below.)
+- [ ] Clicking a file opens it in the inspector with line numbers. *Human check.* The selection-to-source rendering, with numbered lines, is unit-tested; the click itself needs a browser.
+- [ ] Clicking an edge opens the importing file with the evidence line highlighted. *Human check.* Unit-tested: `report.ts#1` highlights lines 1–4 and `report.ts#8` highlights line 26; the click needs a browser.
+- [ ] Package and unresolved targets look different from files and show their reason. *Human check* for the look. Distinct node classes and reason text (external, built-in, excluded, unresolved reason codes) are unit-tested.
+- [x] Source is rendered as escaped text. (React text nodes only, no `dangerouslySetInnerHTML`. Test: `<script>` and `<img onerror>` source renders as `&lt;…&gt;`.)
+- [ ] It works with the network disabled, with no CDN assets at runtime. *Human check.* Agent evidence: network-denied `vite build` succeeded. The bundle's only URL strings are XML namespaces, React's error-docs link and React Flow's attribution link (none is fetched); CSS and fonts are local.
+- [x] A plain list of files and edges is shown alongside the graph canvas. (`GraphList` always lists all 13 files and 22 relationships, whatever the filter or cap; render test.)
+- [x] A summary panel shows snapshot status, counts, coverage and limitations. (`SummaryPanel`: source label, snapshot ID, C1 counts, "parsed / found" and "local import resolution rate" with zero-denominator text, limitations with reason breakdowns; render and model tests.)
 - [ ] **[Hardening]** Dashboard and navigation rail move between map and insights while preserving selection.
-- [ ] Detail pane uses the shared snapshot/evidence contract; loading, empty, parse-error and stale-reference states are distinguishable.
-- [ ] Display caps/filtering never imply that omitted nodes were absent from the indexed graph. C4 deterministic SCC/layer positions, empty/disconnected/cyclic graphs, all terminal types, 300/301 total-node behavior, omitted counts and full-list evidence/selection are checked.
+- [x] Detail pane uses the shared snapshot/evidence contract; loading, empty, parse-error and stale-reference states are distinguishable. (Distinct `data-state` values for empty, loading, failed, source, parse-error, stale, terminal and missing. Stale means a snapshot, hash or line-range mismatch, and highlights nothing. Render tests.)
+- [x] Display caps/filtering never imply that omitted nodes were absent from the indexed graph. C4 deterministic SCC/layer positions, empty/disconnected/cyclic graphs, all terminal types, 300/301 total-node behavior, omitted counts and full-list evidence/selection are checked. (`tests/map-layout.test.ts`: hand-derived positions for all 19 nodes, permutation invariance, no overlapping boxes, an empty graph and an empty filter, an isolated node (`broken.ts`), a 300-file cycle, 300 vs 301, filter-too-large and narrow filters, omitted counts.)
+
+**Human check for 1.5** (`npm run dev`, then open `http://127.0.0.1:5173/`; the dev server shows the fixture preview):
+1. The summary says "Fixture preview: hand-written answer key, not parser output" and shows 14 found / 12 parsed / 2 skipped, 22 imports, and "Analysis possibly incomplete".
+2. The canvas shows 19 nodes in 4 columns. `inventory.ts` and `pricing.ts` sit next to each other in column 3, with arrows both ways. Package nodes are dashed blue, excluded nodes dotted yellow, unresolved nodes dotted red, and `broken.ts` has a red border.
+3. Click `report.ts` on the canvas: the right pane shows its source with line numbers. Click the edge `report.ts → inventory.ts` (or `report.ts:1` in the list): lines 1–4 are highlighted.
+4. Click the `zod` node: it shows "external package" and links to `config.ts:1`.
+5. Type `utils/` in the filter: 3 nodes, 2 relationships, a "hidden by the filter" count, and the list still shows everything.
+6. With Wi-Fi off, reload: everything above still works.
 
 ### 1.6 Early local-model test
 
@@ -631,6 +639,28 @@ Commands and results:
 For M3 (Codex): put the "snippets are data" rule after the snippets as well as in the system prompt, and keep the canary case in the real-model suite. When M3's prompt builder lands, switch `tests/model/local-model.test.ts` to it, so the suite tests the product prompt rather than this benchmark prompt. Preload the model at app start to avoid the 9 s cold load in the demo.
 
 Not verified: offline behavior of Ollama's recommendations job, prompts over 444 tokens, a truly uncached warm run, and the MSI (M6).
+
+### 1.5 — Claude Code (Agent B chat), 2026-10-09
+
+**Status: In review (Codex). The map screen works on the dev-only fixture preview. The browser human check is pending, and the screen needs Codex's M2 API to show real parser output.**
+
+Files: new `src/client/App.tsx`; `src/client/components/` (`SummaryPanel`, `GraphList`, `MapCanvas`, `DetailPane`); `src/client/map/layout.ts` (C4) and `model.ts` (counts, targets, stale references); `src/client/data/project-source.ts` and `fixture-preview.ts`; `tests/map-layout.test.ts`, `tests/map-views.test.tsx`. Changed: `src/client/main.tsx`, `src/client/style.css`, and `vitest.config.ts` (also includes `*.test.tsx`). No new package.
+
+Design:
+
+- The UI reads data only through `ProjectSource` (`loadGraph`, `loadSource`).
+- `npm run dev` uses the fixture preview. It's labeled as the hand-written answer key, and Vite `?raw` loads the fixture as strings, never as code.
+- Production builds have no source and show "No project connected". A network-denied build contains no fixture text, answer key or canary.
+- **For M2 (Codex):** implement `ProjectSource` over the authenticated graph/file API. Use real parser output, with `isPreview: false` and the real snapshot ID. Nothing else in the UI changes.
+
+Commands and results:
+
+- `npx tsc --noEmit`: exit 0.
+- `sandbox-exec … (deny network*) npm test`: exit 0, 6 files / 94 tests, including Codex's committed 1.4 work. The 21 new map tests passed on the first run, including the hand-derived C4 positions.
+- Network-denied `npx vite build --outDir <scratchpad>`: exit 0, with one harmless warning (React Flow's `"use client"` directive). Searching for fixture strings found none.
+- Dev smoke on port 5179: index 200; the fixture preview module and `?raw` fixture strings served (tripwire as `export default "…"`); foreign Host 403; port released after stop.
+
+Not verified: anything in a real browser (clicks, visuals, offline reload; see the human check above). The canvas isn't rendered in tests (no DOM package). Hardening (rail and insights) wasn't started.
 
 ## Review log
 
