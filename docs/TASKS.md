@@ -39,7 +39,7 @@ Future owners below are proposed assignments, not evidence that work has started
 | 1.4 | Parser/resolver | Codex (Agent A, this session) | 1.3 reviewed | Snapshot → graph; Claude reviews | In progress: claimed after 1.3 approval; implementation not begun |
 | 1.5 | Dashboard, canvas, detail pane, navigation | Claude Code | 1.2 Approved; reviewed 1.3 data | Graph/evidence and shared selection; Codex reviews | Not started |
 | 1.6 | Early local-model test | Claude Code (Agent B) | 1.2 Approved; download approved 2026-10-09; 1.3 snippets | ModelAdapter → benchmark record; Codex reviews | Not started |
-| M2 | Ingestion and local folder input | Codex | 1.4, 1.5 | Authorized root → immutable snapshot → 1.5 UI | Not started |
+| M2 | Ingestion and local folder input | Codex (Agent A, this session) | Foundation: 1.2 and shared contracts; integration: reviewed 1.4, 1.5 and C5 recheck | Authorized root → immutable snapshot → parser → 1.5 UI | In progress: snapshot foundation In review; integration pending |
 | M3 | Grounded explanations and initial evaluations | Codex | 1.4, 1.5, 1.6 on the fixture snapshot; M2 for real folders | Retriever/ModelAdapter/validator → detail pane | Not started |
 | M4 | Graph calculations, potential impact, insights | Claude Code (Agent B) | 1.4, 1.5 | GraphQueries → navigation/insights views; Codex reviews | Not started |
 | M6 | MSI verification, if used for any demo | Human lead | M3, M4; approved setup | Actual runtime/app/display/recorder → evidence | Not started; MSI reliance blocked until pass |
@@ -361,16 +361,20 @@ Acceptance:
 
 ## M2: Ingestion and local project input
 
+**Dependency change and scope claim (human lead, 2026-10-09):** local-folder input and snapshot production may start against `src/shared/contracts.ts` without waiting for 1.4 or 1.5. Codex (this session) owns server-only selection/confirmation and read-only snapshot code, offline tests, and matching README.md/ARCHITECTURE.md/TASKS.md status and contract documentation. Integrate with the independently reviewed parser when 1.4 lands, and with 1.5's UI afterward. Authenticated browser routes still wait for C5's independent recheck. No parser, UI, model, persistence or package changes are part of this first slice.
+
+Foundation status: **In review**, with 21 input cases and read-only fixture/own-repo smoke evidence in the handoff below. Original end-to-end checks remain separate; source hashes alone do not prove browser stale-reference handling.
+
 - [ ] A user explicitly selects a permitted local root through the launcher, confirms it in the UI, and indexes within documented caps; the app never writes into it.
 - [ ] Browser APIs expose opaque project/file IDs only; other roots, unselected IDs and revoked sessions are rejected.
 - [ ] Loopback binding, exact Host/Origin checks, token-protected reads/writes and no permissive CORS pass hostile-origin, CSRF and DNS-rebinding cases.
 - [ ] Immutable snapshots and hash-bound references prevent stale source from being presented as current; parse failures and incomplete analysis remain visible.
 - [ ] Demo tier stores nothing on disk: snapshots, graphs and results stay in memory.
 - [ ] **[Hardening]** App-owned storage is outside the selected root; overlapping roots are refused before writes. Atomic save/load, permissions, size/retention caps and corrupt-file handling are verified.
-- [ ] `node_modules`, `.git`, and build output are ignored by default. Size and file-count caps are documented and enforced.
+- [x] `node_modules`, `.git`, and build output are ignored by default. Size and file-count caps are documented and enforced. (M2 foundation native exclusion/source-cap tests plus own-repo snapshot; metadata flood is a labeled enumeration simulation. See handoff.)
 - [ ] Symlinks, nested symlinks, absolute/`..` escapes and case collisions are rejected (tests); config and tripwire files are never executed.
 - [ ] **[Hardening]** Detected file-replacement races are rejected (tests).
-- [ ] Secret-file exclusions, binary/oversize handling and cancellation are verified without logging sensitive content.
+- [x] Secret-file exclusions, binary/oversize handling and cancellation are verified without logging sensitive content. (M2 foundation tests use inert temporary targets; unreadable secret filenames are excluded before opening, NUL/invalid UTF-8 are skipped, caps/cancellation return sanitized errors and no partial result.)
 - [ ] **[Hardening]** Known-secret snippet rejection/redaction based on file content.
 - [ ] Boozer AI's own repo opens and renders, with the time recorded.
 
@@ -584,6 +588,27 @@ Commands/results in the pinned clean review checkout: offline `npm ci --ignore-s
 Non-blocking notes: the author handoff's “3 scaffold + 13 fixture” split is inaccurate; actual fixture count is 11 and the current total of 16 includes 5 scaffold cases. The test harness is a fixture-only text reader, not general M2 ingestion; its “trusted fixture” comment does not override AGENTS.md's untrusted-data rules. TSX/JSX/MJS, pruned directories and unsupported diagnostics remain uncovered as disclosed; symlink/secret/case/cap runtime safety belongs to M2. No general ingestion or parser behavior is cleared by this review.
 
 Checklist: Scope Pass; dependencies N/A (zod is inert fixture text, no package change); docs/contracts Pass; clean-checkout commands Pass; offline/model-free Pass; no weakened checks/oracle regeneration Pass; evidence and safety-by-inspection Pass; parser-boundary implementation N/A (none exists); honesty Pass with explicit count correction; originality by local inspection Pass, external source comparison Not checked. Runtime snapshot validation and production safety remain unverified. Reviewer's changes: TASKS.md review/status/1.4 claim only; all fixture/oracle/harness bytes preserved. Follow-ups: implement 1.4 against this oracle under its separate task, retain placeholder guards and hand-written expectations, obtain Claude's independent parser review before integration.
+
+### M2 local input/snapshot foundation — Codex (this session), 2026-10-09
+
+**Status: In review; M2 integration remains In progress.** Human-directed dependency change recorded above: build snapshots against the accepted shared contract now; integrate the independently reviewed parser when 1.4 lands and the UI when 1.5 lands. No self-review verdict is recorded.
+
+Files added: `src/server/local-input.ts`, `tests/local-input.test.ts`. Files changed: README.md, ARCHITECTURE.md and this file. No package/configuration/shared-shape, launcher, API, parser, UI, storage or model change. Agent B's 18 fixture/oracle/harness artifacts are untouched and remain uncommitted in the shared main tree; final manifest SHA-256 still `4b7a30dbdf3c2fcd87234fe8f479714a41291e5853b57174441daef92b87754b`, oracle SHA-256 still `c0260fe70a4c127452098542b7326193681327e26a8a32cfb6313fa21f15c554`. Foundation tests do not depend on those uncommitted files; fixture compatibility is a separate smoke check.
+
+Behavior: server-only `LocalInputAdapter.select(folder)` validates a canonical, nonsymlink root and holds it privately behind an opaque project ID. Explicit `confirm(projectId)` precedes indexing; other IDs and revoked adapters fail, including a pending scan when closed. Snapshots contain root-relative POSIX paths, exact UTF-8 sizes/SHA-256 hashes, sorted coverage inventory and deeply frozen contract layers. Refresh preserves previous snapshots; content/path/inventory/limits or the required `analysisKey` changes the identity. Root/project ID/time do not affect the identity. The future parser must supply a version/configuration key rather than reuse the smoke-test keys.
+
+Bounds: 2,000 supported source candidates, 1 MiB per file, 20 MiB read total; only smaller caller limits are accepted. Binary/unreadable supported candidates consume work budgets. Metadata-only targets are also bounded at 20,000 entries and 64 directory levels. Default ignored/secret trees are pruned without invented counts. Secret filenames precede content reads; all symlink entries are excluded without traversal; case collisions abort. Strict UTF-8/NUL checks, unreadable-file skips, unreadable-directory aborts, readonly/no-follow opens, root identity/component checks and bounded reads are implemented. Every cap/cancellation failure produces a sanitized error and no partial snapshot. This is an app boundary, not OS isolation against a same-user adversary.
+
+Commands and actual results:
+
+- `npm run typecheck`: exit 0. `sandbox-exec -p '(version 1)(allow default)(deny network*)' npm run build`: exit 0, both typechecks/server compilation and Vite build (15 modules).
+- First network-denied full-suite run: exit 1, 34 passed / 1 failed. The case-collision test attempted to create two names differing only in case; this case-insensitive Mac rejected setup with EEXIST. Corrected the harness to explicitly simulate conflicting directory entries; no production check was weakened or skipped. Added an explicitly simulated 20,001-entry metadata flood (abort at 20,000). A native collision on a case-sensitive filesystem remains unverified.
+- Final `sandbox-exec -p '(version 1)(allow default)(deny network*)' npm test -- --reporter=verbose`: exit 0, 3 files / **37 tests** (21 input, 5 scaffold/C5, 11 Agent B fixture). Symlink/ancestor/replacement-root/permission/binary/cap/cancellation/revocation cases use the native filesystem; case collision and metadata flood use the labeled enumeration simulations. Target tripwire/config code is read only and never imported/executed.
+- Separate network-denied Node script: new adapter's files and inventory deep-equal the reviewed 1.3 harness, **14 found / 13 source / 1 unsupported CSS skip**. No parser/graph output was created and the hand-written oracle was not regenerated.
+- Separate network-denied Node script over this checkout: **52 found = 28 source + 24 skipped**, 3 pruned directories, 58,948 source bytes, **74 ms** selection/confirmation/snapshot time; snapshot/files frozen. Machine: Intel i5-8500B, 32 GiB RAM, macOS 15.7.7 (24G720), Node 24.16.0, 2026-10-09. This is one small snapshot smoke measurement, not parser/render/model or scale evidence. An earlier development smoke was 72 ms with 58,812 source bytes before final test edits; it is not substituted for this final reading.
+- Markdown links/fences: 10 top-level/docs/skill files, 40 local links, zero errors. `git diff --check`: exit 0. Python artifact hashes match the independently approved fixture pin.
+
+Verified: foundation authorization, bounded read-only source ingestion, exclusions, deterministic content/config identity, runtime immutability, fixture compatibility and offline regression. Unverified/pending: independent Claude review, `--project` launcher and UI confirmation wiring, authenticated/token-protected project/file APIs and stale browser references, actual parser integration, full race hardening, embedded-secret scanning, larger-repo rendering and MSI proof. M2 remains unfinished. Next integration step after reviewed 1.4: pass this `WorkspaceSnapshot` directly to the pure extractor, bind graph/evidence to its snapshot ID, and supply the extractor/resolver configuration through `analysisKey`; keep file access confined to this adapter. C5 independent recheck still precedes any browser API route.
 
 ## Review log
 

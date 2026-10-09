@@ -4,7 +4,7 @@ Boozer AI is a codebase intelligence project for developers who need to understa
 
 ## Status
 
-**Scaffold only; independent review 1.2 approved it on 2026-10-09.** The static React shell, loopback Node server, shared contracts and offline test entry run locally. No project ingestion, parser, map, impact or explanation feature is implemented. Proposal review 0.2 approved scaffolding; the human lead authorized 1.1 on 2026-10-09.
+**Scaffold approved; M2's server-only local snapshot foundation is ready for independent review.** The static React shell, loopback Node server, shared contracts and offline tests run locally. The input adapter selects/confirms a folder and builds a bounded immutable snapshot; launcher/UI/API integration is pending. The hand-written fixture/oracle is approved for 1.4. Parser, map, impact and explanation features remain pending. Proposal review 0.2 approved scaffolding; the human lead authorized 1.1 and this M2 foundation on 2026-10-09.
 
 The product capabilities below describe planned behavior; the Development section describes the scaffold.
 
@@ -17,11 +17,11 @@ The product capabilities below describe planned behavior; the Development sectio
 - **Local-first.** Parsing, the graph, and default explanations run on your machine. Internet is needed only for setup and for optional features such as GitHub import.
 - **Safe with untrusted code.** Analyzed repositories are treated as data: never executed, never installed, and instructions inside them are ignored.
 
-Input: local folders first, GitHub import in a later delivery phase. Neither input is implemented.
+Input: local-folder snapshot code exists server-side; the application input flow is pending. GitHub import is a later delivery phase.
 
 ## Full roadmap and delivery
 
-The roadmap retains a dashboard, parser, graph canvas, detail pane, graph calculations, navigation rail and insights, ingestion pipeline, framework adapters, CommonJS and Express support, explanations with caching and tracing, evaluations, a read-only agent, landing page, and local folder and GitHub input. [PRODUCT.md](docs/PRODUCT.md) separates delivery phases from permanent safety exclusions; none of these features is implemented.
+The roadmap retains a dashboard, parser, graph canvas, detail pane, graph calculations, navigation rail and insights, ingestion pipeline, framework adapters, CommonJS and Express support, explanations with caching and tracing, evaluations, a read-only agent, landing page, and local folder and GitHub input. [PRODUCT.md](docs/PRODUCT.md) separates delivery phases from permanent safety exclusions. These user-facing features remain pending.
 
 The proposed first delivery is a small offline vertical slice: fixture and selected local folder → parsed map → inspection → local explanation → potential impact. JEV and OpenAI remain optional secondary cloud integrations. LangSmith is optional and off by default; local evaluation needs no cloud account. The full roadmap is not a promise to finish the tutorial before the deadline.
 
@@ -52,6 +52,8 @@ For development, run `npm run dev` and open `http://127.0.0.1:5173`. It performs
 `npm test` is the model-free default suite; its setup rejects socket/fetch calls. `npm run test:model` is a separate entry for `tests/model/**/*.test.ts`, owned by 1.6; it currently exits nonzero because no real-model cases exist. It performs no inference or download. Never treat that absence as a successful benchmark.
 
 Shared types live in [src/shared/contracts.ts](src/shared/contracts.ts); server/client entry points are `src/server/index.ts` and `src/client/main.tsx`. Source fixtures and a hand-written oracle belong at `fixtures/basic/` in 1.3 after review 1.2. Do not execute fixtures. There are no parser/model/storage stubs or cloud SDKs. See [dependency inventory](docs/DEPENDENCIES.json) for locked package versions/licenses, including platform-optional packages.
+
+M2's [LocalInputAdapter](src/server/local-input.ts) is callable from server code or a plain script: `select(folder)`, `confirm(projectId)`, then `snapshot(projectId, { analysisKey })`; `close()` revokes further operations. `analysisKey` must identify the caller's parser/resolver version and configuration. The default limits are 2,000 supported source candidates, 1 MiB per file and 20 MiB read total, with metadata bounds of 20,000 entries and 64 directory levels. Callers may lower the source limits. Caps/cancellation fail with sanitized codes and return no partial snapshot. Source is retained only in memory, never executed or written into the selected root. This module is awaiting independent review and is not wired to the launcher or browser; parser integration waits for reviewed 1.4.
 
 ## Documentation
 
