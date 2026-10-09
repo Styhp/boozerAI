@@ -1,6 +1,6 @@
 # Architecture (proposed)
 
-**Status:** scaffold complete under human-authorized 1.1, awaiting independent review 1.2. Proposal review 0.2 approved scaffolding with conditions; C1/C4 are specified below and in the shared types for review 1.2. All S-choices remain **Proposed** until their independent gates. Only the package, static server/client shell and contracts exist; analysis features remain planned. See [TASKS.md](TASKS.md).
+**Status:** scaffold complete under human-authorized 1.1 and approved in review 1.2 (2026-10-09, condition C5 open). C1/C4 are specified below and in the shared types, and 1.2 verified them at contract/spec level. Scaffold S-choices are Accepted; the others remain **Proposed** until their gates (see the stack table). Only the package, static server/client shell and contracts exist; analysis features remain planned. See [TASKS.md](TASKS.md).
 
 ## Principles
 
@@ -195,21 +195,21 @@ The local path must be tested with no cloud keys, no cloud services, tracing dis
 
 ## Stack choices for independent review
 
-All rows remain **Proposed**, not independently accepted. Direct package pins are recorded in package.json and SUBMISSION.md when installed for 1.1. Review 0.2 assesses this proposal; 1.2 confirms the actual scaffold. Pin exact compatible versions and record licenses at authorized installation, not by guessing a lockfile now.
+Review 1.2 (Claude Code, 2026-10-09, commit `4718e27`) marked S-1, S-2, S-3, S-5, S-6, S-8 and S-11 **Accepted** as scaffold choices; each still has to pass the later gate in its row. S-4, S-7, S-9, S-10 and S-12 remain **Proposed** until their gates. Direct package pins are recorded in package.json and SUBMISSION.md when installed for 1.1. Review 0.2 assesses this proposal; 1.2 confirms the actual scaffold. Pin exact compatible versions and record licenses at authorized installation, not by guessing a lockfile now.
 
 | ID | Choice | Proposal and rationale | Validation gate |
 |---|---|---|---|
-| S-1 | Language/runtime | TypeScript on Node.js 24 LTS; one language for server/shared/client, portable macOS/Linux runtime | 0.2/1.2; Mac checks, MSI M6 |
-| S-2 | App shape/server | Local web app using Node HTTP and built-in fetch; one local process serves built assets/API; no desktop shell or hosted backend | 0.2/1.2; security M2 |
-| S-3 | Parser | TypeScript compiler API, pin a compatible release below 7; AST over supplied JS/TS/JSX text gives source positions without executing it | 0.2/1.2, fixture 1.4 |
+| S-1 | Language/runtime | TypeScript on Node.js 24 LTS; one language for server/shared/client, portable macOS/Linux runtime | **Accepted 1.2** (Node 24.16.0, TS 6.0.3 on the Mac); MSI M6 |
+| S-2 | App shape/server | Local web app using Node HTTP and built-in fetch; one local process serves built assets/API; no desktop shell or hosted backend | **Accepted 1.2** (static loopback host verified); API security M2; dev-proxy Origin C5 |
+| S-3 | Parser | TypeScript compiler API, pin a compatible release below 7; AST over supplied JS/TS/JSX text gives source positions without executing it | **Accepted 1.2** (`typescript` 6.0.3 pinned); parser behavior 1.4 |
 | S-4 | Resolution | Small deterministic snapshot-only resolver with the explicit rules above; extension points for later adapters | 1.4, M9 |
-| S-5 | Canvas | React Flow (`@xyflow/react`); original iterative SCC/layer layout specified in C4; list-first above 300 total rendered nodes; no layout dependency | 0.2/1.2, 1.5; benchmark larger graphs later |
-| S-6 | UI/build | React + Vite, locally bundled CSS/assets; shared selection state, no extra state library initially | 0.2/1.2, 1.5 |
+| S-5 | Canvas | React Flow (`@xyflow/react`); original iterative SCC/layer layout specified in C4; list-first above 300 total rendered nodes; no layout dependency | **Accepted 1.2** (`@xyflow/react` 12.12.0, C4 spec); implementation 1.5; larger graphs M2 |
+| S-6 | UI/build | React + Vite, locally bundled CSS/assets; shared selection state, no extra state library initially | **Accepted 1.2** (React 19.3.0, Vite 8.3.4; offline build verified); UI 1.5 |
 | S-7 | Local inference | Ollama loopback HTTP; first candidate `qwen3:4b-instruct`, Q4_K_M, registry size 2.5 GB; optional smaller `qwen2.5-coder:1.5b` only after separate approval | Human download approval, 1.6, M6 |
-| S-8 | Packages/tests | npm with lockfile, Vitest for offline TS contract tests, TypeScript typecheck; real-model evaluations separate | 0.2/1.2 |
+| S-8 | Packages/tests | npm with lockfile, Vitest for offline TS contract tests, TypeScript typecheck; real-model evaluations separate | **Accepted 1.2** (`npm ci` from lockfile, Vitest 5.0.3, network-denied suite verified) |
 | S-9 | GitHub import | Bounded public archive download, no git execution; archive library chosen/disclosed only when M5 is claimed | M5 |
 | S-10 | Optional cloud | OpenAI model adapter and optional JEV integration; no cloud SDK in scaffold; no silent fallback | P-11, M12 |
-| S-11 | Storage | Memory-only demo; versioned local JSON behind `LocalStore` with atomic writes/caps deferred to M8 | M2 memory; M8 persistence |
+| S-11 | Storage | Memory-only demo; versioned local JSON behind `LocalStore` with atomic writes/caps deferred to M8 | **Accepted 1.2** for the memory-only demo (P-10); persistence stays Proposed for M8 |
 | S-12 | Tracing/evaluation | Local records and offline evaluation runner; optional explicit LangSmith export later; no required orchestration SDK | M3/M8; optional export M12 |
 
 Official references checked 2026-10-09: [Node release schedule](https://nodejs.org/en/about/previous-releases), [TypeScript compiler API](https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API) (documents the pre-7 API boundary), [React Flow](https://reactflow.dev/learn), [Vite](https://vite.dev/guide/), [Ollama macOS requirements](https://docs.ollama.com/macos), and [candidate model listing](https://ollama.com/library/qwen3:4b-instruct). These are proposal references, not copied implementation code or proof of local compatibility. The registry tag may move: record the actual digest, quantization, size and runtime version when authorized to download/test.

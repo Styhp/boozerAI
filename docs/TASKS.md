@@ -28,11 +28,11 @@ Future owners below are proposed assignments, not evidence that work has started
 | ID | Milestone / task | Owner | Depends on | Integration point | Status |
 |---|---|---|---|---|---|
 | M0 | Documentation baseline | Claude Code | None | Shared project docs | Historical draft; reconciled in 0.1 |
-| 0.1 | Reconcile docs and propose architecture | Codex (Agent A) | All project docs read | README.md, AGENTS.md, PRODUCT.md, ARCHITECTURE.md, TASKS.md, SUBMISSION.md | Approved for 1.1 in 0.2; C2/C3 resolved; C1/C4 specified in 1.1 for 1.2 review |
+| 0.1 | Reconcile docs and propose architecture | Codex (Agent A) | All project docs read | README.md, AGENTS.md, PRODUCT.md, ARCHITECTURE.md, TASKS.md, SUBMISSION.md | Approved for 1.1 in 0.2; C1–C4 resolved (C1/C4 verified in 1.2) |
 | 0.2 | Independent proposal review | Claude Code (Agent B) | 0.1 | Proposed S-choices, roadmap, safety contracts, schedule | Done: Approved for 1.1 with conditions C1–C4 (2026-10-09) |
 | 0.3 | Agent working rules and project skills | Claude Code | Human lead request, 2026-10-09 | AGENTS.md, CLAUDE.md, `.agents/skills/`, `.claude/skills/` | In review; Codex reviews. Does not change product, architecture or S-choices, so it does not block 0.2 |
-| 1.1 | Scaffold/configuration | Codex (Agent A, this session) | 0.2 Approved + human start approval | Shared types, server/client/test entry points | In review: clean-checkout gates pass; C1/C4 specified; Agent B 1.2 pending |
-| 1.2 | Independent scaffold review | Claude Code | 1.1 | Rerun scaffold gates; record accepted stack | Not started |
+| 1.1 | Scaffold/configuration | Codex (Agent A, this session) | 0.2 Approved + human start approval | Shared types, server/client/test entry points | Done: Approved in 1.2 at `4718e27`; condition C5 open for M2/M3 |
+| 1.2 | Independent scaffold review | Claude Code (review chat) | 1.1 | Rerun scaffold gates; record accepted stack | Done: Approved with condition C5 (2026-10-09); 1.3, 1.5 and 1.6 may start |
 | 1.3 | Original fixture and hand-written graph | Claude Code | 1.2 Approved | Snapshot/graph schemas; Codex reviews oracle | Not started |
 | 1.4 | Parser/resolver | Codex | 1.3 reviewed | Snapshot → graph; Claude reviews | Not started |
 | 1.5 | Dashboard, canvas, detail pane, navigation | Claude Code | 1.2 Approved; reviewed 1.3 data | Graph/evidence and shared selection; Codex reviews | Not started |
@@ -191,10 +191,60 @@ Work: before any parallel implementation starts, review 1.1 against AGENTS.md an
 
 Acceptance:
 
-- [ ] The reviewer is not the author of 1.1.
-- [ ] The reviewer re-ran the documented commands from a clean checkout and recorded the results.
-- [ ] Each scaffold S-choice is marked Accepted or Changed in ARCHITECTURE.md; later choices remain Proposed until their gates. A changed contract is propagated to consumers.
-- [ ] The verdict is recorded in the review log below. Parallel work starts only after "Approved".
+- [x] The reviewer is not the author of 1.1. (Claude Code, review chat. Commits `1050b8d` and `4718e27` are Codex's.)
+- [x] The reviewer re-ran the documented commands from a clean checkout and recorded the results. (See the 1.2 report.)
+- [x] Each scaffold S-choice is marked Accepted or Changed in ARCHITECTURE.md; later choices remain Proposed until their gates. A changed contract is propagated to consumers. (S-1, 2, 3, 5, 6, 8 and 11 Accepted; no contract changed by the review.)
+- [x] The verdict is recorded in the review log below. Parallel work starts only after "Approved". (Approved with condition C5, which doesn't block 1.3, 1.5 or 1.6.)
+
+**1.2 review report** (Claude Code, review chat, 2026-10-09 16:08–16:20 AWST, commit `4718e27`, working tree clean)
+
+**Verdict: Approved with condition C5.** Tasks 1.3, 1.5 and 1.6 may start. C5 must be fixed before any browser API route lands (M2/M3).
+
+*Re-run in a fresh local clone at `4718e27` (scratchpad, not the workspace):*
+
+| Command | Result |
+|---|---|
+| `npm ci --ignore-scripts --offline` | exit 0, 65 packages |
+| `npm ls --depth=0` | exit 0, the 9 exact pins |
+| `npm run typecheck` | exit 0 |
+| `npm test` under `sandbox-exec … (deny network*)` | exit 0, 1 file / 3 tests |
+| `npm run build`, network denied | exit 0, 15 modules |
+| `npm run test:model` | exit 1, "No test files found", as documented |
+
+*Probes against my clean clone's production host* (my PID confirmed on 127.0.0.1:4173):
+
+- `GET /`, the JS asset and `HEAD` returned 200.
+- Host `localhost:4173` or `evil.example`, and Origin `https://evil.example` or `null`, returned 403.
+- `POST` returned 405.
+- `/../../etc/passwd`, `/%2e%2e/package.json` and `/api/projects` returned 404.
+- CSP, `nosniff` and `no-referrer` headers are present. The port was refused after stop.
+
+*Dev mode from the clean clone:*
+
+- Vite on 5173 returned 200, and a foreign Host was rejected (403).
+- Both ports were released on SIGTERM.
+- An occupied port fails visibly. My first start collided with the human lead's own `npm run dev` and printed "Could not start Boozer AI on 127.0.0.1:4173".
+
+*Code inspection:* all of `src/`, `scripts/`, the configs, `index.html` and the tests. The only URLs are loopback, and there are no fetch/http/socket client calls. Static assets are served from an in-memory map, so no request path reaches the filesystem. There is no feature code, parser, storage or model code. The inventory has 89 entries, all with licenses: MIT 63, MPL-2.0 12 (all `lightningcss`, Vite's build-time CSS tool), ISC 9, Apache-2.0 3, BSD-3-Clause 2.
+
+*C1 and C4 resolved at the contract/spec level:* coverage counts with reasons and zero-denominator rules, one walk with direction, depth and `depthLimited`, deterministic IDs and ordering, and `Snippet`/`Explanation` retained. The C4 layout is original and package-free, with list-first above 300 nodes. Proof that they're implemented correctly belongs to 1.3/1.4/1.5/M4.
+
+*Checklist:*
+- Scope: Pass. Dependencies are within the S-choices and disclosed: Pass. Docs: Pass.
+- Clean-checkout re-run: Pass. Offline default suite: Pass. No weakened checks (the TS2882 fix added types; it didn't loosen anything): Pass. Ticked 1.1 checks have evidence: Pass.
+- Safety, as applicable to a static host: Pass. Parser boundary search: N/A (no parser yet). Honesty: Pass. No copied tutorial code: Pass, by inspection.
+
+**Condition C5, before M2/M3 API routes (Codex): the dev proxy rejects browser API calls.** Verified: `/api/x` through the 5173 proxy returns 404 without an Origin, but **403 with `Origin: http://127.0.0.1:5173`**. Browsers send that Origin on POST, so the planned `POST /explanations` and `/refresh` would fail under `npm run dev`. The cause is that `permitsRequest` (src/server/app.ts:6–8) allows only the 4173 origin. Fix by allowing exactly the dev origin only when started by `scripts/dev.mjs`, keeping the Host check and the M2 token, and add a test.
+
+*Non-blocking notes:*
+
+- **N1.** `engines` is pinned to Node `>=24 <25` with `engine-strict`. The MSI (ParrotOS) will need a human-approved Node 24 install for M6. Distro Node is likely older; unverified.
+- **N2.** `AnalysisCoverage.unsupported[].reason` is a free string, while every other reason is an enum. Prefer an enum; until then, 1.3's oracle defines the exact strings and 1.4 must match them.
+- **N3.** Every `GraphWalkResult` embeds the full `AnalysisCoverage`, including all skip and issue lists. That's fine for the fixture; check payload size at M2 scale.
+- **N4.** `.npmrc` sets `audit=false`, so no vulnerability audit has run. Run `npm audit` once deliberately (it needs the network) before submission.
+- **N5.** The static host reads only top-level files in `dist/client/assets/`. A future nested asset folder would make startup fail.
+
+*Not checked:* startup with external networking denied (my evidence is source inspection plus the CSP header; Codex ran the sandboxed startup), any browser rendering (a human check), and the MSI. 0.3 is still pending Codex review and is not part of this verdict.
 
 ### 1.3 Known-code fixture and expected graph
 
@@ -450,3 +500,4 @@ Handoff to Agent B: review 1.2 from a clean checkout, rerun README commands, ins
 | Date | Task | Reviewer | Verdict | Notes |
 |---|---|---|---|---|
 | 2026-10-09 | 0.2 (reviews 0.1) | Claude Code | Approved for 1.1 with conditions | 0 blocking for 1.1. Conditions: C1 schemas before 1.3, C2 Phase A tiers before M2, C3 ordering/ownership before 1.2 closes, C4 canvas layout before 1.5. See 0.2 report |
+| 2026-10-09 | 1.2 (reviews 1.1 at `4718e27`) | Claude Code (review chat) | Approved with conditions | 0 blocking for 1.3/1.5/1.6. C1 and C4 resolved at contract/spec level. C5: dev proxy Origin 403, before M2/M3 API routes (Codex). See 1.2 report |

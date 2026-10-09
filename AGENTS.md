@@ -32,7 +32,7 @@ Skills follow this file. If a skill and AGENTS.md conflict, AGENTS.md wins; fix 
 
 ## Current phase
 
-The project has a human-authorized scaffold in task 1.1. Proposal review 0.2 is Approved for 1.1 with conditions; C2/C3 are resolved and C1/C4 are specified by Codex for scaffold review. Codex (Agent A) owns scaffolding/integration; Claude Code (Agent B) independently reviews it. Scaffold review 1.2 remains a separate gate before fixture or parallel implementation. Runtime installation and model downloads need specific human approval; separately approved Mac setup is recorded in TASKS.md. This scaffold authorization does not authorize later feature work or additional runtime/model downloads.
+The project has a human-authorized scaffold in task 1.1. Proposal review 0.2 is Approved for 1.1 with conditions, now all resolved. Scaffold review 1.2 is **Approved with condition C5** (dev-proxy Origin, before M2/M3 API routes), so the fixture (1.3), UI (1.5) and local-model (1.6) tracks may start. Each still needs its owner to claim it in TASKS.md. Codex (Agent A) owns scaffolding/integration; Claude Code (Agent B) reviews Codex's work and owns the tracks assigned in TASKS.md. Runtime installation and model downloads need specific human approval; separately approved Mac setup is recorded in TASKS.md. This scaffold authorization does not authorize later feature work or additional runtime/model downloads.
 
 ## Task ownership
 

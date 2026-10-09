@@ -4,7 +4,7 @@ Boozer AI is a codebase intelligence project for developers who need to understa
 
 ## Status
 
-**Scaffold only, awaiting independent review 1.2.** The static React shell, loopback Node server, shared contracts and offline test entry run locally. No project ingestion, parser, map, impact or explanation feature is implemented. Proposal review 0.2 approved scaffolding; the human lead authorized 1.1 on 2026-10-09.
+**Scaffold only; independent review 1.2 approved it on 2026-10-09.** The static React shell, loopback Node server, shared contracts and offline test entry run locally. No project ingestion, parser, map, impact or explanation feature is implemented. Proposal review 0.2 approved scaffolding; the human lead authorized 1.1 on 2026-10-09.
 
 The product capabilities below describe planned behavior; the Development section describes the scaffold.
 
