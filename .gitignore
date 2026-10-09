@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.vite/
+.env*
+*.log
+.DS_Store
+models/
+*.gguf
+*.ggml
+*.safetensors
+*.onnx
