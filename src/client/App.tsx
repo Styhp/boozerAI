@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DependencyGraph, Snippet } from '../shared/contracts';
+import type { CloudStatus } from '../shared/explanation';
 import { DetailPane } from './components/DetailPane';
 import type { ExplanationState } from './components/ExplanationPanel';
 import { GraphList } from './components/GraphList';
@@ -22,6 +23,11 @@ export function App({ project }: { project: ProjectSource | null }) {
   // Kept per file so a cited range can be opened and the explanation found again.
   const [explanations, setExplanations] = useState<ReadonlyMap<string, ExplanationState>>(new Map());
   const running = useRef(new Map<string, AbortController>());
+  const [cloudStatus, setCloudStatus] = useState<CloudStatus>({ available: false });
+
+  useEffect(() => {
+    project?.cloud?.status().then(setCloudStatus, () => setCloudStatus({ available: false }));
+  }, [project]);
 
   useEffect(() => {
     if (project === null) return;
@@ -44,17 +50,22 @@ export function App({ project }: { project: ProjectSource | null }) {
     return () => { current = false; };
   }, [project, path]);
 
-  const explain = useCallback(async (path: string) => {
+  // Local answers are keyed by path; cloud answers by `cloud:` + path, so both can be compared.
+  const explain = useCallback(async (path: string, cloud?: { previewHash: string }) => {
     if (project === null || graph === null) return;
-    running.current.get(path)?.abort();
+    const key = cloud ? `cloud:${path}` : path;
+    running.current.get(key)?.abort();
     const controller = new AbortController();
-    running.current.set(path, controller);
-    const update = (state: ExplanationState) => setExplanations((all) => new Map(all).set(path, state));
+    running.current.set(key, controller);
+    const update = (state: ExplanationState) => setExplanations((all) => new Map(all).set(key, state));
     let snippets: Snippet[] = [];
     let text = '';
     update({ status: 'running', snippets, text });
     try {
-      for await (const event of project.explain({ snapshotId: graph.snapshotId, path }, controller.signal)) {
+      const body = cloud
+        ? { snapshotId: graph.snapshotId, path, provider: 'cloud' as const, previewHash: cloud.previewHash }
+        : { snapshotId: graph.snapshotId, path };
+      for await (const event of project.explain(body, controller.signal)) {
         if (event.type === 'snippets') snippets = [...event.snippets];
         else if (event.type === 'token') text += event.text;
         if (event.type === 'done') { update({ status: 'done', explanation: event.explanation, details: event.details }); return; }
@@ -65,7 +76,7 @@ export function App({ project }: { project: ProjectSource | null }) {
     } catch {
       update({ status: 'error', code: controller.signal.aborted ? 'cancelled' : 'runtime-error', message: 'The explanation did not finish.', snippets, text });
     } finally {
-      if (running.current.get(path) === controller) running.current.delete(path);
+      if (running.current.get(key) === controller) running.current.delete(key);
     }
   }, [project, graph]);
 
@@ -94,6 +105,13 @@ export function App({ project }: { project: ProjectSource | null }) {
             state: explanations.get(selection.path) ?? { status: 'idle' },
             onExplain: () => { void explain(selection.path); },
             onCancel: () => running.current.get(selection.path)?.abort(),
+            cloud: cloudStatus.available && project.cloud && graph ? {
+              status: cloudStatus,
+              answer: explanations.get(`cloud:${selection.path}`) ?? { status: 'idle' },
+              onPreview: () => project.cloud!.preview({ snapshotId: graph.snapshotId, path: selection.path }),
+              onSend: (previewHash: string) => { void explain(selection.path, { previewHash }); },
+              onCancel: () => running.current.get(`cloud:${selection.path}`)?.abort(),
+            } : undefined,
           } : undefined} />
       </div>
     </div>

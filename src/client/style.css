@@ -107,3 +107,10 @@ code, .source, .path, .snapshot-id { font-family: ui-monospace, SFMono-Regular, 
 .snippets summary { cursor: pointer; font-size: 0.8rem; }
 .snippets ol { padding-left: 1rem; }
 .snippets pre { font-size: 0.72rem; background: #111312; padding: 0.4rem; overflow: auto; white-space: pre-wrap; }
+
+.explanation.cloud { border-color: var(--package); }
+.explanation.cloud h3 { font-size: 0.85rem; margin: 0 0 0.25rem; }
+.badge.cloud { color: var(--package); font-weight: 600; }
+.cloud-preview { margin-top: 0.4rem; }
+.payload { font-size: 0.7rem; background: #111312; padding: 0.4rem; max-height: 14rem; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+.explain-bar button.secondary { background: none; border-color: var(--line); }

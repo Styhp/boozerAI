@@ -19,6 +19,9 @@ const ERROR_TITLES: Record<ExplanationErrorCode, string> = {
   timeout: 'The local model took too long',
   cancelled: 'Explanation cancelled',
   'runtime-error': 'The local model failed',
+  'cloud-unavailable': 'No cloud provider is configured',
+  'preview-mismatch': 'The request changed after your preview',
+  'cloud-error': 'The cloud provider failed',
 };
 
 const rangeLabel = (ref: EvidenceRef) =>
@@ -87,11 +90,6 @@ export function ExplanationPanel({ path, state, onExplain, onCancel, onSelect }:
   onSelect: (selection: Selection) => void;
 }) {
   const running = state.status === 'running';
-  const text = state.status === 'done' ? state.explanation.text : state.status === 'idle' ? '' : state.text;
-  const snippets = state.status === 'done' ? state.explanation.snippets : state.status === 'idle' ? [] : state.snippets;
-  const mentions = state.status === 'done' ? state.details.mentions : [];
-  const blocks = formatExplanation(text, mentions);
-
   return (
     <section className="explanation" aria-label="Local explanation" data-state={state.status}>
       <div className="explain-bar">
@@ -100,12 +98,30 @@ export function ExplanationPanel({ path, state, onExplain, onCancel, onSelect }:
           : <button type="button" onClick={onExplain}>{state.status === 'idle' ? 'Explain with local model' : 'Explain again'}</button>}
         {running && <span className="muted" role="status">Generating on this machine…</span>}
       </div>
+      <ExplanationResult path={path} state={state} onSelect={onSelect} />
+    </section>
+  );
+}
 
+// The answer, its labels, checks and snippets. Shared by the local panel and the optional
+// cloud comparison so both answers are shown and checked the same way.
+export function ExplanationResult({ path, state, onSelect }: {
+  path: FilePath;
+  state: ExplanationState;
+  onSelect: (selection: Selection) => void;
+}) {
+  const text = state.status === 'done' ? state.explanation.text : state.status === 'idle' ? '' : state.text;
+  const snippets = state.status === 'done' ? state.explanation.snippets : state.status === 'idle' ? [] : state.snippets;
+  const mentions = state.status === 'done' ? state.details.mentions : [];
+  const blocks = formatExplanation(text, mentions);
+
+  return (
+    <>
       {state.status === 'done' && (
         <p className="model-labels">
           <span className="badge">{state.explanation.model.name}</span>{' '}
           <span className="badge">{state.explanation.model.runtime}</span>{' '}
-          <span className="badge local">{state.explanation.model.location}</span>{' '}
+          <span className={`badge ${state.explanation.model.location}`}>{state.explanation.model.location}</span>{' '}
           <span className="badge">{(state.explanation.durationMs / 1000).toFixed(1)} s</span>
         </p>
       )}
@@ -153,6 +169,6 @@ export function ExplanationPanel({ path, state, onExplain, onCancel, onSelect }:
       })()}
 
       {snippets.length > 0 && <SnippetList snippets={snippets} path={path} onSelect={onSelect} />}
-    </section>
+    </>
   );
 }

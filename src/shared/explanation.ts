@@ -18,7 +18,11 @@ export type ExplanationErrorCode =
   | 'model-mismatch'       // the tag is installed with a different digest
   | 'timeout'
   | 'cancelled'
-  | 'runtime-error';
+  | 'runtime-error'
+  // Optional cloud comparison (P-16). Never used as a fallback for a local failure.
+  | 'cloud-unavailable'    // no OPENAI_API_KEY at launch
+  | 'preview-mismatch'     // the payload to send differs from the one the user confirmed
+  | 'cloud-error';         // the cloud provider refused or failed the request
 
 // How a file path written in the model's prose relates to the snapshot (finding 1).
 export interface PathMention {
@@ -36,7 +40,7 @@ export interface SuspectedInjection {
 
 export interface ExplanationDetails {
   readonly promptVersion: string;
-  readonly modelDigest: string;
+  readonly modelDigest: string | null;   // local runtime digest; null for cloud answers
   readonly runtimeVersion: string;
   readonly promptTokens: number | null;
   readonly outputTokens: number | null;
@@ -52,10 +56,30 @@ export type ExplanationEvent =
   | { readonly type: 'done'; readonly explanation: Explanation; readonly details: ExplanationDetails }
   | { readonly type: 'error'; readonly code: ExplanationErrorCode; readonly message: string };
 
-// Body of POST /api/projects/:id/explanations.
+// Body of POST /api/projects/:id/explanations. `provider` defaults to 'local'. A cloud
+// request must carry the hash of the preview the user confirmed (P-16).
 export interface ExplainRequestBody {
   readonly snapshotId: string;
   readonly path: FilePath;
+  readonly provider?: 'local' | 'cloud';
+  readonly previewHash?: string;
+}
+
+// What the browser may learn about the optional cloud provider: never the key.
+export type CloudStatus =
+  | { readonly available: false }
+  | { readonly available: true; readonly provider: 'OpenAI'; readonly model: string; readonly endpoint: string };
+
+// The exact request body that would be sent to the cloud provider, minus the
+// Authorization header, plus the hash the user's confirmation must send back.
+export interface CloudPreview {
+  readonly provider: 'OpenAI';
+  readonly endpoint: string;
+  readonly model: string;
+  readonly payload: unknown;
+  readonly payloadJson: string;
+  readonly previewHash: string;
+  readonly suspectedInjections: readonly SuspectedInjection[];
 }
 
 export type RuntimeStatus =

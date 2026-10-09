@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { DependencyEdge, DependencyGraph } from '../../shared/contracts';
+import type { CloudPreview, CloudStatus } from '../../shared/explanation';
+import { CloudComparePanel } from './CloudComparePanel';
 import { ExplanationPanel, type ExplanationState } from './ExplanationPanel';
 import { ImpactPanel } from './ImpactPanel';
 import { describeTarget, findEdge, findFile, referenceState, sourceLines, type Selection, type SourceState } from '../map/model';
@@ -37,6 +39,14 @@ export interface ExplanationControls {
   readonly state: ExplanationState;
   readonly onExplain: () => void;
   readonly onCancel: () => void;
+  // P-16, present only when the server offers a cloud comparison.
+  readonly cloud?: {
+    readonly status: Extract<CloudStatus, { available: true }>;
+    readonly answer: ExplanationState;
+    readonly onPreview: () => Promise<CloudPreview>;
+    readonly onSend: (previewHash: string) => void;
+    readonly onCancel: () => void;
+  } | undefined;
 }
 
 export function DetailPane({ graph, selection, source, onSelect, explanation }: {
@@ -101,6 +111,10 @@ export function DetailPane({ graph, selection, source, onSelect, explanation }: 
       {selection.kind === 'file' && explanation !== undefined && (
         <ExplanationPanel path={file.path} state={explanation.state} onExplain={explanation.onExplain}
           onCancel={explanation.onCancel} onSelect={onSelect} />
+      )}
+      {selection.kind === 'file' && explanation?.cloud !== undefined && (
+        <CloudComparePanel key={file.path} path={file.path} status={explanation.cloud.status} answer={explanation.cloud.answer}
+          onPreview={explanation.cloud.onPreview} onSend={explanation.cloud.onSend} onCancel={explanation.cloud.onCancel} onSelect={onSelect} />
       )}
       {selection.kind === 'file' && <ImpactPanel key={file.path} graph={graph} path={file.path} onSelect={onSelect} />}
     </header>
