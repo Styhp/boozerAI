@@ -1,3 +1,4 @@
+import { Children, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { DetailPane } from '../src/client/components/DetailPane.js';
@@ -115,6 +116,19 @@ describe('list, summary and canvas messages', () => {
     expect(html).toContain('Read <strong>12 of 14</strong> code files and found <strong>22</strong> imports');
     expect(html).toContain('Analysis possibly incomplete: 2 files skipped, 1 import excluded, 3 imports not followed. See Details for why.');
     expect(html).toMatch(/<details class="summary-details"><summary>Details<\/summary>.*Local import resolution rate/);
+  });
+
+  it('gives every per-file panel a distinct React key (duplicate keys stacked old impact panels in the browser)', () => {
+    const idle = { status: 'idle' } as const;
+    const cloud = { status: { available: true, provider: 'OpenAI', model: 'm', endpoint: 'e' }, answer: idle,
+      onPreview: () => new Promise<never>(noop), onSend: noop, onCancel: noop } as never;
+    // DetailPane itself has no hooks, so calling it returns the element tree without a DOM.
+    const tree = DetailPane({ graph, selection: { kind: 'file', path: 'pricing.ts' }, source: loaded('pricing.ts'), onSelect: noop,
+      notes: {} as never, explanation: { state: idle, onExplain: noop, onCancel: noop, cloud } }) as ReactElement<{ children: ReactNode }>;
+    const header = Children.toArray(tree.props.children).find((child) => isValidElement(child) && child.type === 'header') as ReactElement<{ children: ReactNode }>;
+    const keys = Children.toArray(header.props.children).filter(isValidElement).map((child) => child.key);
+    expect(keys.filter((key) => key?.includes('pricing.ts'))).toHaveLength(3);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
   it('opens on a three-step Start here guide before anything is selected (P-18)', () => {

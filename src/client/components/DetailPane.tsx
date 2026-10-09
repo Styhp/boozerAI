@@ -135,12 +135,13 @@ export function DetailPane({ graph, selection, source, onSelect, explanation, no
         <ExplanationPanel path={file.path} state={explanation.state} onExplain={explanation.onExplain}
           onCancel={explanation.onCancel} onSelect={onSelect} />
       )}
+      {/* Each per-file panel keys on its own prefix: siblings sharing a key made React keep old copies on screen. */}
       {selection.kind === 'file' && explanation?.cloud !== undefined && (
-        <CloudComparePanel key={file.path} path={file.path} status={explanation.cloud.status} answer={explanation.cloud.answer}
+        <CloudComparePanel key={`cloud:${file.path}`} path={file.path} status={explanation.cloud.status} answer={explanation.cloud.answer}
           onPreview={explanation.cloud.onPreview} onSend={explanation.cloud.onSend} onCancel={explanation.cloud.onCancel} onSelect={onSelect} />
       )}
-      {selection.kind === 'file' && <ImpactPanel key={file.path} graph={graph} path={file.path} onSelect={onSelect} />}
-      {selection.kind === 'file' && notes !== undefined && <NotesPanel key={file.path} notes={notes} graph={graph} path={file.path} onSelect={onSelect} />}
+      {selection.kind === 'file' && <ImpactPanel key={`impact:${file.path}`} graph={graph} path={file.path} onSelect={onSelect} />}
+      {selection.kind === 'file' && notes !== undefined && <NotesPanel key={`notes:${file.path}`} notes={notes} graph={graph} path={file.path} onSelect={onSelect} />}
     </header>
   );
 
