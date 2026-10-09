@@ -102,11 +102,20 @@ describe('list, summary and canvas messages', () => {
   });
 
   it('labels the fixture preview and the incomplete-analysis status', () => {
-    const html = renderToStaticMarkup(<SummaryPanel graph={graph} sourceLabel="Fixture preview: hand-written answer key, not parser output" isPreview />);
+    const html = renderToStaticMarkup(<SummaryPanel graph={graph} sourceLabel="Fixture preview: hand-written answer key, not parser output" isPreview onSelect={noop} />);
     expect(html).toContain('Fixture preview: hand-written answer key, not parser output');
     expect(html).toContain('Analysis possibly incomplete');
     expect(html).toContain('Local import resolution rate');
     expect(html).toContain('73%');
+  });
+
+  it('mounts reading insights over the full snapshot graph', () => {
+    const html = renderToStaticMarkup(<SummaryPanel graph={graph} sourceLabel="Fixture" isPreview={false} onSelect={noop} />);
+    // Hand-derived from the oracle: 13 indexed files, 3 reading starts, 10 imported files, 1 cycle group.
+    expect(html).toContain('Reading insights (13 indexed files)');
+    expect(html).toContain('Where to start reading (3)');
+    expect(html).toContain('Most-imported files (10)');
+    expect(html).toContain('Static import cycle groups (1)');
   });
 
   it('explains list-first mode and filter counts instead of drawing a partial canvas', () => {

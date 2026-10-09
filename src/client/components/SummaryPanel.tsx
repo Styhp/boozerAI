@@ -1,7 +1,10 @@
 import type { DependencyGraph } from '../../shared/contracts';
-import { coverageSummary, formatRate } from '../map/model';
+import { coverageSummary, formatRate, type Selection } from '../map/model';
+import { InsightsPanel } from './InsightsPanel';
 
-export function SummaryPanel({ graph, sourceLabel, isPreview }: { graph: DependencyGraph; sourceLabel: string; isPreview: boolean }) {
+export function SummaryPanel({ graph, sourceLabel, isPreview, onSelect }: {
+  graph: DependencyGraph; sourceLabel: string; isPreview: boolean; onSelect: (selection: Selection) => void;
+}) {
   const summary = coverageSummary(graph);
   const { files, imports } = summary;
   return (
@@ -32,6 +35,8 @@ export function SummaryPanel({ graph, sourceLabel, isPreview }: { graph: Depende
           <li>Static analysis only: relationships are potential, not proof of runtime behavior.</li>
         </ul>
       </div>
+      {/* The full snapshot graph, never the map filter: insight counts must not shrink with the view. */}
+      <InsightsPanel graph={graph} onSelect={onSelect} />
     </section>
   );
 }

@@ -123,13 +123,13 @@ Inline all-type named imports are `type-import`; mixed value/type imports remain
 
 ## Reading insights — M4-I
 
-The human lead authorized this [Hardening] slice on 2026-10-09. [analyzeInsights](../src/shared/insights.ts) consumes the full `DependencyGraph`, identifies its snapshot and `insights-v1` algorithm, and returns reading starts, ranked importer counts, cycle groups and the original coverage. It has no filesystem, HTTP, parser or model dependency and never changes graph files/edges. The standalone [InsightsPanel](../src/client/components/InsightsPanel.tsx) is ready for Agent B to mount; it is not yet an app screen.
+The human lead authorized this [Hardening] slice on 2026-10-09. [analyzeInsights](../src/shared/insights.ts) consumes the full `DependencyGraph`, identifies its snapshot and `insights-v1` algorithm, and returns reading starts, ranked importer counts, cycle groups and the original coverage. It has no filesystem, HTTP, parser or model dependency and never changes graph files/edges. [InsightsPanel](../src/client/components/InsightsPanel.tsx) is mounted in [SummaryPanel](../src/client/components/SummaryPanel.tsx) with the full snapshot graph (never the map filter) and App's shared selection callback.
 
 - Count distinct direct importing files, including type and self imports; repeated statements from one file count once. Only local file targets participate. Known zero-importer files are suggested as where to start reading, with the wording "No importers found by static analysis." No usage judgment is inferred.
 - Rank positive counts descending, breaking ties by UTF-8 bytewise path order. Preserve importer names for inspection. Reading starts, cycle members/groups and evidence IDs are sorted deterministically.
 - Two iterative Kosaraju passes find strongly connected groups with multiple files or a self-loop. Keep every original internal dependency edge and its evidence; a group is not represented as an invented simple-cycle chain. Type imports can contribute, so these are static relationships rather than runtime-order claims.
 - Keep all coverage gaps and the existing `possiblyIncomplete` calculation. Duplicate graph files and dangling file endpoints fail loudly instead of producing partial findings.
-- The panel uses escaped text, the shared file/edge selection callback and current graph snapshot. Long lists show eight entries with exact totals and a Show all control; calculations always use the full graph. Agent B owns summary/App mounting and the human browser check; Codex's slice adds new implementation files only.
+- The panel uses escaped text, the shared file/edge selection callback and current graph snapshot. Long lists show eight entries with exact totals and a Show all control; calculations always use the full graph. Agent B owns the summary/App mounting; Codex reviews it. The human browser check remains open.
 
 ## Map layout — C4, implementation owned by 1.5
 

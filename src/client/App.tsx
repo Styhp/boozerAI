@@ -96,7 +96,7 @@ export function App({ project }: { project: ProjectSource | null }) {
 
   return (
     <div className="app">
-      <SummaryPanel graph={graphState.graph} sourceLabel={project.label} isPreview={project.isPreview} />
+      <SummaryPanel graph={graphState.graph} sourceLabel={project.label} isPreview={project.isPreview} onSelect={setSelection} />
       <div className="workspace">
         <GraphList graph={graphState.graph} selection={selection} onSelect={setSelection} />
         <MapCanvas layout={layout!} selection={selection} filter={filter} onFilter={setFilter} onSelect={setSelection} />
