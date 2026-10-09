@@ -1,6 +1,6 @@
 # Product
 
-**Status: product features remain planned; task 1.1 adds only a scaffold awaiting review 1.2.** Boozer AI is planned to help developers understand unfamiliar or AI-generated JavaScript/TypeScript code through a parser-built dependency map and local, source-grounded explanations. No application features exist yet.
+**Status: scaffold approved in 1.2; M2's server-only local snapshot foundation awaits independent review.** Boozer AI is planned to help developers understand unfamiliar or AI-generated JavaScript/TypeScript code through a parser-built dependency map and local, source-grounded explanations. The application still shows only the static shell; parser and launcher/UI integration remain pending.
 
 ## Users and problem
 
