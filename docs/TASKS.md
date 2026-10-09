@@ -30,10 +30,12 @@ Future owners below are proposed assignments, not evidence that work has started
 | M0 | Documentation baseline | Claude Code | None | Shared project docs | Historical draft; reconciled in 0.1 |
 | 0.1 | Reconcile docs and propose architecture | Codex (Agent A) | All project docs read | README.md, AGENTS.md, PRODUCT.md, ARCHITECTURE.md, TASKS.md, SUBMISSION.md | Approved for 1.1 in 0.2; C1–C4 resolved (C1/C4 verified in 1.2) |
 | 0.2 | Independent proposal review | Claude Code (Agent B) | 0.1 | Proposed S-choices, roadmap, safety contracts, schedule | Done: Approved for 1.1 with conditions C1–C4 (2026-10-09) |
-| 0.3 | Agent working rules and project skills | Claude Code | Human lead request, 2026-10-09 | AGENTS.md, CLAUDE.md, `.agents/skills/`, `.claude/skills/` | In review; Codex reviews. Does not change product, architecture or S-choices, so it does not block 0.2 |
+| 0.3 | Agent working rules and project skills | Claude Code | Human lead request, 2026-10-09 | AGENTS.md, CLAUDE.md, `.agents/skills/`, `.claude/skills/` | Done: reviewed by Codex; Approved with condition C6 before 1.6 (full digest/thinking record) |
+| 0.3-R | Independent review of Claude-authored 0.3 | Codex (this session) | 0.3 handoff; human request | Review skill, rules, P-12/P-13 and reserved ScoreProvider | Done: Approved with condition C6 |
 | 1.1 | Scaffold/configuration | Codex (Agent A, this session) | 0.2 Approved + human start approval | Shared types, server/client/test entry points | Done: Approved in 1.2 at `4718e27`; condition C5 open for M2/M3 |
 | 1.2 | Independent scaffold review | Claude Code (review chat) | 1.1 | Rerun scaffold gates; record accepted stack | Done: Approved with condition C5 (2026-10-09); 1.3, 1.5 and 1.6 may start |
-| 1.3 | Original fixture and hand-written graph | Claude Code | 1.2 Approved | Snapshot/graph schemas; Codex reviews oracle | Not started |
+| 1.1-C5 | Dev-proxy Origin correction | Codex (this session) | 1.2 condition C5; human request | Dev launcher → Node Origin policy; production remains strict | In progress |
+| 1.3 | Original fixture and hand-written graph | Claude Code (Agent B chat) | 1.2 Approved | Snapshot/graph schemas; Codex reviews oracle | In progress (claimed 2026-10-09 16:30 AWST) |
 | 1.4 | Parser/resolver | Codex | 1.3 reviewed | Snapshot → graph; Claude reviews | Not started |
 | 1.5 | Dashboard, canvas, detail pane, navigation | Claude Code | 1.2 Approved; reviewed 1.3 data | Graph/evidence and shared selection; Codex reviews | Not started |
 | 1.6 | Early local-model test | Claude Code (Agent B) | 1.2 Approved; download approved 2026-10-09; 1.3 snippets | ModelAdapter → benchmark record; Codex reviews | Not started |
@@ -156,7 +158,23 @@ Scope: AGENTS.md, CLAUDE.md, README.md (docs table row), `.agents/skills/`, `.cl
 - [x] Local Markdown links and code fences checked: 11 files, 33 local links, 0 broken, 0 unbalanced fences. (Python standard-library check, 2026-10-09.)
 - [x] Claude Code discovers both skills through the `.claude/skills/` symlinks. (They appeared in Claude Code's skill list in the creating session, 2026-10-09 15:27. Codex discovery is unverified; AGENTS.md lists the paths.)
 - [x] P-12 recorded as a human decision, separate from the guardrails Claude Code proposed; P-13 opened; M12 check and the SUBMISSION.md internet answer updated. (Claude Code, 2026-10-09.)
-- [ ] Codex reviews 0.3, including the P-12 guardrails, and records a verdict in the review log.
+- [x] Codex reviews 0.3, including the P-12 guardrails, and records a verdict in the review log. (This session, 2026-10-09: Approved with condition C6 below.)
+
+**0.3 independent review report** (Codex, this session, 2026-10-09; pinned `238d89e4530aff57c09ef9e9837880bc84912808`, clean before review)
+
+**Verdict: Approved with condition C6.** No blocker for fixture work or the C5 correction. Claude Code must fix the benchmark procedure before 1.6 uses it. The P-12 guardrails and P-13 proposal pass as design; this does not resolve P-11/P-13, authorize a cloud call, or implement JEV.
+
+Scope/authorship: Claude's 0.3 additions identified in its handoff: fresh-context/ownership/build/test/safety/honesty rules, CLAUDE.md delegation, both canonical skills and their symlinks, the README skill row/disclosures, and P-12/P-13 plus the reserved ScoreProvider/JEV boundary and M12 check. These Claude-authored skill/P-12/P-13 blobs are unchanged since the imported baseline `6d04b41`. Excluded: my 0.1 proposal and 1.1 implementation/current-phase edits, and the separate 1.2 review. No self-review; the pre-Git 0.3 changes have no isolated author commit, so attribution comes from the handoff and unchanged blob comparison.
+
+**C6 — Claude Code, before 1.6:** `.agents/skills/boozer-model-benchmark/SKILL.md:34–38,47,85–100` asks for an ID and sampling settings but does not require the full immutable digest or an explicit thinking setting/output-state record. TASKS.md 1.6 requires exact tag/digest; the approved candidate's setup record explicitly calls for controlled thinking. Update the capture instructions and report template to require the full digest, runtime version, tag/quantization, thinking setting and whether thinking text appeared. Fail loudly if these cannot be obtained. Keep abbreviated display IDs supplemental. The reviewer did not edit the skill.
+
+Non-blocking notes: the benchmark skill's unqualified `ollama` commands need the recorded absolute runtime path on this Mac (it is not on PATH). Its M6 recorder example does not replace the separate live-display workload gate in TASKS.md. Source-reference/no-copy disclosures are preserved; the external Cartograph reference and prior Claude auto-discovery claim were not independently rechecked.
+
+Checks and actual results (fresh detached worktree at the pinned SHA): `npm ci --ignore-scripts --offline` exit 0, 65 packages; `npm run typecheck` exit 0; network-denied `npm test` exit 0, 1 file / 3 tests; network-denied `npm run build` exit 0, 15 modules. Python document validation: 9 canonical Markdown files, 34 local links, zero broken/fence errors; both `.claude/skills` symlinks resolve and their bytes match canonical SKILL.md files. Worktree clean after checks and removed. Both skills are listed in this Codex session's provided skill catalogue; reading them directly works. No benchmark/inference, fixture execution, cloud call, download or package change performed for this review.
+
+Checklist: Scope Pass; dependencies N/A (docs/skills only); docs/contract alignment Pass subject to C6; clean-checkout re-run Pass; offline default suite Pass; no weakened checks/oracle regeneration Pass; ticked evidence Pass (historical Claude-discovery evidence attributed, not rerun); safety design Pass; runtime confinement/parser-boundary implementation N/A; honesty Pass with benchmark-provenance condition C6; no external-copy inspection Not checked. Application command reruns are regression evidence only and do not re-approve my scaffold.
+
+Files changed by this review: TASKS.md only (claim/status, report and log). Follow-up: Claude fixes C6 before benchmarking; Codex independently rechecks the changed skill. No reviewer repair or new human approval requested.
 
 ## M1: First engineering milestone
 
@@ -245,6 +263,14 @@ Acceptance:
 - **N5.** The static host reads only top-level files in `dist/client/assets/`. A future nested asset folder would make startup fail.
 
 *Not checked:* startup with external networking denied (my evidence is source inspection plus the CSP header; Codex ran the sandboxed startup), any browser rendering (a human check), and the MSI. 0.3 is still pending Codex review and is not part of this verdict.
+
+### 1.1-C5 Dev-proxy Origin correction (Codex)
+
+Scope claimed by Codex in this session, 2026-10-09: `src/server/app.ts`, `src/server/index.ts`, `scripts/dev.mjs` and its watched `scripts/dev-host.mjs` child, boundary tests, README.md and the relevant ARCHITECTURE.md/TASKS.md/SUBMISSION.md entries. Dev startup explicitly selects the extra `http://127.0.0.1:5173` Origin; production startup has no environment/CLI opt-in. Host remains exactly `127.0.0.1:4173`. No API/token or feature implementation; C5 requires independent recheck, not self-approval.
+
+- [ ] Production rejects the dev Origin; dev accepts exactly that Origin while preserving the existing production Origin and Host check.
+- [ ] Host, null/foreign/lookalike Origin and production-default regression tests pass in the full offline suite.
+- [ ] Live Node/dev-proxy checks and typecheck/build results are recorded; docs match the changed startup behavior.
 
 ### 1.3 Known-code fixture and expected graph
 
@@ -501,3 +527,4 @@ Handoff to Agent B: review 1.2 from a clean checkout, rerun README commands, ins
 |---|---|---|---|---|
 | 2026-10-09 | 0.2 (reviews 0.1) | Claude Code | Approved for 1.1 with conditions | 0 blocking for 1.1. Conditions: C1 schemas before 1.3, C2 Phase A tiers before M2, C3 ordering/ownership before 1.2 closes, C4 canvas layout before 1.5. See 0.2 report |
 | 2026-10-09 | 1.2 (reviews 1.1 at `4718e27`) | Claude Code (review chat) | Approved with conditions | 0 blocking for 1.3/1.5/1.6. C1 and C4 resolved at contract/spec level. C5: dev proxy Origin 403, before M2/M3 API routes (Codex). See 1.2 report |
+| 2026-10-09 | 0.3 (Claude-authored additions at `238d89e`) | Codex (this session) | Approved with conditions | 0 blocking for fixture/C5. C6: benchmark skill must capture full digest and explicit thinking state before 1.6 (Claude). P-12/P-13 design passes; cloud approvals remain separate |
