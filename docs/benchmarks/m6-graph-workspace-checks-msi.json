@@ -1,0 +1,54 @@
+[
+  {
+    "command": [
+      "node",
+      "--version"
+    ],
+    "exitCode": 0,
+    "stdout": "v24.16.0\n",
+    "stderr": "",
+    "at": "2026-10-09T21:57:23.290942+00:00"
+  },
+  {
+    "command": [
+      "npm",
+      "--version"
+    ],
+    "exitCode": 0,
+    "stdout": "11.13.0\n",
+    "stderr": "",
+    "at": "2026-10-09T21:57:23.369121+00:00"
+  },
+  {
+    "command": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "exitCode": 0,
+    "stdout": "a5ece9d6da3eedbd9e6fb585b2565cfd90d2f7e7\n",
+    "stderr": "",
+    "at": "2026-10-09T21:57:23.370823+00:00"
+  },
+  {
+    "command": [
+      "npm",
+      "test"
+    ],
+    "exitCode": 0,
+    "stdout": "\n> boozer-ai@0.0.0 test\n> vitest run --config vitest.config.ts\n\n\n RUN  v5.0.3 /home/boozer/boozer-ai\n\n\n Test Files  27 passed (27)\n      Tests  361 passed (361)\n   Start at  17:57:23\n   Duration  2.10s (tests 34%, import 32%, transform 29%, setup 4%, worker 1%)\n\n  Transform  transforming modules took 4.39s \u00b7 29% of tracked time, re-done on every run\n             persist transforms across runs with fsModuleCache: true\n             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns\n\n",
+    "stderr": "npm warn Unknown user config \"allow-scripts\". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.\n",
+    "at": "2026-10-09T21:57:25.870273+00:00"
+  },
+  {
+    "command": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "exitCode": 0,
+    "stdout": "\n> boozer-ai@0.0.0 build\n> npm run typecheck && npm run build:server && vite build\n\n\n> boozer-ai@0.0.0 typecheck\n> tsc --noEmit && tsc -p tsconfig.server.json --noEmit\n\n\n> boozer-ai@0.0.0 build:server\n> tsc -p tsconfig.server.json\n\nvite v8.3.4 building client environment for production...\ntransforming...\n\u2713 208 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/client/index.html                   0.41 kB \u2502 gzip:   0.28 kB\ndist/client/assets/index-4Z6PknZH.css   66.51 kB \u2502 gzip:  12.68 kB\ndist/client/assets/index-CdbeCMLS.js   505.22 kB \u2502 gzip: 158.71 kB\n\n\u2713 built in 246ms\n",
+    "stderr": "npm warn Unknown user config \"allow-scripts\". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.\nnpm warn Unknown env config \"allow-scripts\". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.\nnpm warn Unknown user config \"allow-scripts\". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.\nnpm warn Unknown env config \"allow-scripts\". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.\nnpm warn Unknown user config \"allow-scripts\". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.\n\u001b[33m[MODULE_LEVEL_DIRECTIVE] \u001b[0mThe semantics of the module level directive \"use client\" in \"node_modules/@xyflow/react/dist/esm/index.js\" may not be preserved when bundling.\n   \u001b[38;5;246m\u256d\u001b[0m\u001b[38;5;246m\u2500\u001b[0m\u001b[38;5;246m[\u001b[0m node_modules/@xyflow/react/dist/esm/index.js:1:1 \u001b[38;5;246m]\u001b[0m\n   \u001b[38;5;246m\u2502\u001b[0m\n \u001b[38;5;246m1 \u2502\u001b[0m \"use client\"\n \u001b[38;5;240m  \u2502\u001b[0m \u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500  \n \u001b[38;5;240m  \u2502\u001b[0m       \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500 module level directive may not be preserved\n \u001b[38;5;240m  \u2502\u001b[0m \n \u001b[38;5;240m  \u2502\u001b[0m \u001b[38;5;115mHelp\u001b[0m: For more information, see https://rolldown.rs/in-depth/directives#other-directives\n\u001b[38;5;246m\u2500\u2500\u2500\u256f\u001b[0m\n\n[plugin builtin:vite-reporter] \n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n",
+    "at": "2026-10-09T21:57:32.095230+00:00"
+  }
+]

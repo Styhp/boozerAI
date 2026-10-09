@@ -154,6 +154,16 @@ The standard `python3 docs/benchmarks/m6-app-probes-msi.py docs/benchmarks/m6-ap
 
 **Real OpenAI request: not run**, pending a configured credential and the required outbound-payload preview/explicit send. No API-key bytes were printed or written to evidence, and no cloud call was made. Offline/recorder/browser gates remain unchanged.
 
+## Graph workspace launch recovery — 2026-10-10 05:57 UTC+8
+
+Human reported the new interface missing on MSI. Checked branch `feat/graph-workspace` at **`a5ece9d6da3eedbd9e6fb585b2565cfd90d2f7e7`** (application snapshot `feb2819`). Both existing dev listeners returned HTTP 200, but their Node processes were **22.22.1**, and `scripts/dev.mjs` / `scripts/dev-host.mjs` had **no `--project` argument**. The current ProjectGate shows “No project selected” in that state; the repository workspace requires a selected and confirmed project. Node 22 is outside the accepted toolchain, but no claim is made that Node 22 caused this UI symptom.
+
+Stopped only the identified Boozer dev launcher with SIGTERM. With the already-installed Node **24.16.0** / npm **11.13.0**, `npm test` passed **27 files / 361 tests**, and `npm run build` passed both typechecks, server compilation and client bundling. No dependency/runtime/model install. [Check output](benchmarks/m6-graph-workspace-checks-msi.json). Existing npm config and React Flow directive warnings remain; this build also warns about a minified chunk over 500 kB.
+
+Started the actual compiled entry with Node 24 and `--project .`; its normal launcher opened a fresh browser tab on **127.0.0.1:4173**. The old 5173 dev listener is stopped; the new server is deliberately left running for the human. HTTP HTML and both asset responses match the freshly built files byte-for-byte, and the served JavaScript contains Chat Boozer. [Launch/asset evidence](benchmarks/m6-graph-launch-msi.json), [launch log](benchmarks/m6-graph-launch-msi.log).
+
+Human action: use that newly opened launcher tab, click **Read this folder**, then inspect the graph workspace and **Details / Chat Boozer** tabs. Visual/browser confirmation remains unverified by this agent; no chat response, live OpenAI call or new timing claim was made. Ollama remains on 127.0.0.1:11434. Only MSI evidence/report files changed; app source and shared task docs were not edited. This startup correction does not clear the earlier recorder/offline/model limitations.
+
 ## Handoff and decision
 
 Changed files: this report and MSI-named raw evidence/diagnostic scripts in `docs/benchmarks/`. Prior-session artifacts are preserved, including the malformed request and failing benchmark log. Only the MSI diagnostic memory arithmetic was repaired. No app, tests, fixtures, shared task/benchmark docs, dependencies, runtime configuration or model downloads changed.
