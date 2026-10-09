@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ExplanationService } from '../src/server/explain/index.js';
+import type { CloudComparison, ExplanationService } from '../src/server/explain/index.js';
 import type { NotesResponse } from '../src/shared/notes.js';
 import type { GraphResponse } from '../src/shared/project-api.js';
 import { handleProjectApi } from '../src/server/project-api.js';
@@ -32,9 +32,13 @@ async function temp(prefix: string) {
   temps.push(dir);
   return dir;
 }
-function service(): ExplanationService {
+function service(): ExplanationService & CloudComparison {
   const ready = { state: 'ready', model: 'service-double', runtimeVersion: 'test', digest: 'test' } as const;
-  return { status: vi.fn(async () => ready), preload: vi.fn(async () => ready), explain: vi.fn(async function* () { yield { type: 'error' as const, code: 'runtime-unavailable' as const, message: 'Labeled service double.' }; }) };
+  return {
+    cloudStatus: vi.fn(() => ({ available: false } as const)),
+    previewCloud: vi.fn(() => ({ type: 'error', code: 'cloud-unavailable', message: 'No cloud provider is configured for this launch.' } as const)),
+    status: vi.fn(async () => ready), preload: vi.fn(async () => ready), explain: vi.fn(async function* () { yield { type: 'error' as const, code: 'runtime-unavailable' as const, message: 'Labeled service double.' }; }),
+  };
 }
 const MAIN = "import './dep';\n// first linked line\n// second linked line\nexport const x = 1;\n";
 async function project(root?: string) {

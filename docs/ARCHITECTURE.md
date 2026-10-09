@@ -157,6 +157,7 @@ These are implementation boundaries; later adapters/storage/tools remain propose
 | `Retriever.retrieve(snapshot, selection, budget)` | Selection → `Snippet[]` | Hash-bound source ranges, exclusions/redaction and token caps enforced before inference |
 | `ModelAdapter.stream(request, abortSignal)` | Prompt/snippets/settings → text chunks + final model/timing metadata | Provider location explicit; fixed local endpoint by default; timeout/cancellation; no cloud fallback |
 | `ExplanationService.explain(request)` | Immutable snapshot/graph, selected relative path, abort signal → `AsyncIterable<ExplanationEvent>` | Agent B's committed interface; snippets/tokens followed by one done/error. Owns retrieval/model/validation; M2 owns authorization and NDJSON transport. Cache is later work; invalid references remain visible |
+| `CloudComparison.cloudStatus()` / `previewCloud(request)` | Safe launch availability / immutable snapshot + graph + selected key → exact `CloudPreview` or fixed error | Preview sends nothing; browser receives no API key. Explicit cloud explanation must match the preview payload hash; no provider fallback. M2 owns authenticated transport |
 | `LocalStore` | Versioned graph/cache/trace/evaluation records → bounded app-owned persistence | Atomic save/load/remove by opaque key; never accepts a target path; deletion only of app-owned data |
 | `TraceSink.record` / `exportApprovedTrace` | Minimal local events / explicitly selected redacted payload → local record / optional upload | Default local-only sink; no auto-export, no SDK auto-instrumentation |
 | `EvaluationRunner.run(dataset, adapter?)` | Hand-written cases → local report | Deterministic suite needs no model; real-model suite separate and offline-capable |
@@ -175,15 +176,18 @@ Implemented M2 routes, all bearer-authenticated with no cookies or CORS. POST bo
 
 | Route | Request / response |
 |---|---|
-| `GET /api/session` | Selected project ID, basename label and indexing state, or null; no source or absolute root |
+| `GET /api/session` | `{project, cloud}`: selected project ID, basename label and indexing state, or null; cloud is unavailable or safe provider/model/endpoint metadata. No source, absolute root or API key |
 | `POST /api/projects/:id/confirm` | `{}` → snapshot/parser graph plus opaque per-snapshot file IDs |
 | `GET /api/projects/:id/graph` | Current graph/file-ID envelope, only after successful indexing |
 | `GET /api/projects/:id/files/:fileId?snapshotId=…` | Current snapshot ID + opaque file ID → exact in-memory text/path/hash; never reads a browser-supplied filesystem path |
 | `POST /api/projects/:id/refresh` | `{snapshotId}` → revoke old authority, then atomically publish a complete fresh envelope |
 | `POST /api/projects/:id/close` | `{}` → revoke capability, snapshots and pending work |
 | `POST /api/projects/:id/explanations` | Exact `{snapshotId, path}`, optionally `provider: 'local'`, or `provider: 'cloud'` plus a 64-character lowercase-hex `previewHash` → `application/x-ndjson` service events. Other fields/combinations are rejected. `path` is a current-snapshot key; provider/hash pass unchanged to the service |
+| `POST /api/projects/:id/explanations/preview` | Exact `{snapshotId, path}` → the `CloudPreview` object as JSON 200. Requires the current project/snapshot; the service validates the selected key. Errors: cloud-unavailable 404; stale-snapshot 409; invalid-selection/no-excerpt 400. No filesystem-path joins or network call |
 
 Only one index and one explanation run per session; refresh/close/disconnect abort pending work. Explanation transport has a 120-second bound and respects backpressure. Structured failures expose sanitized codes only. File IDs are renewed even on an unchanged-content refresh; [HttpProjectSource](../src/client/data/http-project-source.ts) additionally checks snapshot/path/hash and hashes the received source text before presenting it as current. Later archive/cache/agent routes must reuse this authorization.
+
+P-16 transport is implemented and awaiting Claude's independent review. `startHost` holds `ExplanationService & CloudComparison`; the factory alone reads the optional cloud key at launch. `ProjectConnection.session()` caches authenticated launch availability in memory, and each subsequently created `HttpProjectSource` exposes optional cloud methods only when available. Status reads use that cached metadata; preview runs only on an explicit request, uses the bearer header and sends only the two selection fields. Revoking the source aborts pending previews and rejects late results; close clears availability. The existing explanation transport forwards the confirmed provider/hash and fixed service event messages unchanged. Browser/cloud-send acceptance remains a human check.
 
 ## Local project selection and loopback inference
 

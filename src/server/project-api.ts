@@ -1,7 +1,7 @@
 import { once } from 'node:events';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { ExplainRequestBody } from '../shared/explanation.js';
-import type { ExplanationService } from './explain/index.js';
+import type { CloudComparison, ExplanationService } from './explain/index.js';
 import { ApiError, ProjectSession } from './project-session.js';
 import { NotesError, routeNotes } from './project-notes.js';
 
@@ -53,7 +53,7 @@ function explanationBody(input: Record<string, unknown>): ExplainRequestBody {
   throw new ApiError(400, 'invalid-body');
 }
 
-export async function handleProjectApi(request: IncomingMessage, response: ServerResponse, session: ProjectSession, service: ExplanationService, development: boolean): Promise<void> {
+export async function handleProjectApi(request: IncomingMessage, response: ServerResponse, session: ProjectSession, service: ExplanationService & CloudComparison, development: boolean): Promise<void> {
   const controller = new AbortController();
   const disconnected = () => { if (!response.writableEnded) controller.abort(); };
   response.on('close', disconnected);
@@ -70,7 +70,7 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
       if (origin !== 'http://127.0.0.1:4173' && !(development && origin === 'http://127.0.0.1:5173')) throw new ApiError(403, 'origin-required');
     }
     if (method === 'GET' && pathname === '/api/session' && query === undefined) {
-      json(response, 200, { project: session.descriptor() }); return;
+      json(response, 200, { project: session.descriptor(), cloud: service.cloudStatus() }); return;
     }
     // --- Project notes hook (phase 1): its own route table behind the same auth, Origin,
     // JSON and body-cap checks; errors become the same sanitized { error: { code } }.
@@ -86,7 +86,7 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
       return;
     }
     // --- end project notes hook ---
-    const route = /^\/api\/projects\/([0-9a-f-]{36})\/(confirm|graph|files\/([0-9a-f-]{36})|refresh|close|explanations)$/.exec(pathname ?? '');
+    const route = /^\/api\/projects\/([0-9a-f-]{36})\/(confirm|graph|files\/([0-9a-f-]{36})|refresh|close|explanations|explanations\/preview)$/.exec(pathname ?? '');
     if (route === null) throw new ApiError(404, 'not-found');
     const id = route[1]!;
     const action = route[2]!;
@@ -116,6 +116,18 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
       // Validate the selected project even when it hasn't been confirmed yet.
       if (session.descriptor()?.id !== id) throw new ApiError(404, 'invalid-project');
       session.close(); json(response, 200, { closed: true }); return;
+    }
+    if (action === 'explanations/preview') {
+      fields(input, ['snapshotId', 'path']);
+      const current = session.current(id, input.snapshotId as string);
+      // Selection stays a snapshot key. Only the service builds the exact cloud payload.
+      const result = service.previewCloud({ snapshot: current.snapshot, graph: current.response.graph, selected: input.path as string, signal: controller.signal });
+      if (result.type === 'error') {
+        const status = result.code === 'cloud-unavailable' ? 404 : result.code === 'stale-snapshot' ? 409
+          : result.code === 'invalid-selection' || result.code === 'no-excerpt' ? 400 : 500;
+        throw new ApiError(status, result.code);
+      }
+      json(response, 200, result.preview); return;
     }
     if (action !== 'explanations') throw new ApiError(405, 'method-not-allowed');
     const selection = explanationBody(input);

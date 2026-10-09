@@ -1,7 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { createExplanationService, type ExplanationService } from './explain/index.js';
+import { createExplanationService, type CloudComparison, type ExplanationService } from './explain/index.js';
 import { launchSession, openLaunchUrl } from './launcher.js';
 import { handleProjectApi } from './project-api.js';
 import type { ProjectSession } from './project-session.js';
@@ -17,7 +17,7 @@ export function permitsRequest(host: string | undefined, requestOrigin: string |
 }
 
 // This reads only Boozer's built assets, never a selected target repository.
-export async function createApp(developmentProxy = false, api?: { session: ProjectSession; service: ExplanationService }) {
+export async function createApp(developmentProxy = false, api?: { session: ProjectSession; service: ExplanationService & CloudComparison }) {
   const client = new URL('../client/', import.meta.url);
   const assets = new Map<string, { body: Buffer; type: string }>();
   assets.set('/', { body: await readFile(new URL('index.html', client)), type: 'text/html' });
@@ -54,7 +54,7 @@ export async function createApp(developmentProxy = false, api?: { session: Proje
 
 export async function startHost(developmentProxy = false, args: readonly string[] = process.argv.slice(2)) {
   const session = await launchSession(args);
-  const service = createExplanationService();
+  const service: ExplanationService & CloudComparison = createExplanationService();
   const preload = new AbortController();
   const server = createServer(await createApp(developmentProxy, { session, service }));
   const stop = () => {

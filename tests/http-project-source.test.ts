@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import type { DependencyGraph } from '../src/shared/contracts.js';
+import type { CloudPreview, CloudStatus } from '../src/shared/explanation.js';
 import type { GraphResponse } from '../src/shared/project-api.js';
 import { HttpProjectSource, ProjectApiError, ProjectConnection, takeCapability } from '../src/client/data/http-project-source';
 
@@ -16,15 +17,21 @@ const graph: DependencyGraph = {
 };
 const envelope: GraphResponse = { projectId: id, label: 'Inert fixture', graph, files: [{ id: fileId, path: 'main.ts' }] };
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
+const cloudStatus: CloudStatus = { available: true, provider: 'OpenAI', model: 'cloud-service-double', endpoint: 'https://api.openai.com/v1/chat/completions' };
+const preview: CloudPreview = {
+  provider: 'OpenAI', endpoint: cloudStatus.endpoint, model: cloudStatus.model,
+  payload: { messages: [{ content: 'inert preview text' }] }, payloadJson: '{"messages":[{"content":"inert preview text"}]}',
+  previewHash: createHash('sha256').update('{"messages":[{"content":"inert preview text"}]}').digest('hex'), suspectedInjections: [],
+};
 
 describe('M2 browser capability and HTTP ProjectSource', () => {
   it('calls the default browser fetch without rebinding its receiver to the connection', async () => {
     const standalone = vi.spyOn(globalThis, 'fetch').mockImplementation(function (this: unknown) {
       expect(this === undefined || this === globalThis).toBe(true);
-      return Promise.resolve(json({ project: null }));
+      return Promise.resolve(json({ project: null, cloud: { available: false } }));
     });
     try {
-      expect(await new ProjectConnection('c'.repeat(64)).session()).toEqual({ project: null });
+      expect(await new ProjectConnection('c'.repeat(64)).session()).toEqual({ project: null, cloud: { available: false } });
     } finally { standalone.mockRestore(); }
   });
   it('removes the launch fragment immediately and accepts only the exact capability field', () => {
@@ -35,7 +42,7 @@ describe('M2 browser capability and HTTP ProjectSource', () => {
     for (const hash of ['', '#cap=wrong', `#cap=${capability}&root=/etc`, `#cap=${capability}&cap=${capability}`]) expect(takeCapability({ hash, pathname: '/', search: '' }, history)).toBeNull();
   });
   it('sends authority only in a bearer header; mutations use JSON and no cookies/redirects/cache', async () => {
-    const transport = vi.fn(async () => json({ project: { id, label: 'Inert fixture', state: 'selected' } }));
+    const transport = vi.fn(async () => json({ project: { id, label: 'Inert fixture', state: 'selected' }, cloud: { available: false } }));
     const connection = new ProjectConnection('c'.repeat(64), transport);
     await connection.session();
     await connection.confirm(id);
@@ -99,5 +106,114 @@ describe('M2 browser capability and HTTP ProjectSource', () => {
     const received = [];
     for await (const event of source.explain({ snapshotId, path: 'main.ts' }, controller.signal)) received.push(event);
     expect(received).toMatchObject([{ type: 'error', code: 'cancelled' }]);
+  });
+});
+
+describe('P-16 HTTP cloud methods', () => {
+  it('offers cloud only after authenticated available session metadata, without a status/preview background request', async () => {
+    const transport = vi.fn(async () => json({ project: null, cloud: cloudStatus }));
+    const connection = new ProjectConnection('c'.repeat(64), transport);
+    expect(new HttpProjectSource(connection, envelope).cloud).toBeUndefined();
+    await connection.session();
+    const source = new HttpProjectSource(connection, envelope);
+    expect(await source.cloud!.status()).toEqual(cloudStatus);
+    expect(await source.cloud!.status()).toEqual(cloudStatus);
+    expect(transport).toHaveBeenCalledTimes(1);
+    const unavailable = new ProjectConnection('c'.repeat(64), async () => json({ project: null, cloud: { available: false } }));
+    await unavailable.session();
+    expect(new HttpProjectSource(unavailable, envelope).cloud).toBeUndefined();
+    const unauthorized = new ProjectConnection('c'.repeat(64), async () => json({ error: { code: 'unauthorized' } }, 401));
+    await expect(unauthorized.session()).rejects.toMatchObject({ code: 'unauthorized' });
+    expect(new HttpProjectSource(unauthorized, envelope).cloud).toBeUndefined();
+  });
+  it('previews only on explicit request with exact selection JSON and the token header, then forwards cloud/hash through NDJSON', async () => {
+    const event = { type: 'error', code: 'cloud-error', message: 'Fixed cloud service message.' };
+    const transport = vi.fn(async (url: string, _init: RequestInit) => {
+      if (url === '/api/session') return json({ project: null, cloud: cloudStatus });
+      if (url.endsWith('/preview')) return json(preview);
+      return new Response(`${JSON.stringify(event)}\n`, { headers: { 'Content-Type': 'application/x-ndjson' } });
+    });
+    const connection = new ProjectConnection('c'.repeat(64), transport);
+    await connection.session();
+    const source = new HttpProjectSource(connection, envelope);
+    expect(await source.cloud!.preview({ snapshotId, path: 'main.ts' })).toEqual(preview);
+    expect(transport.mock.calls[1]).toEqual([`/api/projects/${id}/explanations/preview`, expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ snapshotId, path: 'main.ts' }), signal: expect.any(AbortSignal),
+      credentials: 'omit', mode: 'same-origin', redirect: 'error', cache: 'no-store', referrerPolicy: 'no-referrer',
+      headers: { Authorization: `Bearer ${'c'.repeat(64)}`, 'Content-Type': 'application/json' },
+    })]);
+    const body = { snapshotId, path: 'main.ts', provider: 'cloud' as const, previewHash: preview.previewHash };
+    const received = [];
+    for await (const value of source.explain(body, new AbortController().signal)) received.push(value);
+    expect(received).toEqual([event]);
+    expect(transport.mock.calls[2]).toEqual([`/api/projects/${id}/explanations`, expect.objectContaining({ body: JSON.stringify(body) })]);
+    expect(transport).toHaveBeenCalledTimes(3);
+    expect(transport.mock.calls.every(([url]) => url.startsWith('/api/'))).toBe(true);
+  });
+  it('refuses stale/unknown preview selections without transporting any source path', async () => {
+    const transport = vi.fn(async () => json({ project: null, cloud: cloudStatus }));
+    const connection = new ProjectConnection('c'.repeat(64), transport);
+    await connection.session();
+    const source = new HttpProjectSource(connection, envelope);
+    for (const body of [{ snapshotId: 'old', path: 'main.ts' }, { snapshotId, path: '../private.ts' }]) {
+      await expect(source.cloud!.preview(body)).rejects.toThrow('Refresh and select the file again.');
+    }
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+  it.each([
+    [404, 'cloud-unavailable', 'No cloud provider is configured for this launch.'],
+    [409, 'stale-snapshot', 'Refresh and select the file again.'],
+    [400, 'invalid-selection', 'Select a source file in the current snapshot.'],
+    [400, 'no-excerpt', 'No exact excerpt of this file fits the explanation budget, so nothing was sent.'],
+    [401, 'unauthorized', 'The project session has ended. Restart the launcher.'],
+    [500, '/private/exception contains a key', 'Could not preview the cloud request.'],
+  ])('shows a fixed readable error for preview HTTP %s / %s', async (status, code, message) => {
+    const transport = async (url: string) => url === '/api/session' ? json({ project: null, cloud: cloudStatus }) : json({ error: { code, message: 'NEVER SHOW THIS PRIVATE EXCEPTION' } }, status);
+    const connection = new ProjectConnection('c'.repeat(64), transport);
+    await connection.session();
+    const source = new HttpProjectSource(connection, envelope);
+    await expect(source.cloud!.preview({ snapshotId, path: 'main.ts' })).rejects.toEqual(new Error(message));
+  });
+  it('aborts pending previews and suppresses late results after source revocation', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const transport = vi.fn(async (url: string, _init: RequestInit) => {
+      if (url === '/api/session') return json({ project: null, cloud: cloudStatus });
+      await gate; return json(preview); // This double intentionally ignores AbortSignal.
+    });
+    const connection = new ProjectConnection('c'.repeat(64), transport);
+    await connection.session();
+    const source = new HttpProjectSource(connection, envelope);
+    const pending = source.cloud!.preview({ snapshotId, path: 'main.ts' });
+    source.revoke();
+    expect(transport.mock.calls[1]![1].signal!.aborted).toBe(true);
+    release();
+    await expect(pending).rejects.toThrow('Cloud preview cancelled.');
+    expect(await source.cloud!.status()).toEqual({ available: false });
+    await expect(source.cloud!.preview({ snapshotId, path: 'main.ts' })).rejects.toThrow('Cloud preview cancelled.');
+    expect(transport).toHaveBeenCalledTimes(2);
+  });
+  it('clears cached availability on close and suppresses a preview whose JSON finishes after close', async () => {
+    let release!: () => void;
+    let draining!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const started = new Promise<void>((resolve) => { draining = resolve; });
+    const transport = vi.fn(async (url: string) => {
+      if (url === '/api/session') return json({ project: null, cloud: cloudStatus });
+      if (url.endsWith('/close')) return json({ closed: true });
+      const response = json(preview);
+      response.json = async () => { draining(); await gate; return preview; };
+      return response;
+    });
+    const connection = new ProjectConnection('c'.repeat(64), transport);
+    await connection.session();
+    const source = new HttpProjectSource(connection, envelope);
+    const pending = source.cloud!.preview({ snapshotId, path: 'main.ts' });
+    await started;
+    await connection.close(id);
+    release();
+    await expect(pending).rejects.toThrow('The project session has ended. Restart the launcher.');
+    expect(await source.cloud!.status()).toEqual({ available: false });
+    expect(new HttpProjectSource(connection, envelope).cloud).toBeUndefined();
   });
 });
