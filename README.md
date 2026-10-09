@@ -55,6 +55,8 @@ Shared types live in [src/shared/contracts.ts](src/shared/contracts.ts); server/
 
 M2's [LocalInputAdapter](src/server/local-input.ts) is callable from server code or a plain script: `select(folder)`, `confirm(projectId)`, then `snapshot(projectId, { analysisKey: ANALYSIS_KEY })`; pass the result directly to `extractDependencies`. `ANALYSIS_KEY` and `extractDependencies` are exported by the [extractor module](src/shared/extractor.ts). `close()` revokes further operations. Defaults: 2,000 supported source candidates, 1 MiB per file, 20 MiB read total, 20,000 metadata entries and 64 directory levels; callers may lower the source limits. Known oversize files and every case-colliding sibling become counted skips before reads/traversal. Whole-run file-count/total-byte/entry/depth caps, cancellation and detected mid-read growth abort with sanitized codes and no partial result. Source stays in memory, is never executed or written, and graph evidence shares its snapshot ID. The input/parser, C7/C8 corrections and local launcher/API/browser integration are independently approved; human/MSI rehearsal remains separate.
 
+**Project notes (optional, P-17).** In a file's detail pane, "Remember notes for this folder" turns on notes you write yourself, linked to lines of code. Boozer marks each note current, moved, stale or missing as the code changes; the model never sees them. They are saved outside the project, in `~/Library/Application Support/Boozer AI/` on macOS or `~/.local/share/boozer-ai/` on Linux. Nothing is written until you turn notes on. To stop notes for a folder on later launches, or to recover from a notes file Boozer reports as unreadable, quit Boozer and remove that folder's `notes-<key>.json` there.
+
 ## Documentation
 
 | File | Contents |

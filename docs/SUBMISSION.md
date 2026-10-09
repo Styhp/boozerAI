@@ -107,7 +107,7 @@ Official references checked 2026-10-09: [Ollama macOS requirements](https://docs
 
 ## Stack and later integrations
 
-- Local scaffold packages are recorded above. The parser and Ollama integration remain planned. The demo uses memory only; local JSON persistence is later M8 hardening.
+- Local scaffold packages are recorded above. The parser and Ollama integration remain planned. The demo keeps snapshots, graphs and results in memory. The only disk write is opt-in project notes (P-17), saved in the app data folder outside the analyzed project; other local persistence is later M8 hardening.
 - Secondary cloud: OpenAI and JEV, both off by default and subject to explicit cloud approval. JEV service identity/API/data terms remain unresolved (P-11).
 - Optional tracing: LangSmith, off by default. Traces can expose prompts/snippets, outputs, tool inputs/results, identifiers, timing, model settings/token usage, errors and metadata. Only an explicit previewed/redacted export may transmit data. See [ARCHITECTURE.md](ARCHITECTURE.md) for the proposed payload controls. Local traces and evaluations do not require LangSmith.
 
