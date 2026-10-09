@@ -109,6 +109,22 @@ describe('list, summary and canvas messages', () => {
     expect(html).toContain('73%');
   });
 
+  it('counts every coverage gap in the plain status line and keeps exact numbers under Details (P-18)', () => {
+    const html = renderToStaticMarkup(<SummaryPanel graph={graph} sourceLabel="Fixture" isPreview={false} onSelect={noop} />);
+    // Hand-derived from the oracle coverage: 14 found / 12 parsed / 2 skipped; 22 imports, 1 excluded, 3 failed.
+    expect(html).toContain('Read <strong>12 of 14</strong> code files and found <strong>22</strong> imports');
+    expect(html).toContain('Analysis possibly incomplete: 2 files skipped, 1 import excluded, 3 imports not followed. See Details for why.');
+    expect(html).toMatch(/<details class="summary-details"><summary>Details<\/summary>.*Local import resolution rate/);
+  });
+
+  it('opens on a three-step Start here guide before anything is selected (P-18)', () => {
+    const html = renderToStaticMarkup(<DetailPane graph={graph} selection={null} source={{ status: 'idle' }} onSelect={noop} />);
+    expect(html).toContain('Start here');
+    expect(html.match(/<li>/g)).toHaveLength(3);
+    expect(html).toContain('Explain in plain English');
+    expect(html).toContain('never runs it or changes it');
+  });
+
   it('mounts reading insights over the full snapshot graph', () => {
     const html = renderToStaticMarkup(<SummaryPanel graph={graph} sourceLabel="Fixture" isPreview={false} onSelect={noop} />);
     // Hand-derived from the oracle: 13 indexed files, 3 reading starts, 10 imported files, 1 cycle group.

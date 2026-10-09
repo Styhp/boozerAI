@@ -114,3 +114,14 @@ code, .source, .path, .snapshot-id { font-family: ui-monospace, SFMono-Regular, 
 .cloud-preview { margin-top: 0.4rem; }
 .payload { font-size: 0.7rem; background: #111312; padding: 0.4rem; max-height: 14rem; overflow: auto; white-space: pre-wrap; word-break: break-all; }
 .explain-bar button.secondary { background: none; border-color: var(--line); }
+
+/* P-18: plain-language hints and the first-screen guide. */
+.hint { margin: 0.15rem 0.25rem 0.4rem; font-size: 0.78rem; line-height: 1.45; color: #c9d1cb; font-family: system-ui, sans-serif; }
+.summary-plain { max-width: 40rem; font-size: 0.85rem; }
+.summary-plain p { margin: 0.15rem 0; }
+.summary-details summary { cursor: pointer; color: var(--accent); font-size: 0.8rem; }
+.summary-details[open] { flex-basis: 100%; }
+.start-here { padding: 0.75rem 1rem; border: 1px solid var(--accent); border-radius: 8px; background: var(--panel); line-height: 1.55; }
+.start-here h2 { font-family: system-ui, sans-serif; font-size: 1.1rem; margin: 0 0 0.5rem; color: var(--accent); }
+.start-here ol { margin: 0 0 0.6rem; padding-left: 1.2rem; }
+.start-here li { margin: 0.45rem 0; }

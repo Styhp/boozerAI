@@ -47,6 +47,7 @@ export function InsightsPanel({ graph, onSelect }: { graph: DependencyGraph; onS
       </details>
       <details>
         <summary>Most-imported files ({result.mostImported.length})</summary>
+        <p className="hint">Files that many other files use. A change here potentially affects more of the project.</p>
         {result.mostImported.length === 0 ? <p className="muted">No local file imports found by static analysis.</p>
           : <InsightList key={`${result.snapshotId}:rank`} entries={result.mostImported} render={(file) => <li key={file.path}>
             {fileLink(file.path)}{' '}<span className="badge">{file.importerCount} importing {file.importerCount === 1 ? 'file' : 'files'}</span>
@@ -58,6 +59,7 @@ export function InsightsPanel({ graph, onSelect }: { graph: DependencyGraph; onS
       </details>
       <details>
         <summary>Static import cycle groups ({result.cycles.length})</summary>
+        <p className="hint">Files that depend on each other in a loop.</p>
         <p className="small muted">Files in a group are mutually reachable through local imports. Type imports are included; static relationships may differ from runtime behavior.</p>
         {result.cycles.length === 0 ? <p className="muted">No import cycles found by static analysis.</p>
           : <InsightList key={`${result.snapshotId}:cycles`} entries={result.cycles} render={(group) => <li key={group.files[0]}>

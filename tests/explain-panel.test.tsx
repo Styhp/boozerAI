@@ -65,7 +65,7 @@ describe('explanation panel', () => {
 
   it('labels model, runtime, local and duration, and keeps the sent snippets visible', () => {
     const html = panel(done);
-    for (const label of ['qwen3:4b-instruct', 'Ollama 0.40.2', '>local<', '41.2 s', 'Snippets sent to the model (1)', '[S1] pricing.ts:1–2']) {
+    for (const label of ['qwen3:4b-instruct', 'Ollama 0.40.2', '>local<', '41.2 s', 'Code the AI was shown (1)', '[S1] pricing.ts:1–2']) {
       expect(html).toContain(label);
     }
   });
@@ -76,7 +76,7 @@ describe('explanation panel', () => {
     expect(html).toContain('class="citation invalid"');
     expect(html).toContain('[S4]?');
     expect(html).toContain('class="mention unknown"');
-    expect(html).toContain('2 citations, 1 unknown (flagged with ?)');
+    expect(html).toContain('2 source links like [S1], 1 unknown (flagged with ?)');
     expect(html).toContain('File names not found as indexed source: ghost.ts');
     expect(html).toContain('does not prove the claim is correct');
   });
@@ -97,7 +97,7 @@ describe('explanation panel', () => {
   });
 
   it('shows clear states for idle, running and a missing runtime, with no invented answer', () => {
-    expect(panel({ status: 'idle' })).toContain('Explain with local model');
+    expect(panel({ status: 'idle' })).toContain('Explain in plain English');
     expect(panel({ status: 'running', snippets, text: 'Partial' })).toContain('Cancel');
     const missing = panel({ status: 'error', code: 'runtime-unavailable', message: 'No local Ollama runtime is answering on 127.0.0.1:11434.', snippets: [], text: '' });
     expect(missing).toContain('Local model runtime not available');

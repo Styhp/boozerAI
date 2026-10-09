@@ -7,7 +7,8 @@ import type { Explanation, FilePath, Snippet } from './contracts.js';
 // v1 (docs/benchmarks/m3-explain-v1-dev-mac.jsonl) had no word limit and hit the 300-token cap.
 // v2 named "code words" in its post-snippet rule and missed a differently phrased injection
 // (docs/benchmarks/m3-injection-variants-v2-dev-mac.jsonl); v3 states the rule generically.
-export const PROMPT_VERSION = 'explain-v3';
+// v4 (P-18) asks for an everyday-words summary first for readers new to programming; the injection rules are unchanged.
+export const PROMPT_VERSION = 'explain-v4';
 
 export type ExplanationErrorCode =
   | 'invalid-selection'    // selected path is not a source file in this snapshot

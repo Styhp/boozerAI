@@ -6,7 +6,7 @@ import { ExplanationPanel, type ExplanationState } from './ExplanationPanel';
 import { ImpactPanel } from './ImpactPanel';
 import { NotesPanel } from './NotesPanel';
 import type { NotesSource } from '../data/project-source';
-import { describeTarget, findEdge, findFile, referenceState, sourceLines, type Selection, type SourceState } from '../map/model';
+import { EDGE_KIND_HINTS, describeTarget, findEdge, findFile, referenceState, sourceLines, type Selection, type SourceState } from '../map/model';
 
 function EvidenceLink({ edge, onSelect }: { edge: DependencyEdge; onSelect: (s: Selection) => void }) {
   return (
@@ -37,6 +37,24 @@ function SourceView({ text, highlight }: { text: string; highlight: { start: num
   );
 }
 
+// P-18: the first screen tells a newcomer what to do, in three steps.
+function StartHere() {
+  return (
+    <section className="start-here" aria-label="Start here">
+      <h2>Start here</h2>
+      <ol>
+        <li><strong>Pick a file</strong> in the list on the left or a box on the map. Not sure which? Open
+          {' '}<em>Reading insights</em> at the top and try a file under <em>Where to start reading</em>.</li>
+        <li><strong>Read what it does.</strong> Press <em>Explain in plain English</em>. The AI runs on this computer,
+          and each link like [S1] jumps to the lines it used.</li>
+        <li><strong>See what it touches.</strong> <em>Potentially affected files</em> lists the files that use this one,
+          so check them before you change it.</li>
+      </ol>
+      <p className="muted small">Boozer reads your code but never runs it or changes it.</p>
+    </section>
+  );
+}
+
 export interface ExplanationControls {
   readonly state: ExplanationState;
   readonly onExplain: () => void;
@@ -61,7 +79,7 @@ export function DetailPane({ graph, selection, source, onSelect, explanation, no
   notes?: NotesSource | undefined;
 }) {
   if (selection === null) {
-    return <aside className="detail" data-state="empty"><p className="muted">Select a file or relationship to inspect its source.</p></aside>;
+    return <aside className="detail" data-state="empty"><StartHere /></aside>;
   }
 
   if (selection.kind === 'terminal') {
@@ -98,6 +116,7 @@ export function DetailPane({ graph, selection, source, onSelect, explanation, no
           <span className={`badge kind-${edge.target.type}`}>{edge.kind}</span>{' '}
           <code>{edge.specifier}</code> → {describeTarget(edge).label}
           {describeTarget(edge).reason && <span className="muted"> ({describeTarget(edge).reason})</span>}
+          <br /><span className="hint">{EDGE_KIND_HINTS[edge.kind]}, on line {edge.evidence.startLine} of this file.</span>
         </p>
       )}
       {file.parse.status === 'error' && (

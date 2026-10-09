@@ -62,7 +62,7 @@ describe('cloud comparison panel (P-16)', () => {
     const html = renderToStaticMarkup(<DetailPane graph={graph} selection={{ kind: 'file', path: 'pricing.ts' }}
       source={{ status: 'loading', path: 'pricing.ts' }} onSelect={noop}
       explanation={{ state: { status: 'idle' }, onExplain: noop, onCancel: noop }} />);
-    expect(html).toContain('Explain with local model');
+    expect(html).toContain('Explain in plain English');
     expect(html).not.toContain('Compare with cloud');
   });
 });

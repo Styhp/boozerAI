@@ -1,4 +1,4 @@
-import type { DependencyEdge, DependencyGraph, EvidenceRef, FileNode, FilePath } from '../../shared/contracts';
+import type { DependencyEdge, DependencyGraph, EdgeKind, EvidenceRef, FileNode, FilePath } from '../../shared/contracts';
 
 // Display rules for counts, targets and evidence. Pure functions over C1 data.
 
@@ -21,6 +21,15 @@ export type SourceState =
   | { readonly status: 'loading'; readonly path: FilePath }
   | { readonly status: 'loaded'; readonly source: LoadedSource }
   | { readonly status: 'failed'; readonly path: FilePath; readonly message: string };
+
+// P-18: everyday-words meaning of each import kind, shown as hover text beside the technical label.
+export const EDGE_KIND_HINTS: Readonly<Record<EdgeKind, string>> = {
+  import: 'Uses code from another file',
+  'type-import': 'Uses only type definitions from another file; no running code',
+  're-export': 'Passes another file\'s code along to whoever uses this file',
+  require: 'Uses code from another file (older CommonJS style)',
+  'dynamic-import': 'Loads another file only when it is needed',
+};
 
 // A zero denominator has no rate: "No files examined" is never shown as 100%.
 export const rate = (part: number, whole: number): number | null => (whole === 0 ? null : part / whole);

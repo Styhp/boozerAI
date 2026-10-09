@@ -48,6 +48,10 @@ export function MapCanvas({ layout, selection, filter, onFilter, onSelect }: {
           Folder or path filter{' '}
           <input value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="e.g. utils/" spellCheck={false} />
         </label>
+        <p className="hint">
+          Each box is a file; an arrow points from a file to what it uses. Blue dashed boxes are outside packages,
+          dotted boxes are imports Boozer skipped (yellow) or could not follow (red), and dashed arrows carry only type definitions. Click a box to open it.
+        </p>
         <p className="muted">
           Showing {counts.displayedFiles} of {counts.indexedFiles} files and {counts.displayedEdges} of {counts.indexedEdges} relationships
           {counts.omittedFiles + counts.omittedEdges > 0 && ` (${counts.omittedFiles} files and ${counts.omittedEdges} relationships hidden by the filter; still indexed and in the list)`}

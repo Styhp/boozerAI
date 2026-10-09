@@ -66,7 +66,8 @@ function InlineView({ parts, snippets, path, onSelect }: {
 function SnippetList({ snippets, path, onSelect }: { snippets: readonly Snippet[]; path: FilePath; onSelect: (s: Selection) => void }) {
   return (
     <details className="snippets" open>
-      <summary>Snippets sent to the model ({snippets.length})</summary>
+      <summary>Code the AI was shown ({snippets.length})</summary>
+      <p className="hint">The AI saw only these excerpts. Each [S#] link in the answer points to one of them.</p>
       <ol>
         {snippets.map((s) => (
           <li key={s.id} id={`snippet-${s.id}`}>
@@ -95,8 +96,9 @@ export function ExplanationPanel({ path, state, onExplain, onCancel, onSelect }:
       <div className="explain-bar">
         {running
           ? <button type="button" onClick={onCancel}>Cancel</button>
-          : <button type="button" onClick={onExplain}>{state.status === 'idle' ? 'Explain with local model' : 'Explain again'}</button>}
-        {running && <span className="muted" role="status">Generating on this machine…</span>}
+          : <button type="button" onClick={onExplain} title="Runs the approved AI model on this computer; nothing is sent online">
+            {state.status === 'idle' ? 'Explain in plain English' : 'Explain again'}</button>}
+        {running && <span className="muted" role="status">The AI on this computer is writing… this can take up to a minute.</span>}
       </div>
       <ExplanationResult path={path} state={state} onSelect={onSelect} />
     </section>
@@ -139,8 +141,8 @@ export function ExplanationResult({ path, state, onSelect }: {
 
       {state.status === 'done' && state.details.suspectedInjections.length > 0 && (
         <div className="notice warning" role="status">
-          <strong>Possible prompt injection.</strong> The code sent to the model contains text that looks addressed to AI
-          tools, and the model may have followed it. Check the answer against the source:{' '}
+          <strong>Possible prompt injection.</strong> The code shown to the AI contains text that looks aimed at AI
+          tools, and the AI may have followed it instead of just explaining. Check the answer against the source:{' '}
           {state.details.suspectedInjections.map((s, i) => {
             const snippet = snippets.find((candidate) => candidate.id === s.snippetId);
             return (
@@ -159,11 +161,11 @@ export function ExplanationResult({ path, state, onSelect }: {
         const unknown = state.details.mentions.filter((m) => m.status !== 'linked');
         return (
           <ul className="checks">
-            <li>{state.explanation.citations.length} citations, {invalid === 0 ? 'all match a sent snippet' : `${invalid} unknown (flagged with ?)`}.</li>
+            <li>{state.explanation.citations.length} source links like [S1], {invalid === 0 ? 'all pointing to code the AI was shown' : `${invalid} unknown (flagged with ?)`}.</li>
             {unknown.length > 0 && <li className="warning">File names not found as indexed source: {unknown.map((m) => m.text).join(', ')}.</li>}
             {state.details.truncated && <li className="warning">The answer reached the output limit and may be cut short.</li>}
             {state.details.thinkingSeen && <li className="warning">The model produced thinking text despite thinking being off (not shown).</li>}
-            <li className="muted">A valid citation shows where a claim came from; it does not prove the claim is correct.</li>
+            <li className="muted">A source link shows where a claim came from. It does not prove the claim is correct, so check the code when it matters.</li>
           </ul>
         );
       })()}
