@@ -1,29 +1,32 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DependencyGraph, Snippet } from '../shared/contracts';
 import type { CloudStatus } from '../shared/explanation';
-import { DetailPane } from './components/DetailPane';
 import type { ExplanationState } from './components/ExplanationPanel';
-import { GraphList } from './components/GraphList';
-import { MapCanvas } from './components/MapCanvas';
-import { SummaryPanel } from './components/SummaryPanel';
 import type { ProjectSource } from './data/project-source';
-import { layoutMap } from './map/layout';
 import { selectedPath, type Selection, type SourceState } from './map/model';
+import { GateCard } from './workspace/GateCard';
+import { Workspace } from './workspace/Workspace';
 
 type GraphState =
   | { status: 'loading' }
-  | { status: 'loaded'; graph: DependencyGraph }
+  // readAt: when this browser received the parser's graph, shown as "read Thu 9 Oct, 15:20".
+  | { status: 'loaded'; graph: DependencyGraph; readAt: Date }
   | { status: 'failed'; message: string };
 
-export function App({ project }: { project: ProjectSource | null }) {
+export function App({ project, onRefresh, onClose }: {
+  project: ProjectSource | null;
+  onRefresh?: (() => void) | undefined;
+  onClose?: (() => void) | undefined;
+}) {
   const [graphState, setGraphState] = useState<GraphState>({ status: 'loading' });
   const [selection, setSelection] = useState<Selection | null>(null);
   const [source, setSource] = useState<SourceState>({ status: 'idle' });
-  const [filter, setFilter] = useState('');
   // Kept per file so a cited range can be opened and the explanation found again.
   const [explanations, setExplanations] = useState<ReadonlyMap<string, ExplanationState>>(new Map());
   const running = useRef(new Map<string, AbortController>());
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>({ available: false });
+  // Cloud requests actually issued this session; the locality indicators count them.
+  const [cloudSends, setCloudSends] = useState(0);
 
   useEffect(() => {
     project?.cloud?.status().then(setCloudStatus, () => setCloudStatus({ available: false }));
@@ -32,7 +35,7 @@ export function App({ project }: { project: ProjectSource | null }) {
   useEffect(() => {
     if (project === null) return;
     project.loadGraph().then(
-      (graph) => setGraphState({ status: 'loaded', graph }),
+      (graph) => setGraphState({ status: 'loaded', graph, readAt: new Date() }),
       (error: unknown) => setGraphState({ status: 'failed', message: String(error) }),
     );
   }, [project]);
@@ -61,6 +64,7 @@ export function App({ project }: { project: ProjectSource | null }) {
     let snippets: Snippet[] = [];
     let text = '';
     update({ status: 'running', snippets, text });
+    if (cloud) setCloudSends((n) => n + 1);
     try {
       const body = cloud
         ? { snapshotId: graph.snapshotId, path, provider: 'cloud' as const, previewHash: cloud.previewHash }
@@ -80,40 +84,29 @@ export function App({ project }: { project: ProjectSource | null }) {
     }
   }, [project, graph]);
 
-  const layout = useMemo(() => (graph === null ? null : layoutMap(graph, filter)), [graph, filter]);
-
   if (project === null) {
-    return (
-      <main className="message-screen">
-        <p className="eyebrow">Boozer AI</p>
-        <h1>No project connected.</h1>
-        <p>This build can't load a project yet.</p>
-      </main>
-    );
+    return <GateCard title="No project connected."><p>This build can't load a project yet.</p></GateCard>;
   }
-  if (graphState.status === 'loading') return <main className="message-screen"><p>Loading graph…</p></main>;
-  if (graphState.status === 'failed') return <main className="message-screen"><p className="notice error">Could not load the graph: {graphState.message}</p></main>;
+  if (graphState.status === 'loading') return <GateCard><p role="status">Loading graph…</p></GateCard>;
+  if (graphState.status === 'failed') {
+    return <GateCard><p className="bz-notice bz-notice--danger" role="alert">Could not load the graph: {graphState.message}</p></GateCard>;
+  }
 
   return (
-    <div className="app">
-      <SummaryPanel graph={graphState.graph} sourceLabel={project.label} isPreview={project.isPreview} onSelect={setSelection} />
-      <div className="workspace">
-        <GraphList graph={graphState.graph} selection={selection} onSelect={setSelection} />
-        <MapCanvas layout={layout!} selection={selection} filter={filter} onFilter={setFilter} onSelect={setSelection} />
-        <DetailPane graph={graphState.graph} selection={selection} source={source} onSelect={setSelection} notes={project.notes}
-          explanation={selection?.kind === 'file' ? {
-            state: explanations.get(selection.path) ?? { status: 'idle' },
-            onExplain: () => { void explain(selection.path); },
-            onCancel: () => running.current.get(selection.path)?.abort(),
-            cloud: cloudStatus.available && project.cloud && graph ? {
-              status: cloudStatus,
-              answer: explanations.get(`cloud:${selection.path}`) ?? { status: 'idle' },
-              onPreview: () => project.cloud!.preview({ snapshotId: graph.snapshotId, path: selection.path }),
-              onSend: (previewHash: string) => { void explain(selection.path, { previewHash }); },
-              onCancel: () => running.current.get(`cloud:${selection.path}`)?.abort(),
-            } : undefined,
-          } : undefined} />
-      </div>
-    </div>
+    <Workspace graph={graphState.graph} label={project.label} isPreview={project.isPreview} readAt={graphState.readAt}
+      selection={selection} onSelection={setSelection} source={source} notes={project.notes} cloudSends={cloudSends}
+      onRefresh={onRefresh} onClose={onClose}
+      explanation={selection?.kind === 'file' ? {
+        state: explanations.get(selection.path) ?? { status: 'idle' },
+        onExplain: () => { void explain(selection.path); },
+        onCancel: () => running.current.get(selection.path)?.abort(),
+        cloud: cloudStatus.available && project.cloud && graph ? {
+          status: cloudStatus,
+          answer: explanations.get(`cloud:${selection.path}`) ?? { status: 'idle' },
+          onPreview: () => project.cloud!.preview({ snapshotId: graph.snapshotId, path: selection.path }),
+          onSend: (previewHash: string) => { void explain(selection.path, { previewHash }); },
+          onCancel: () => running.current.get(`cloud:${selection.path}`)?.abort(),
+        } : undefined,
+      } : undefined} />
   );
 }

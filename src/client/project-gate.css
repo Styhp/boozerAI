@@ -1,6 +1,0 @@
-.project-toolbar { display: flex; align-items: center; gap: 12px; height: 3rem; padding: 0 20px; background: var(--panel); color: #e8e8e4; border-bottom: 1px solid var(--line); }
-/* The toolbar sits above .app, so the app takes the rest of the window instead of a second full screen. */
-.project-toolbar + .app { height: calc(100vh - 3rem); }
-.project-toolbar button { background: #2b302c; border: 1px solid var(--line); border-radius: 4px; color: inherit; }
-.project-toolbar span { flex: 1; font-weight: 600; }
-.project-toolbar button, .message-screen button { padding: 8px 12px; cursor: pointer; }

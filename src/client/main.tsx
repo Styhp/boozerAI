@@ -3,6 +3,9 @@ import { App } from './App';
 import type { ProjectSource } from './data/project-source';
 import { ProjectGate } from './ProjectGate';
 import { ProjectConnection, takeCapability } from './data/http-project-source';
+// Load order (SPEC §2): tokens, then components. style.css is the S1 interim for panels not yet restyled.
+import './styles/tokens.css';
+import './styles/components.css';
 import './style.css';
 
 const root = document.getElementById('root');
