@@ -4,7 +4,8 @@ import type { Explanation, FilePath, Snippet } from './contracts.js';
 // any server code. The route streams ExplanationEvent values as NDJSON: one JSON object
 // per line, Content-Type `application/x-ndjson`.
 
-export const PROMPT_VERSION = 'explain-v1';
+// v1 (docs/benchmarks/m3-explain-v1-dev-mac.jsonl) had no word limit and hit the 300-token cap.
+export const PROMPT_VERSION = 'explain-v2';
 
 export type ExplanationErrorCode =
   | 'invalid-selection'    // selected path is not a source file in this snapshot

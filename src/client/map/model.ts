@@ -5,7 +5,9 @@ import type { DependencyEdge, DependencyGraph, EvidenceRef, FileNode, FilePath }
 export type Selection =
   | { readonly kind: 'file'; readonly path: FilePath }
   | { readonly kind: 'edge'; readonly id: string }
-  | { readonly kind: 'terminal'; readonly nodeId: string };
+  | { readonly kind: 'terminal'; readonly nodeId: string }
+  // A cited snippet range; `returnTo` is the file whose explanation cited it.
+  | { readonly kind: 'range'; readonly ref: EvidenceRef; readonly returnTo?: FilePath };
 
 export interface LoadedSource {
   readonly snapshotId: string;
@@ -92,5 +94,6 @@ export function selectedPath(graph: DependencyGraph, selection: Selection | null
   if (selection === null) return null;
   if (selection.kind === 'file') return selection.path;
   if (selection.kind === 'edge') return findEdge(graph, selection.id)?.from ?? null;
+  if (selection.kind === 'range') return selection.ref.file;
   return null;
 }

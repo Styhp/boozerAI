@@ -92,3 +92,18 @@ code, .source, .path, .snapshot-id { font-family: ui-monospace, SFMono-Regular, 
 .chain { display: block; font-size: 0.75rem; color: var(--muted); }
 .badge.kind-type { color: var(--package); }
 .small { font-size: 0.75rem; }
+
+.explanation { margin: 0.5rem 0 0.75rem; padding: 0.5rem; border: 1px solid var(--line); border-radius: 6px; }
+.explain-bar { display: flex; gap: 0.75rem; align-items: center; }
+.explain-bar button { background: #2f3a32; border: 1px solid var(--accent); border-radius: 4px; padding: 0.2rem 0.7rem; cursor: pointer; }
+.model-labels { margin: 0.4rem 0; }
+.badge.local { color: var(--accent); font-weight: 600; }
+.explanation-text p, .explanation-text ul { margin: 0.4rem 0; line-height: 1.5; }
+.citation { background: none; border: 0; padding: 0 0.1rem; color: var(--accent); cursor: pointer; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.citation.invalid, .mention.unknown { color: var(--error); text-decoration: wavy underline; }
+.mention.not-indexed { color: var(--warn); }
+.checks { font-size: 0.75rem; margin: 0.4rem 0; padding-left: 1.1rem; }
+.checks .warning { color: var(--warn); }
+.snippets summary { cursor: pointer; font-size: 0.8rem; }
+.snippets ol { padding-left: 1rem; }
+.snippets pre { font-size: 0.72rem; background: #111312; padding: 0.4rem; overflow: auto; white-space: pre-wrap; }

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { DependencyEdge, DependencyGraph } from '../../shared/contracts';
+import { ExplanationPanel, type ExplanationState } from './ExplanationPanel';
 import { ImpactPanel } from './ImpactPanel';
 import { describeTarget, findEdge, findFile, referenceState, sourceLines, type Selection, type SourceState } from '../map/model';
 
@@ -32,11 +33,18 @@ function SourceView({ text, highlight }: { text: string; highlight: { start: num
   );
 }
 
-export function DetailPane({ graph, selection, source, onSelect }: {
+export interface ExplanationControls {
+  readonly state: ExplanationState;
+  readonly onExplain: () => void;
+  readonly onCancel: () => void;
+}
+
+export function DetailPane({ graph, selection, source, onSelect, explanation }: {
   graph: DependencyGraph;
   selection: Selection | null;
   source: SourceState;
   onSelect: (selection: Selection) => void;
+  explanation?: ExplanationControls | undefined;
 }) {
   if (selection === null) {
     return <aside className="detail" data-state="empty"><p className="muted">Select a file or relationship to inspect its source.</p></aside>;
@@ -62,7 +70,9 @@ export function DetailPane({ graph, selection, source, onSelect }: {
   }
 
   const edge = selection.kind === 'edge' ? findEdge(graph, selection.id) : undefined;
-  const path = selection.kind === 'file' ? selection.path : edge?.from;
+  // A cited range is evidence like an edge's: highlighted only while it matches the source.
+  const evidence = selection.kind === 'range' ? selection.ref : edge?.evidence;
+  const path = selection.kind === 'file' ? selection.path : selection.kind === 'range' ? selection.ref.file : edge?.from;
   const file = path === undefined ? undefined : findFile(graph, path);
   if (file === undefined) return <aside className="detail" data-state="missing"><p>This item is not in the current graph.</p></aside>;
 
@@ -79,6 +89,19 @@ export function DetailPane({ graph, selection, source, onSelect }: {
       {file.parse.status === 'error' && (
         <p className="notice error" role="status">Parse error: this file contributed no relationships. Its source is shown as text.</p>
       )}
+      {selection.kind === 'range' && (
+        <p className="relationship">
+          Cited lines {selection.ref.startLine}–{selection.ref.endLine}
+          {selection.returnTo !== undefined && (
+            <>{' · '}<button type="button" className="link" onClick={() => onSelect({ kind: 'file', path: selection.returnTo! })}>
+              Back to the explanation of {selection.returnTo}</button></>
+          )}
+        </p>
+      )}
+      {selection.kind === 'file' && explanation !== undefined && (
+        <ExplanationPanel path={file.path} state={explanation.state} onExplain={explanation.onExplain}
+          onCancel={explanation.onCancel} onSelect={onSelect} />
+      )}
       {selection.kind === 'file' && <ImpactPanel key={file.path} graph={graph} path={file.path} onSelect={onSelect} />}
     </header>
   );
@@ -90,14 +113,14 @@ export function DetailPane({ graph, selection, source, onSelect }: {
     return <aside className="detail" data-state="failed">{header}<p className="notice error" role="status">Source unavailable: {source.message}</p></aside>;
   }
 
-  const stale = edge !== undefined && referenceState(edge.evidence, source.source) === 'stale';
-  const highlight = edge !== undefined && !stale ? { start: edge.evidence.startLine, end: edge.evidence.endLine } : null;
+  const stale = evidence !== undefined && referenceState(evidence, source.source) === 'stale';
+  const highlight = evidence !== undefined && !stale ? { start: evidence.startLine, end: evidence.endLine } : null;
   return (
     <aside className="detail" data-state={stale ? 'stale' : file.parse.status === 'error' ? 'parse-error' : 'source'}>
       {header}
       {stale && (
         <p className="notice warning" role="status">
-          Stale reference: this relationship was recorded against different file contents, so no lines are highlighted.
+          Stale reference: this was recorded against different file contents, so no lines are highlighted.
         </p>
       )}
       <SourceView text={source.source.text} highlight={highlight} />

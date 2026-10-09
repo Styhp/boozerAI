@@ -26,4 +26,8 @@ export const fixturePreview: ProjectSource = {
     const graph = await this.loadGraph();
     return { snapshotId: graph.snapshotId, path, contentHash: await sha256Hex(text), text };
   },
+  // The browser never calls Ollama directly, and the preview has no project server.
+  async *explain() {
+    yield { type: 'error', code: 'runtime-unavailable', message: 'The fixture preview has no project server, so it cannot run local explanations.' };
+  },
 };

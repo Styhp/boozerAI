@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { DependencyGraph } from '../shared/contracts';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { DependencyGraph, Snippet } from '../shared/contracts';
 import { DetailPane } from './components/DetailPane';
+import type { ExplanationState } from './components/ExplanationPanel';
 import { GraphList } from './components/GraphList';
 import { MapCanvas } from './components/MapCanvas';
 import { SummaryPanel } from './components/SummaryPanel';
@@ -18,6 +19,9 @@ export function App({ project }: { project: ProjectSource | null }) {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [source, setSource] = useState<SourceState>({ status: 'idle' });
   const [filter, setFilter] = useState('');
+  // Kept per file so a cited range can be opened and the explanation found again.
+  const [explanations, setExplanations] = useState<ReadonlyMap<string, ExplanationState>>(new Map());
+  const running = useRef(new Map<string, AbortController>());
 
   useEffect(() => {
     if (project === null) return;
@@ -40,6 +44,31 @@ export function App({ project }: { project: ProjectSource | null }) {
     return () => { current = false; };
   }, [project, path]);
 
+  const explain = useCallback(async (path: string) => {
+    if (project === null || graph === null) return;
+    running.current.get(path)?.abort();
+    const controller = new AbortController();
+    running.current.set(path, controller);
+    const update = (state: ExplanationState) => setExplanations((all) => new Map(all).set(path, state));
+    let snippets: Snippet[] = [];
+    let text = '';
+    update({ status: 'running', snippets, text });
+    try {
+      for await (const event of project.explain({ snapshotId: graph.snapshotId, path }, controller.signal)) {
+        if (event.type === 'snippets') snippets = [...event.snippets];
+        else if (event.type === 'token') text += event.text;
+        if (event.type === 'done') { update({ status: 'done', explanation: event.explanation, details: event.details }); return; }
+        if (event.type === 'error') { update({ status: 'error', code: event.code, message: event.message, snippets, text }); return; }
+        update({ status: 'running', snippets, text });
+      }
+      update({ status: 'error', code: 'runtime-error', message: 'The explanation stream ended early.', snippets, text });
+    } catch {
+      update({ status: 'error', code: controller.signal.aborted ? 'cancelled' : 'runtime-error', message: 'The explanation did not finish.', snippets, text });
+    } finally {
+      if (running.current.get(path) === controller) running.current.delete(path);
+    }
+  }, [project, graph]);
+
   const layout = useMemo(() => (graph === null ? null : layoutMap(graph, filter)), [graph, filter]);
 
   if (project === null) {
@@ -60,7 +89,12 @@ export function App({ project }: { project: ProjectSource | null }) {
       <div className="workspace">
         <GraphList graph={graphState.graph} selection={selection} onSelect={setSelection} />
         <MapCanvas layout={layout!} selection={selection} filter={filter} onFilter={setFilter} onSelect={setSelection} />
-        <DetailPane graph={graphState.graph} selection={selection} source={source} onSelect={setSelection} />
+        <DetailPane graph={graphState.graph} selection={selection} source={source} onSelect={setSelection}
+          explanation={selection?.kind === 'file' ? {
+            state: explanations.get(selection.path) ?? { status: 'idle' },
+            onExplain: () => { void explain(selection.path); },
+            onCancel: () => running.current.get(selection.path)?.abort(),
+          } : undefined} />
       </div>
     </div>
   );
