@@ -1,15 +1,16 @@
 import { createHash } from 'node:crypto';
 import type { Dir, Dirent } from 'node:fs';
-import { chmod, mkdir, mkdtemp, opendir, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, open, opendir, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SNAPSHOT_LIMITS, InputError, LocalInputAdapter } from '../src/server/local-input.js';
 import type { SnapshotLimits, WorkspaceSnapshot } from '../src/shared/contracts.js';
+import { ANALYSIS_KEY, extractDependencies } from '../src/shared/extractor.js';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
-  return { ...actual, opendir: vi.fn(actual.opendir) };
+  return { ...actual, opendir: vi.fn(actual.opendir), open: vi.fn(actual.open) };
 });
 
 const analysisKey = 'test-extractor-v1/resolver-v1';
@@ -39,6 +40,7 @@ const snapshot = (adapter: LocalInputAdapter, limits?: SnapshotLimits): Promise<
 
 afterEach(async () => {
   vi.mocked(opendir).mockReset();
+  vi.mocked(open).mockReset();
   await Promise.all(ownedFolders.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
@@ -221,11 +223,50 @@ describe('untrusted input exclusions and bounds', () => {
     expect(JSON.stringify(result)).not.toContain('DO_NOT_READ_OUTSIDE');
   });
 
-  it('aborts for case-colliding directory entries (simulated on this insensitive filesystem)', async () => {
+  it('skips every colliding sibling before reads and preserves other sources (simulated enumeration)', async () => {
     const root = await folder();
-    await put(root, 'Case.ts', 'export {};');
+    await put(root, 'Case.ts', 'DO_NOT_READ_COLLIDING_SOURCE');
+    await put(root, 'main.ts', 'import "./Case.ts"; import "./case.ts";');
     // This Mac cannot create both names. Enumerate the real file then a synthetic alias;
     // the adapter must reject it before attempting to read that second entry.
+    vi.mocked(opendir).mockImplementation(async (...args) => {
+      const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+      const dir = await actual.opendir(...args);
+      return {
+        async *[Symbol.asyncIterator]() {
+          for await (const entry of dir) {
+            yield entry;
+            if (entry.name === 'Case.ts') yield {
+              name: 'case.ts', isFile: () => true, isDirectory: () => false, isSymbolicLink: () => false,
+            } as Dirent;
+          }
+        },
+      } as Dir;
+    });
+    const adapter = await selected(root);
+    const result = await adapter.snapshot(adapter.projectId, { analysisKey: ANALYSIS_KEY });
+    expect(result.files.map(({ path }) => path)).toEqual(['main.ts']);
+    expect(result.inventory.skipped).toEqual([
+      { path: 'Case.ts', reason: 'case-collision' }, { path: 'case.ts', reason: 'case-collision' },
+    ]);
+    expect(result.inventory.found).toBe(3);
+    expect(vi.mocked(open).mock.calls.map(([path]) => path)).toEqual([join(root, 'main.ts')]);
+    const graph = extractDependencies(result);
+    expect(graph.snapshotId).toBe(result.snapshotId);
+    expect(graph.coverage.files).toMatchObject({ found: 3, parsed: 1, skipped: 2 });
+    expect(graph.edges.map(({ target }) => target)).toEqual([
+      { type: 'excluded', path: 'Case.ts', reason: 'case-collision' },
+      { type: 'excluded', path: 'case.ts', reason: 'case-collision' },
+    ]);
+    expect(graph.coverage.imports).toMatchObject({ seen: 2, excluded: 2, failed: 0 });
+    await expect(snapshot(adapter, { ...DEFAULT_SNAPSHOT_LIMITS, maxFiles: 1 }))
+      .rejects.toMatchObject({ code: 'file-limit' });
+  });
+
+  it('does not traverse colliding directories or invent counts for their unknown children (simulation)', async () => {
+    const root = await folder();
+    await put(root, 'Folder/hidden.ts', 'DO_NOT_READ_COLLIDING_DIRECTORY');
+    await put(root, 'main.ts', 'export {};');
     vi.mocked(opendir).mockImplementationOnce(async (...args) => {
       const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
       const dir = await actual.opendir(...args);
@@ -233,12 +274,20 @@ describe('untrusted input exclusions and bounds', () => {
         async *[Symbol.asyncIterator]() {
           for await (const entry of dir) {
             yield entry;
-            yield { ...entry, name: 'case.ts' } as Dirent;
+            if (entry.name === 'Folder') yield {
+              name: 'folder', isFile: () => false, isDirectory: () => true, isSymbolicLink: () => false,
+            } as Dirent;
           }
         },
       } as Dir;
     });
-    await expect(snapshot(await selected(root))).rejects.toMatchObject({ code: 'case-collision' });
+    const result = await snapshot(await selected(root));
+    expect(result.files.map(({ path }) => path)).toEqual(['main.ts']);
+    expect(result.inventory.skipped).toEqual([
+      { path: 'Folder', reason: 'case-collision' }, { path: 'folder', reason: 'case-collision' },
+    ]);
+    expect(result.inventory.found).toBe(3);
+    expect(vi.mocked(opendir)).toHaveBeenCalledTimes(1);
   });
 
   it('aborts a metadata-only flood at the entry cap (simulated enumeration)', async () => {
@@ -246,7 +295,7 @@ describe('untrusted input exclusions and bounds', () => {
     vi.mocked(opendir).mockImplementationOnce(async () => ({
       async *[Symbol.asyncIterator]() {
         for (let index = 0; index < 20_001; index++) {
-          yield { name: `unsupported-${index}.md`, isSymbolicLink: () => false, isDirectory: () => false } as Dirent;
+          yield { name: `unsupported-${index}.md`, isFile: () => false, isSymbolicLink: () => false, isDirectory: () => false } as Dirent;
         }
       },
     }) as Dir);
@@ -295,12 +344,13 @@ describe('untrusted input exclusions and bounds', () => {
     }
   });
 
-  it('aborts oversize snapshots rather than returning a partial graph input', async () => {
+  it('skips an oversize file but retains total-byte and file-count aborts', async () => {
     const root = await folder();
     await put(root, 'main.ts', 'export {};');
     const adapter = await selected(root);
-    await expect(snapshot(adapter, { ...DEFAULT_SNAPSHOT_LIMITS, maxFileBytes: 3 }))
-      .rejects.toMatchObject({ code: 'file-bytes-limit' });
+    const oversize = await snapshot(adapter, { ...DEFAULT_SNAPSHOT_LIMITS, maxFileBytes: 3 });
+    expect(oversize.files).toEqual([]);
+    expect(oversize.inventory).toMatchObject({ found: 1, skipped: [{ path: 'main.ts', reason: 'oversize' }] });
     await expect(snapshot(adapter, { ...DEFAULT_SNAPSHOT_LIMITS, maxTotalBytes: 3 }))
       .rejects.toMatchObject({ code: 'total-bytes-limit' });
     await put(root, 'second.ts', 'export {};');
@@ -308,6 +358,58 @@ describe('untrusted input exclusions and bounds', () => {
       .rejects.toMatchObject({ code: 'file-limit' });
     await expect(snapshot(adapter, { ...DEFAULT_SNAPSHOT_LIMITS, maxTotalBytes: 15 }))
       .rejects.toMatchObject({ code: 'total-bytes-limit' });
+  });
+
+  it('skips a real file over 1 MiB without opening it and carries exclusions into the parser', async () => {
+    const root = await folder();
+    await put(root, 'vendor/huge.min.js', Buffer.alloc(DEFAULT_SNAPSHOT_LIMITS.maxFileBytes + 1, 32));
+    await put(root, 'main.ts', 'import "./vendor/huge.min.js"; export {};');
+    const adapter = await selected(root);
+    const result = await adapter.snapshot(adapter.projectId, { analysisKey: ANALYSIS_KEY });
+    expect(result.files.map(({ path }) => path)).toEqual(['main.ts']);
+    expect(result.inventory).toMatchObject({ found: 2, skipped: [{ path: 'vendor/huge.min.js', reason: 'oversize' }] });
+    expect(vi.mocked(open).mock.calls.map(([path]) => path)).toEqual([join(root, 'main.ts')]);
+    const graph = extractDependencies(result);
+    expect(graph.snapshotId).toBe(result.snapshotId);
+    expect(graph.coverage.files).toMatchObject({ found: 2, parsed: 1, skipped: 1 });
+    expect(graph.edges[0]?.target).toEqual({ type: 'excluded', path: 'vendor/huge.min.js', reason: 'oversize' });
+    expect(graph.coverage.imports).toMatchObject({ seen: 1, excluded: 1, failed: 0 });
+  });
+
+  it('accepts exactly the per-file cap and counts oversize candidates against the whole-run file cap', async () => {
+    const root = await folder();
+    await put(root, 'exact.js', Buffer.alloc(DEFAULT_SNAPSHOT_LIMITS.maxFileBytes, 32));
+    const adapter = await selected(root);
+    expect((await snapshot(adapter)).files[0]?.sizeBytes).toBe(DEFAULT_SNAPSHOT_LIMITS.maxFileBytes);
+    await put(root, 'oversize.js', Buffer.alloc(DEFAULT_SNAPSHOT_LIMITS.maxFileBytes + 1, 32));
+    await expect(snapshot(adapter, { ...DEFAULT_SNAPSHOT_LIMITS, maxFiles: 1 }))
+      .rejects.toMatchObject({ code: 'file-limit' });
+  });
+
+  it('aborts if a file grows across the per-file cap during the read, and closes its handle', async () => {
+    const root = await folder();
+    await put(root, 'grow.ts', '12345678');
+    let openedHandle: Awaited<ReturnType<typeof open>> | undefined;
+    vi.mocked(open).mockImplementationOnce(async (...args) => {
+      const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+      const handle = await actual.open(...args);
+      openedHandle = handle;
+      const nativeRead = handle.read;
+      let grew = false;
+      handle.read = (async (...readArguments: unknown[]) => {
+        const result = await Reflect.apply(nativeRead, handle, readArguments);
+        if (!grew) { grew = true; await actual.appendFile(join(root, 'grow.ts'), 'x'.repeat(20)); }
+        return result;
+      }) as typeof handle.read;
+      return handle;
+    });
+    const adapter = await selected(root);
+    const limits = { ...DEFAULT_SNAPSHOT_LIMITS, maxFileBytes: 8 };
+    await expect(snapshot(adapter, limits)).rejects.toMatchObject({ code: 'file-bytes-limit' });
+    expect(openedHandle).toBeDefined();
+    expect(openedHandle!.fd).toBe(-1);
+    const refresh = await snapshot(adapter, limits);
+    expect(refresh.inventory.skipped).toEqual([{ path: 'grow.ts', reason: 'oversize' }]);
   });
 
   it('rejects invalid or expanded limits and missing analysis identity', async () => {

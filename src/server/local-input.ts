@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { constants, type BigIntStats } from 'node:fs';
+import { constants, type BigIntStats, type Dirent } from 'node:fs';
 import { lstat, open, opendir, realpath } from 'node:fs/promises';
 import { basename, extname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import type { FileSkip, Language, SnapshotFile, SnapshotLimits, WorkspaceSnapshot } from '../shared/contracts.js';
@@ -15,14 +15,14 @@ const IGNORED_DIRECTORIES = ['.git', 'node_modules', 'dist', 'build', 'coverage'
 const LANGUAGES: Readonly<Record<string, Language>> = {
   '.js': 'js', '.jsx': 'jsx', '.ts': 'ts', '.tsx': 'tsx', '.mjs': 'mjs', '.cjs': 'cjs',
 };
-const POLICY_VERSION = 'local-input-v1';
+const POLICY_VERSION = 'local-input-v2';
 const bytewise = (a: string, b: string) => Buffer.compare(Buffer.from(a), Buffer.from(b));
 const hash = (data: Buffer | string) => createHash('sha256').update(data).digest('hex');
 
 export type InputErrorCode =
   | 'invalid-selection' | 'unconfirmed' | 'revoked' | 'invalid-config' | 'invalid-limits'
   | 'outside-root' | 'symlink-root' | 'changed-during-read' | 'unreadable-directory'
-  | 'case-collision' | 'file-limit' | 'file-bytes-limit' | 'total-bytes-limit'
+  | 'file-limit' | 'file-bytes-limit' | 'total-bytes-limit'
   | 'entry-limit' | 'depth-limit' | 'cancelled';
 
 // Error text contains neither target paths/content nor native filesystem errors.
@@ -191,7 +191,8 @@ export class LocalInputAdapter {
         if (!before.isDirectory()) {
           throw new InputError('changed-during-read');
         }
-        const names = new Set<string>();
+        const names = new Map<string, number>();
+        const children: Dirent[] = [];
         const dir = await opendir(absolute);
         let iterating = false;
         try {
@@ -205,8 +206,23 @@ export class LocalInputAdapter {
             const path = directory === '' ? entry.name : `${directory}/${entry.name}`;
             confinedPath(this.#root, path);
             const caseKey = entry.name.normalize('NFC').toLowerCase();
-            if (names.has(caseKey)) throw new InputError('case-collision');
-            names.add(caseKey);
+            names.set(caseKey, (names.get(caseKey) ?? 0) + 1);
+            children.push(entry);
+          }
+          // Resolve collisions before any source read/descendant traversal. Metadata
+          // buffering is bounded by MAX_ENTRIES, including unsupported entries.
+          children.sort((a, b) => bytewise(a.name, b.name));
+          for (const entry of children) {
+            check();
+            const path = directory === '' ? entry.name : `${directory}/${entry.name}`;
+            const language = LANGUAGES[extname(entry.name)];
+            if (!entry.isSymbolicLink() && entry.isFile() && language !== undefined && !secretName(entry.name)) {
+              if (++sourceCandidates > limits.maxFiles) throw new InputError('file-limit');
+            }
+            if ((names.get(entry.name.normalize('NFC').toLowerCase()) ?? 0) > 1) {
+              skipped.push({ path, reason: 'case-collision' });
+              continue;
+            }
             // Never traverse a symlink, including a link masquerading as an ignored tree.
             if (entry.isSymbolicLink()) {
               skipped.push({ path, reason: 'symlink' });
@@ -220,18 +236,19 @@ export class LocalInputAdapter {
             } else if (secretName(entry.name)) {
               skipped.push({ path, reason: 'secret-name' });
             } else {
-              const language = LANGUAGES[extname(entry.name)];
               if (language === undefined) {
                 skipped.push({ path, reason: 'unsupported-extension' });
               } else if (!entry.isFile()) {
                 skipped.push({ path, reason: 'unreadable' });
               } else {
-                if (++sourceCandidates > limits.maxFiles) throw new InputError('file-limit');
                 let bytes: Buffer;
                 try {
                   const before = await this.#checkPath(path);
                   if (!before.isFile()) throw new InputError('changed-during-read');
-                  if (before.size > BigInt(limits.maxFileBytes)) throw new InputError('file-bytes-limit');
+                  if (before.size > BigInt(limits.maxFileBytes)) {
+                    skipped.push({ path, reason: 'oversize' });
+                    continue;
+                  }
                   if (before.size > BigInt(limits.maxTotalBytes - totalBytes)) throw new InputError('total-bytes-limit');
                   const handle = await open(confinedPath(this.#root, path),
                     constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
