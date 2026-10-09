@@ -121,6 +121,16 @@ Inline all-type named imports are `type-import`; mixed value/type imports remain
 - `depthLimited` is true only when the chosen finite boundary hides at least one reachable unvisited file beyond it. A cycle back to a visited file does not make it true. This is separate from `possiblyIncomplete`, which reflects the graph's coverage limitations, and avoids presenting a depth-1 result as all transitive importers.
 - Impact rows use “potentially affected”. A zero result reads “No importers found by static analysis.” At finite depth, append “within depth N”; show an expansion action when depth-limited. Dependency rows are labeled dependencies, never potentially affected.
 
+## Reading insights — M4-I
+
+The human lead authorized this [Hardening] slice on 2026-10-09. [analyzeInsights](../src/shared/insights.ts) consumes the full `DependencyGraph`, identifies its snapshot and `insights-v1` algorithm, and returns reading starts, ranked importer counts, cycle groups and the original coverage. It has no filesystem, HTTP, parser or model dependency and never changes graph files/edges. The standalone [InsightsPanel](../src/client/components/InsightsPanel.tsx) is ready for Agent B to mount; it is not yet an app screen.
+
+- Count distinct direct importing files, including type and self imports; repeated statements from one file count once. Only local file targets participate. Known zero-importer files are suggested as where to start reading, with the wording "No importers found by static analysis." No usage judgment is inferred.
+- Rank positive counts descending, breaking ties by UTF-8 bytewise path order. Preserve importer names for inspection. Reading starts, cycle members/groups and evidence IDs are sorted deterministically.
+- Two iterative Kosaraju passes find strongly connected groups with multiple files or a self-loop. Keep every original internal dependency edge and its evidence; a group is not represented as an invented simple-cycle chain. Type imports can contribute, so these are static relationships rather than runtime-order claims.
+- Keep all coverage gaps and the existing `possiblyIncomplete` calculation. Duplicate graph files and dangling file endpoints fail loudly instead of producing partial findings.
+- The panel uses escaped text, the shared file/edge selection callback and current graph snapshot. Long lists show eight entries with exact totals and a Show all control; calculations always use the full graph. Agent B owns summary/App mounting and the human browser check; Codex's slice adds new implementation files only.
+
 ## Map layout — C4, implementation owned by 1.5
 
 React Flow provides rendering/interactions rather than automatic layout ([official layout guide](https://reactflow.dev/learn/layouting/layouting)). Use an original, deterministic layered layout, without another package. The layout takes the graph and a display filter and returns positions only; it never alters graph edges.
@@ -143,6 +153,7 @@ These are implementation boundaries; later adapters/storage/tools remain propose
 | `Extractor.extract(snapshot)` + `Resolver.resolve(...)` | Snapshot text → `DependencyGraph` | Deterministic edges/evidence; resolver reads snapshot index only; UI, calculations, retriever consume it |
 | `FrameworkAdapter.analyze(snapshot, graph)` | Read-only inputs → evidence-backed annotations + diagnostics | Adapter ID/version; never mutates dependency graph; new edge kinds require parser contract review and hand-written tests |
 | `GraphQueries.walk(graph, query)` | `GraphWalkQuery` → `GraphWalkResult`; importers projection → `ImpactResult` | Versioned deterministic output; graph remains immutable |
+| `analyzeInsights(graph)` | Full graph → `GraphInsights` in insights.ts | Snapshot-bound reading starts, distinct direct importers and iterative SCC groups with original evidence; no graph mutation |
 | `Retriever.retrieve(snapshot, selection, budget)` | Selection → `Snippet[]` | Hash-bound source ranges, exclusions/redaction and token caps enforced before inference |
 | `ModelAdapter.stream(request, abortSignal)` | Prompt/snippets/settings → text chunks + final model/timing metadata | Provider location explicit; fixed local endpoint by default; timeout/cancellation; no cloud fallback |
 | `ExplanationService.explain(request)` | Immutable snapshot/graph, selected relative path, abort signal → `AsyncIterable<ExplanationEvent>` | Agent B's committed interface; snippets/tokens followed by one done/error. Owns retrieval/model/validation; M2 owns authorization and NDJSON transport. Cache is later work; invalid references remain visible |
@@ -170,7 +181,7 @@ Implemented M2 routes, all bearer-authenticated with no cookies or CORS. POST bo
 | `GET /api/projects/:id/files/:fileId?snapshotId=…` | Current snapshot ID + opaque file ID → exact in-memory text/path/hash; never reads a browser-supplied filesystem path |
 | `POST /api/projects/:id/refresh` | `{snapshotId}` → revoke old authority, then atomically publish a complete fresh envelope |
 | `POST /api/projects/:id/close` | `{}` → revoke capability, snapshots and pending work |
-| `POST /api/projects/:id/explanations` | `{snapshotId, path}` → `application/x-ndjson` service events; `path` must exactly name a source in the current snapshot, never a host read argument |
+| `POST /api/projects/:id/explanations` | Exact `{snapshotId, path}`, optionally `provider: 'local'`, or `provider: 'cloud'` plus a 64-character lowercase-hex `previewHash` → `application/x-ndjson` service events. Other fields/combinations are rejected. `path` is a current-snapshot key; provider/hash pass unchanged to the service |
 
 Only one index and one explanation run per session; refresh/close/disconnect abort pending work. Explanation transport has a 120-second bound and respects backpressure. Structured failures expose sanitized codes only. File IDs are renewed even on an unchanged-content refresh; [HttpProjectSource](../src/client/data/http-project-source.ts) additionally checks snapshot/path/hash and hashes the received source text before presenting it as current. Later archive/cache/agent routes must reuse this authorization.
 

@@ -1,5 +1,6 @@
 import { once } from 'node:events';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { ExplainRequestBody } from '../shared/explanation.js';
 import type { ExplanationService } from './explain/index.js';
 import { ApiError, ProjectSession } from './project-session.js';
 
@@ -31,6 +32,24 @@ function fields(value: Record<string, unknown>, names: readonly string[]): void 
   if (Object.keys(value).length !== names.length || names.some((name) => typeof value[name] !== 'string' || value[name] === '')) {
     throw new ApiError(400, 'invalid-body');
   }
+}
+
+function explanationBody(input: Record<string, unknown>): ExplainRequestBody {
+  const provider = input.provider;
+  if (!Object.hasOwn(input, 'provider')) {
+    fields(input, ['snapshotId', 'path']);
+    return { snapshotId: input.snapshotId as string, path: input.path as string };
+  }
+  if (provider === 'local') {
+    fields(input, ['snapshotId', 'path', 'provider']);
+    return { snapshotId: input.snapshotId as string, path: input.path as string, provider };
+  }
+  if (provider === 'cloud') {
+    fields(input, ['snapshotId', 'path', 'provider', 'previewHash']);
+    if (!/^[0-9a-f]{64}$/.test(input.previewHash as string)) throw new ApiError(400, 'invalid-body');
+    return { snapshotId: input.snapshotId as string, path: input.path as string, provider, previewHash: input.previewHash as string };
+  }
+  throw new ApiError(400, 'invalid-body');
 }
 
 export async function handleProjectApi(request: IncomingMessage, response: ServerResponse, session: ProjectSession, service: ExplanationService, development: boolean): Promise<void> {
@@ -84,15 +103,19 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
       session.close(); json(response, 200, { closed: true }); return;
     }
     if (action !== 'explanations') throw new ApiError(405, 'method-not-allowed');
-    fields(input, ['snapshotId', 'path']);
-    const explanation = session.beginExplanation(id, input.snapshotId as string, input.path as string, controller.signal);
+    const selection = explanationBody(input);
+    const explanation = session.beginExplanation(id, selection.snapshotId, selection.path, controller.signal);
     const timeout = setTimeout(() => controller.abort(), 120_000);
     timeout.unref();
     try {
       response.writeHead(200, { 'Content-Type': 'application/x-ndjson', 'Cache-Control': 'no-store' });
       response.flushHeaders();
       let terminal = false;
-      for await (const event of service.explain(explanation)) {
+      for await (const event of service.explain({
+        ...explanation,
+        ...(selection.provider === undefined ? {} : { provider: selection.provider }),
+        ...(selection.previewHash === undefined ? {} : { previewHash: selection.previewHash }),
+      })) {
         if (explanation.signal.aborted) break;
         if (!response.write(`${JSON.stringify(event)}\n`)) await once(response, 'drain', { signal: explanation.signal });
         if (event.type === 'done' || event.type === 'error') { terminal = true; break; }

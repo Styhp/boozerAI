@@ -1,0 +1,7 @@
+.insights { flex-basis: 100%; font-size: 0.8rem; min-width: 0; }
+.insights summary { cursor: pointer; color: var(--accent); }
+.insight-groups { max-height: 22rem; overflow: auto; border-top: 1px solid var(--line); margin-top: 0.4rem; padding: 0.5rem; }
+.insight-groups > details { margin: 0.5rem 0; }
+.insight-groups ol { padding-left: 1.25rem; }
+.insight-groups li { margin: 0.3rem 0; overflow-wrap: anywhere; }
+.insight-groups .link { text-align: left; overflow-wrap: anywhere; }

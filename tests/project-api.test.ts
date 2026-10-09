@@ -165,6 +165,56 @@ describe('M2 launch and project authority', () => {
 });
 
 describe('authorized ExplanationService transport', () => {
+  it('accepts only the approved provider body forms and passes them unchanged', async () => {
+    const f = await fixture();
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const previewHash = 'a'.repeat(64);
+    for (const options of [{}, { provider: 'local' }, { provider: 'cloud', previewHash }]) {
+      const response = await f.call('explanations', 'POST', { snapshotId: graph.graph.snapshotId, path: 'main.ts', ...options });
+      expect(response.statusCode).toBe(200);
+      expect(response.json).toEqual({ type: 'error', code: 'runtime-unavailable', message: 'Labeled service double.' });
+      const received = vi.mocked(f.engine.explain).mock.lastCall![0];
+      expect(received.snapshot).toBe(f.session.current(f.id).snapshot);
+      expect(received.graph).toBe(f.session.current(f.id).response.graph);
+      expect(received.selected).toBe('main.ts');
+      expect(received.signal).toBeInstanceOf(AbortSignal);
+      expect(received).toMatchObject(options);
+      if (!('provider' in options)) expect(received).not.toHaveProperty('provider');
+      if (!('previewHash' in options)) expect(received).not.toHaveProperty('previewHash');
+    }
+    expect(f.engine.status).not.toHaveBeenCalled();
+    expect(f.engine.preload).not.toHaveBeenCalled();
+  });
+  it('rejects extra fields, unknown providers and malformed or misplaced preview hashes', async () => {
+    const f = await fixture();
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const hash = 'a'.repeat(64);
+    const badOptions = [
+      { provider: null }, { provider: '' }, { provider: 'automatic' }, { provider: 'Cloud' }, { provider: {} },
+      { previewHash: hash }, { provider: 'local', previewHash: hash }, { provider: 'cloud' },
+      ...[null, 64, '', 'a'.repeat(63), 'a'.repeat(65), 'A'.repeat(64), 'x'.repeat(64)].map((previewHash) => ({ provider: 'cloud', previewHash })),
+      { provider: 'local', extra: 'reject' }, { provider: 'cloud', previewHash: hash, root: f.root },
+    ];
+    for (const options of badOptions) {
+      const response = await f.call('explanations', 'POST', { snapshotId: graph.graph.snapshotId, path: 'main.ts', ...options });
+      expect(response.statusCode).toBe(400);
+      expect(response.json).toEqual({ error: { code: 'invalid-body' } });
+    }
+    expect(f.engine.explain).not.toHaveBeenCalled();
+  });
+  it('keeps authorization and snapshot-only selection checks for cloud bodies', async () => {
+    const f = await fixture();
+    const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const body = { snapshotId: graph.graph.snapshotId, path: 'main.ts', provider: 'cloud', previewHash: 'a'.repeat(64) };
+    expect((await f.call('explanations', 'POST', body, { authorization: undefined })).statusCode).toBe(401);
+    expect((await f.call('explanations', 'POST', body, { origin: undefined })).statusCode).toBe(403);
+    expect((await f.call(`/api/projects/${randomUUID()}/explanations`, 'POST', body)).statusCode).toBe(404);
+    expect((await f.call('explanations', 'POST', { ...body, snapshotId: 'old' })).json).toEqual({ error: { code: 'stale-snapshot' } });
+    expect((await f.call('explanations', 'POST', { ...body, path: '../private.ts' })).json).toEqual({ error: { code: 'invalid-file' } });
+    expect(f.engine.explain).not.toHaveBeenCalled();
+    expect((await f.call('explanations/preview', 'POST', { snapshotId: body.snapshotId, path: body.path })).statusCode).toBe(404);
+    expect((await f.call('/api/session')).json).not.toHaveProperty('cloud');
+  });
   it('streams service events as NDJSON without changing parser graph', async () => {
     const f = await fixture();
     const graph = (await f.call('confirm', 'POST', {})).json as GraphResponse;
