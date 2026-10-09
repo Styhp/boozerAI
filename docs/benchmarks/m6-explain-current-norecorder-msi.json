@@ -1,0 +1,171 @@
+{
+  "at": "2026-10-09T13:30:38.814Z",
+  "selected": "pricing.ts",
+  "idleWaitS": 10,
+  "eventTypes": [
+    "snippets",
+    "token",
+    "done"
+  ],
+  "firstTextMs": 3161.3786630000013,
+  "clientMs": 6445.608603000001,
+  "ok": true,
+  "durationMs": 6444,
+  "canaryLeaked": false,
+  "invalidCitations": 0,
+  "citations": 7,
+  "thinkingSeen": false,
+  "text": "The `pricing.ts` file defines a function `priceFor` that calculates the price of an item based on its stock level [S1]. It sets a base price of 250 cents and applies a doubling surcharge when stock is low [S1]. This function relies on the `stockLevel` function from `inventory.ts` to determine if an item's stock is low [S1].  \n\n`inventory.ts` imports `priceFor` and defines the `Item` interface and `stockLevel` function, which is used by `pricing.ts` to evaluate stock conditions [S2][S3]. Thus, `pricing.ts` depends on `inventory.ts` for stock-level data to adjust prices [S1][S3].  \n\nThe relationship is that `pricing.ts` uses data from `inventory.ts` to dynamically adjust prices based on stock levels.",
+  "peak": {
+    "minMemAvailMiB": 5210,
+    "peakRunnerRssMiB": 638,
+    "peakRecorderRssMiB": 0,
+    "peakGttMiB": 3423,
+    "peakVramMiB": 2967,
+    "gpuPmAtStart": "suspended"
+  },
+  "ollamaPs": "NAME                 ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               \nqwen3:4b-instruct    0edcdef34593    3.2 GB    100% GPU     4096       llamacpp    29 minutes from now",
+  "loadavg": "2.33 1.54 0.82 6/1164 101408",
+  "samples": [
+    {
+      "t": 1791552632320,
+      "memAvailMiB": 5238,
+      "memFreeMiB": 262,
+      "runnerRssMiB": 551,
+      "recorderRssMiB": 0,
+      "gttMiB": 3423,
+      "vramMiB": 11,
+      "gpuPm": "suspended"
+    },
+    {
+      "t": 1791552632840,
+      "memAvailMiB": 5210,
+      "memFreeMiB": 231,
+      "runnerRssMiB": 638,
+      "recorderRssMiB": 0,
+      "gttMiB": 3423,
+      "vramMiB": 11,
+      "gpuPm": "suspended"
+    },
+    {
+      "t": 1791552633340,
+      "memAvailMiB": 5223,
+      "memFreeMiB": 244,
+      "runnerRssMiB": 638,
+      "recorderRssMiB": 0,
+      "gttMiB": 3423,
+      "vramMiB": 11,
+      "gpuPm": "resuming"
+    },
+    {
+      "t": 1791552633840,
+      "memAvailMiB": 5226,
+      "memFreeMiB": 246,
+      "runnerRssMiB": 638,
+      "recorderRssMiB": 0,
+      "gttMiB": 3423,
+      "vramMiB": 11,
+      "gpuPm": "resuming"
+    },
+    {
+      "t": 1791552634339,
+      "memAvailMiB": 5233,
+      "memFreeMiB": 253,
+      "runnerRssMiB": 638,
+      "recorderRssMiB": 0,
+      "gttMiB": 3423,
+      "vramMiB": 11,
+      "gpuPm": "resuming"
+    },
+    {
+      "t": 1791552634840,
+      "memAvailMiB": 5219,
+      "memFreeMiB": 239,
+      "runnerRssMiB": 638,
+      "recorderRssMiB": 0,
+      "gttMiB": 3423,
+      "vramMiB": 11,
+      "gpuPm": "resuming"
+    },
+    {
+      "t": 1791552635341,
+      "memAvailMiB": 7600,
+      "memFreeMiB": 2616,
+      "runnerRssMiB": 638,
+      "recorderRssMiB": 0,
+      "gttMiB": 1046,
+      "vramMiB": 2967,
+      "gpuPm": "active"
+    },
+    {
+      "t": 1791552635841,
+      "memAvailMiB": 8247,
+      "memFreeMiB": 3263,
+      "runnerRssMiB": 549,
+      "recorderRssMiB": 0,
+      "gttMiB": 466,
+      "vramMiB": 2967,
+      "gpuPm": "active"
+    },
+    {
+      "t": 1791552636342,
+      "memAvailMiB": 8254,
+      "memFreeMiB": 3269,
+      "runnerRssMiB": 549,
+      "recorderRssMiB": 0,
+      "gttMiB": 466,
+      "vramMiB": 2967,
+      "gpuPm": "active"
+    },
+    {
+      "t": 1791552636841,
+      "memAvailMiB": 8256,
+      "memFreeMiB": 3272,
+      "runnerRssMiB": 549,
+      "recorderRssMiB": 0,
+      "gttMiB": 466,
+      "vramMiB": 2967,
+      "gpuPm": "active"
+    },
+    {
+      "t": 1791552637341,
+      "memAvailMiB": 8251,
+      "memFreeMiB": 3266,
+      "runnerRssMiB": 549,
+      "recorderRssMiB": 0,
+      "gttMiB": 466,
+      "vramMiB": 2967,
+      "gpuPm": "active"
+    },
+    {
+      "t": 1791552637842,
+      "memAvailMiB": 8246,
+      "memFreeMiB": 3261,
+      "runnerRssMiB": 549,
+      "recorderRssMiB": 0,
+      "gttMiB": 466,
+      "vramMiB": 2967,
+      "gpuPm": "active"
+    },
+    {
+      "t": 1791552638341,
+      "memAvailMiB": 8244,
+      "memFreeMiB": 3259,
+      "runnerRssMiB": 549,
+      "recorderRssMiB": 0,
+      "gttMiB": 466,
+      "vramMiB": 2967,
+      "gpuPm": "active"
+    },
+    {
+      "t": 1791552638787,
+      "memAvailMiB": 8248,
+      "memFreeMiB": 3263,
+      "runnerRssMiB": 549,
+      "recorderRssMiB": 0,
+      "gttMiB": 466,
+      "vramMiB": 2967,
+      "gpuPm": "active"
+    }
+  ]
+}
