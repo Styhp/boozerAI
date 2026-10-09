@@ -55,6 +55,9 @@ export function retrieveSnippets(snapshot: WorkspaceSnapshot, graph: DependencyG
   const own = files.get(selected);
   if (own === undefined) return [];
   add(own, 1, linesOf(own.text).length, Math.floor(budget * SELECTED_SHARE), 'selected file');
+  // Without an exact excerpt of the selected file there is nothing to explain; related
+  // snippets alone must not stand in for it (M3 review F1). The service refuses the request.
+  if (snippets.length === 0) return [];
 
   // Who uses it: the importing statement in each direct importer (lowest edge IDs first).
   const importers = graph.edges

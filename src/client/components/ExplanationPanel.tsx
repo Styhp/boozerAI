@@ -11,6 +11,7 @@ export type ExplanationState =
 
 const ERROR_TITLES: Record<ExplanationErrorCode, string> = {
   'invalid-selection': 'This file cannot be explained',
+  'no-excerpt': 'No excerpt of this file fits the model\'s context',
   'stale-snapshot': 'The project changed since this map was built',
   'runtime-unavailable': 'Local model runtime not available',
   'model-missing': 'Approved local model not installed',
@@ -47,7 +48,8 @@ function InlineView({ parts, snippets, path, onSelect }: {
               <button key={i} type="button" className="link mention" onClick={() => onSelect({ kind: 'file', path: target })}>{label}</button>
             ) : (
               <span key={i} className={`mention ${part.mention.status}`}
-                title={part.mention.status === 'not-indexed' ? 'In the project but not indexed as source' : 'No file with this name in the snapshot'}>
+                title={part.mention.status === 'not-indexed' ? 'In the project but not indexed as source'
+                  : part.mention.status === 'ambiguous' ? 'Several indexed files have this name' : 'No file with this path in the snapshot'}>
                 {label}?
               </span>
             );

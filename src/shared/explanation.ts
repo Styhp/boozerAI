@@ -11,6 +11,7 @@ export const PROMPT_VERSION = 'explain-v3';
 
 export type ExplanationErrorCode =
   | 'invalid-selection'    // selected path is not a source file in this snapshot
+  | 'no-excerpt'           // no exact excerpt of the selected file fits the budget; model not called
   | 'stale-snapshot'       // request/graph snapshot differs from the current snapshot
   | 'runtime-unavailable'  // nothing answering on 127.0.0.1:11434
   | 'model-missing'        // the approved tag is not installed
@@ -22,7 +23,7 @@ export type ExplanationErrorCode =
 // How a file path written in the model's prose relates to the snapshot (finding 1).
 export interface PathMention {
   readonly text: string;
-  readonly status: 'linked' | 'not-indexed' | 'unknown';
+  readonly status: 'linked' | 'not-indexed' | 'ambiguous' | 'unknown';
   readonly path?: FilePath;   // set only when status is 'linked'
 }
 

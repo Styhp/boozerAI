@@ -22,6 +22,13 @@ export function createExplanationService(adapter: ModelAdapter = createOllamaAda
       }
       const started = performance.now();
       const snippets = retrieveSnippets(snapshot, graph, selected);
+      if (snippets[0]?.ref.file !== selected) {
+        yield {
+          type: 'error', code: 'no-excerpt',
+          message: 'No exact excerpt of this file fits the explanation budget (its first line is too long), so nothing was sent to the model.',
+        };
+        return;
+      }
       yield { type: 'snippets', snippets };
 
       try {

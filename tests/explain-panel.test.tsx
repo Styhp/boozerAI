@@ -101,6 +101,9 @@ describe('explanation panel', () => {
     expect(panel({ status: 'running', snippets, text: 'Partial' })).toContain('Cancel');
     const missing = panel({ status: 'error', code: 'runtime-unavailable', message: 'No local Ollama runtime is answering on 127.0.0.1:11434.', snippets: [], text: '' });
     expect(missing).toContain('Local model runtime not available');
+    const noExcerpt = panel({ status: 'error', code: 'no-excerpt', message: 'No exact excerpt of this file fits the explanation budget (its first line is too long), so nothing was sent to the model.', snippets: [], text: '' });
+    expect(noExcerpt).toContain('No excerpt of this file fits the model&#x27;s context');
+    expect(noExcerpt).toContain('nothing was sent to the model');
     expect(missing).not.toContain('explanation-text');
   });
 

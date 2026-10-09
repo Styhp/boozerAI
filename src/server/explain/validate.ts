@@ -14,8 +14,9 @@ export function validateCitations(text: string, snippets: readonly Snippet[]): E
     match[1]!.split(/\s*,\s*/).map((id) => (ids.has(id) ? { marker: `[${id}]`, snippetId: id, valid: true } : { marker: `[${id}]`, valid: false })));
 }
 
-// Finding 1: every file name in the prose must exist in the snapshot. Exact root-relative
-// paths link; a bare name links only when exactly one indexed file ends with it.
+// Finding 1: every file name in the prose must exist in the snapshot. A name with a directory
+// must match an indexed path exactly; only a bare file name may resolve by a unique match on
+// its last path segment (M3 review F2). Nothing is rewritten into a different path.
 export function validateMentions(text: string, snapshot: WorkspaceSnapshot): PathMention[] {
   const indexed = snapshot.files.map((file) => file.path);
   const skipped = new Set(snapshot.inventory.skipped.map((skip) => skip.path));
@@ -25,11 +26,13 @@ export function validateMentions(text: string, snapshot: WorkspaceSnapshot): Pat
     if (seen.has(raw)) continue;
     seen.add(raw);
     const candidate = raw.replace(/^\.\//, '');
+    const qualified = candidate.includes('/');
     const matches: FilePath[] = indexed.includes(candidate)
       ? [candidate]
-      : indexed.filter((path) => path.endsWith(`/${candidate}`));
+      : qualified ? [] : indexed.filter((path) => path.endsWith(`/${candidate}`));
     if (matches.length === 1) mentions.push({ text: raw, status: 'linked', path: matches[0]! });
     else if (skipped.has(candidate)) mentions.push({ text: raw, status: 'not-indexed' });
+    else if (matches.length > 1) mentions.push({ text: raw, status: 'ambiguous' });
     else mentions.push({ text: raw, status: 'unknown' });
   }
   return mentions;

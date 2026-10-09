@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { DependencyGraph } from '../src/shared/contracts.js';
 import type { ExplanationEvent } from '../src/shared/explanation.js';
@@ -163,6 +164,55 @@ describe('validator', () => {
       { text: './config.ts', status: 'linked', path: 'config.ts' },
       { text: 'styles.css', status: 'not-indexed' },
       { text: 'export-pdf.ts', status: 'unknown' },
+    ]);
+  });
+});
+
+describe('M3 review fixes', () => {
+  // Author-written in-memory projects; nothing here reads or runs target files.
+  const memory = (sources: Record<string, string>, skipped: string[] = []) => {
+    const files = Object.entries(sources).map(([path, text]) => ({
+      path, text, language: 'ts' as const, sizeBytes: Buffer.byteLength(text), contentHash: createHash('sha256').update(text).digest('hex'),
+    }));
+    const snap = { ...snapshot, snapshotId: 'mem', files, inventory: { found: files.length + skipped.length, skipped: skipped.map((path) => ({ path, reason: 'unsupported-extension' as const })), prunedDirectories: [] } };
+    return { snap, graph: extractDependencies(snap) };
+  };
+  const longLine = `export const table = [${Array.from({ length: 400 }, (_, i) => i).join(', ')}];`;
+
+  it('F1: a file whose first line exceeds the budget gets no explanation and no model call', async () => {
+    expect(Buffer.byteLength(longLine)).toBeGreaterThan(SNIPPET_TOKEN_BUDGET * 3.5);
+    for (const sources of [
+      { 'large.ts': `${longLine}\n` },
+      { 'large.ts': `${longLine}\nimport { x } from './small';\n`, 'small.ts': 'export const x = 1;\n', 'user.ts': "import { table } from './large';\n" },
+    ]) {
+      const { snap, graph: g } = memory(sources);
+      expect(retrieveSnippets(snap, g, 'large.ts')).toEqual([]);
+      const ollama = fakeOllama({ chat: answer('should never be produced') });
+      const events = await collect(createExplanationService(createOllamaAdapter({ fetch: ollama.fetch })).explain({ snapshot: snap, graph: g, selected: 'large.ts' }));
+      expect(events).toMatchObject([{ type: 'error', code: 'no-excerpt' }]);
+      expect(ollama.calls).toEqual([]);
+    }
+  });
+
+  it('F1: a long line after the first still yields an exact, labeled excerpt', () => {
+    const { snap, graph: g } = memory({ 'mixed.ts': `export const a = 1;\n${longLine}\n` });
+    const [first] = retrieveSnippets(snap, g, 'mixed.ts');
+    expect(first).toMatchObject({ ref: { file: 'mixed.ts', startLine: 1, endLine: 1 }, text: 'export const a = 1;', reason: 'selected file (lines 1–1 of 2)' });
+  });
+
+  it('F2: qualified paths must match exactly; only bare names use a unique suffix', () => {
+    const { snap } = memory(
+      { 'vendor/src/missing.ts': '', 'src/a/index.ts': '', 'src/b/index.ts': '', 'src/real.ts': '' },
+      ['assets/logo.css'],
+    );
+    expect(validateMentions('src/real.ts ./src/real.ts src/missing.ts missing.ts index.ts assets/logo.css other/logo.css', snap)).toEqual([
+      { text: 'src/real.ts', status: 'linked', path: 'src/real.ts' },
+      { text: './src/real.ts', status: 'linked', path: 'src/real.ts' },
+      { text: 'src/missing.ts', status: 'unknown' },
+      { text: 'missing.ts', status: 'linked', path: 'vendor/src/missing.ts' },
+      { text: 'index.ts', status: 'ambiguous' },
+      { text: 'assets/logo.css', status: 'not-indexed' },
+      { text: 'other/logo.css', status: 'unknown' },
     ]);
   });
 });
