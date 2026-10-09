@@ -1,6 +1,6 @@
 # Architecture (proposed)
 
-**Status:** scaffold approved in 1.2; C5 independently Approved by Claude at `dc22467`. Snapshot foundation and pure 1.4 parser/resolver are independently Approved; C7 (`22ba446`) and C8 (`c3fbbfb`) were rechecked Approved at `849367a`, with S-4 Accepted. Fixture output matches the hand-written oracle; C1/C4 remain the shared contracts. M2 launcher/authenticated APIs/real-project UI are implemented and in independent review. Map/impact are approved after C10; [M3 review](reviews/2026-10-09-m3-engine-panel.md) requires two grounding/file-name corrections from Agent B. See [TASKS.md](TASKS.md), [M2 handoff](M2-WIRING-HANDOFF.md), [C5/M2 foundation review](reviews/2026-10-09-c5-and-m2-foundation.md) and [1.4 review](reviews/2026-10-09-1.4-parser.md).
+**Status:** scaffold approved in 1.2; C5 independently Approved by Claude at `dc22467`. Snapshot foundation and pure 1.4 parser/resolver are independently Approved; C7 (`22ba446`) and C8 (`c3fbbfb`) were rechecked Approved at `849367a`, with S-4 Accepted. Fixture output matches the hand-written oracle; C1/C4 remain the shared contracts. M2 local launcher/authenticated APIs/real-project UI are independently Approved at `715841c`. Map/impact are approved after C10; [M3 local engine/panel](reviews/2026-10-09-m3-engine-panel.md) is Approved with C9 after F1/F2 at `ace59be`. Human/MSI and secondary cloud gates remain separate. See [TASKS.md](TASKS.md), [M2 handoff](M2-WIRING-HANDOFF.md), [C5/M2 foundation review](reviews/2026-10-09-c5-and-m2-foundation.md) and [1.4 review](reviews/2026-10-09-1.4-parser.md).
 
 ## Principles
 
@@ -34,7 +34,7 @@ DependencyGraph (read-only once built)
 | Component | Responsibility | Notes |
 |---|---|---|
 | Input adapter | Builds a read-only file tree from a local folder, or later from a GitHub archive | Never writes into the target |
-| Workspace snapshot | Lists files with content hashes and languages; applies ignore rules and size/count caps | M2 foundation approved; snapshot/parser/HTTP source integration implemented and in review |
+| Workspace snapshot | Lists files with content hashes and languages; applies ignore rules and size/count caps | M2 foundation and local snapshot/parser/HTTP source integration independently approved |
 | Extractor | Parses each file and finds import, export-from, require, and dynamic import statements, with their positions | Parses text only; never evaluates code |
 | Resolver | Maps each specifier to a file, a package, or `unresolved` | Covers relative paths, extensions, and index files first; tsconfig paths later |
 | Graph | Holds the `DependencyGraph` built from extractor and resolver output | Serializable, deterministic JSON |

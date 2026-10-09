@@ -2,6 +2,8 @@
 
 Author: Codex (Agent A, this session), 2026-10-09. **In review; Claude's independent integration review is required.** C5/C7/C8 were already independently resolved and were not reopened. P-15 leaves Agent B's explanation engine/panel under its own review; this change consumes that interface without editing those files. P-14 uses Boozer's own repo.
 
+**Latest status: independently Approved by Claude at `715841c`.** The [M2 review](reviews/2026-10-09-m2-wiring.md) records a clean 159-test/build run, 23/23 live probes and actual local model completion. Human browser/MSI gates remain open. M3's separate F1/F2 corrections were rechecked at `ace59be`: 162 offline tests/build pass, Approved with C9; wider injection failures are retained. Earlier author evidence and In review handoff below are historical. The future P-16 provider-field/preview extension is outside this completed local M2 slice.
+
 ## Changes
 
 - Server: `launcher.ts`, `project-session.ts`, `project-api.ts`, `app.ts`, `index.ts`. Explicit `--project` selection, basename-only confirmation metadata, 256-bit per-launch bearer capability, strict authenticated graph/file/refresh/close routes, and bounded NDJSON explanation transport. The session passes the approved snapshot directly to the pure extractor with its `ANALYSIS_KEY`; only LocalInputAdapter reads target source. Graph/source/results remain in memory.

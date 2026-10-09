@@ -2,6 +2,8 @@
 
 Reviewer: Codex (this session), 2026-10-09; author: Claude Code (Agent B). Reviewed interface/engine `0d20626`, panel/tests `3014ebe`, and v3/warning/evidence at **`435b9e4ceebe6e0b20ba7114621f47f9050780be`** in a clean detached worktree. Reviewer authored none of these changes. M2's later launcher/HTTP source/route are excluded from this verdict. Later uncommitted engine edits are not silently substituted for the review pin.
 
+**Latest verdict: Approved with C9 after F1/F2 recheck at `ace59be`; see the final section.** Earlier failures/findings below are retained. Human browser/MSI and the disclosed wider injection failures remain open.
+
 **Verdict: Changes required — two blocking findings, Agent B to fix before M3 demo acceptance.** The already-disclosed wider injection failures remain separate under C9; preserve their assertions and disclosure.
 
 ## Blocking findings
@@ -29,3 +31,11 @@ Checklist: scope Pass; dependencies N/A; offline default/model separation Pass; 
 Scoped to Agent B's retriever/test changes at `d89d40953600a8a8892e274570728c30cb1a8fe8`; Codex-authored review/status docs included by that shared-tree commit are excluded from review. The earlier separate docs-only commit attempt returned exit 1/no changes because these staged docs had already been committed there. No history rewrite or code repair.
 
 Fresh clean worktree: network-denied `npm ci --ignore-scripts --offline` passes (65 packages), full offline suite **12 files / 159 tests** and full **187-module** build pass; clean before/after. **Changes required remains.** At the larger 480-token budget the same 2,027-byte standalone source still yields zero snippets and one model call ending in `done`. With a local dependency added, `retriever.ts:80` dereferences `snippets[0]!.reason` and throws before any service event/model call, outside the service's error handler. Include that related-file case in F1's fix/tests; the service must return its documented terminal error rather than throw. F2's false qualified-path suffix link is unchanged. No actual model suite/latency rerun for this budget recheck; Agent B's new records are distinct from the independent 435b9e4 rerun. Current uncommitted cloud/interface work is outside both pins.
+
+## F1/F2 recheck at ace59be
+
+**Approved with C9; F1/F2 resolved.** Reviewed only Agent B's remediation at `ace59bee4d0d5cc5d1856e44c7c8df21256cf488`, including shared error/mention types and panel labels. No author conflict, repair or human-check tick. Fresh detached clean checkout: network-denied `npm ci --ignore-scripts --offline` passes (65 packages), full offline suite **12 files / 162 tests** and full build passes both typechecks/server/client compilation (**187 modules**), clean before/after.
+
+Independent compiled-code repros repeated: the 2,027-byte standalone long line and the same file with a local dependency now both yield exactly one `no-excerpt` error, zero runtime-status/generation calls, and no throw. Retriever exits before related snippets can substitute for missing selected source; the panel's explicit no-model-call error is tested. The previously missing `src/missing.ts` now remains unknown with no target path. Author tests also cover exact and `./` paths, unique/ambiguous basenames, skipped paths and an exact labeled prefix before a later long line.
+
+No prompt/generation-setting change in this fix; the actual model suite was not repeated for this recheck. Retain the independent 435b9e4 result (6 passed / 2 wider injection failures / 1 opt-in benchmark skipped) and Agent B's distinct 480-budget records. C9's demo disclosure/MSI recheck and P-5 chosen-machine rehearsal remain required; approval does not claim injection protection or answer correctness. Final checklist: F1/F2 grounding/name validation Pass; other inspected code-boundary/offline/rendering items Pass; human browser, MSI, background daemon offline behavior and later cloud/provider extension Not checked. M2 has its separate independent Claude Approved verdict at `715841c`.
