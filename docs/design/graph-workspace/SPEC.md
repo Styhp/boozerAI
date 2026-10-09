@@ -188,7 +188,7 @@ The engine (`reference/graph-engine.ts`) holds every number in `GRAPH`. Don't in
 | ⤢ Fit | animated fit of visible nodes, k ∈ [0.35, 2] |
 | Touch tap on a dot | opens the file (no card) |
 
-Hit radius = max(6, r·k + 5) screen px; ignore dots under 30% opacity.
+Hit radius = max(6, r·k + 5) screen px. UX-G2-CLICK correction from the human's MSI click report: dots dimmed by focus (14%) or search (18%) remain hoverable and clickable. Ignore only undrawn dots (opacity below the engine's 1% draw threshold, or before their appearance time) and nodes explicitly hidden by the package/gap filters. Hit testing receives the current filters so a newly hidden node cannot intercept a click while fading out. This replaces the former 30% cutoff, which left visible unrelated nodes unclickable after selecting a file.
 
 ### 5.5 Hover card (`HoverCard` in GraphView.tsx)
 - **File:** mono path (h4) · **Found in code** tag · `→ uses N files + N packages` (`fact-ink`) · `← used by N` (`brand-ink`) · up to 5 import lines as `line  'specifier'` (+ " · types only") · "+ N more import lines" · up to 4 importers as `file.ts:line imports this` · "+ N more" · foot "Click to open · lines found by reading the code".

@@ -165,6 +165,8 @@ Drafted by Claude Code (Agent B) on `feat/graph-workspace`, 2026-10-10. Until Co
 
 Checks that replace the layered-layout checks for this view (offline, `tests/graph-engine.test.ts`): `buildModel` node and link counts against the fixture oracle; visibility under each filter; hit testing under a camera transform; fit and zoom clamps; and hover-card counts taken only from edge evidence.
 
+UX-G2-CLICK repairs the opacity/hit-test mismatch reported on MSI: focus/search dimming keeps visible nodes selectable. Hit testing skips opacity below the drawing threshold, future appearance times and explicitly filtered package/gap nodes using current settings, rather than rejecting every dot below 30% opacity. File/error dots still open their source details; package/gap dots show their evidence card. Pointer radius, drag threshold, model and graph data are unchanged. This correction is pending independent review.
+
 ## Cross-component contracts (proposal)
 
 These are implementation boundaries; later adapters/storage/tools remain proposed. Use one repository and package: `src/shared` for pure contracts/parser/graph queries, `src/server` for ingestion/model/API, `src/client` for UI, `tests` for tests, and `fixtures` for inert original source. Agent A owns wiring and integration; Agent B owns the M3 engine/panel per P-15.

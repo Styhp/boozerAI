@@ -126,7 +126,7 @@ export function GraphView(props: GraphViewProps) {
     };
     const down = (e: PointerEvent) => {
       const m = modelRef.current; if (!m) return; const [sx, sy] = local(e);
-      drag = { node: hitTest(m, camRef.current, viewRef.current, sx, sy), sx, sy, cx: camRef.current.x, cy: camRef.current.y, moved: false, touch: e.pointerType === 'touch' };
+      drag = { node: hitTest(m, camRef.current, viewRef.current, sx, sy, live.current.filters), sx, sy, cx: camRef.current.x, cy: camRef.current.y, moved: false, touch: e.pointerType === 'touch' };
       canvas.setPointerCapture(e.pointerId); setSettingsOpen(false);
     };
     const move = (e: PointerEvent) => {
@@ -140,7 +140,7 @@ export function GraphView(props: GraphViewProps) {
           return;
         }
       }
-      if (e.pointerType !== 'touch') setHover(hitTest(m, cam, viewRef.current, sx, sy), sx, sy);
+      if (e.pointerType !== 'touch') setHover(hitTest(m, cam, viewRef.current, sx, sy, live.current.filters), sx, sy);
     };
     const up = () => {
       const d = drag; drag = null; canvas.dataset.cursor = hoverRef.current ? 'pointer' : '';

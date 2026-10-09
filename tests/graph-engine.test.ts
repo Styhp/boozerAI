@@ -80,7 +80,7 @@ describe('ids and filters', () => {
 describe('camera and hit testing', () => {
   const view = { w: 200, h: 100 };
 
-  it('hits a dot within max(6, r·k + 5) screen px and ignores faint dots', () => {
+  it('hits a dot within max(6, r·k + 5) screen px and ignores undrawn dots', () => {
     const model = buildModel(graph);
     for (const n of model.nodes) { n.x = 1000; n.y = 1000; n.a = 1; }
     const main = node(model, 'main.ts');
@@ -89,7 +89,7 @@ describe('camera and hit testing', () => {
     // r = 4.5 → hit radius 4.5·2 + 5 = 14.
     expect(hitTest(model, cam, view, 130, 60)).toBe(main);
     expect(hitTest(model, cam, view, 135, 60)).toBeNull();
-    main.a = 0.29;
+    main.a = 0;
     expect(hitTest(model, cam, view, 120, 60)).toBeNull();
   });
 
@@ -105,6 +105,35 @@ describe('camera and hit testing', () => {
     expect(cam.k).toBe(GRAPH.zoom.fitMax);
     fitCamera(cam, view, model, DEFAULT_FILTERS, true);
     expect(cam.target).not.toBeNull();
+  });
+
+  it('lets a visible node be selected after focus or search dims it', () => {
+    const model = buildModel(graph);
+    for (const n of model.nodes) { n.x = 1000; n.y = 1000; n.a = 1; }
+    const main = node(model, 'main.ts');
+    main.x = 0; main.y = 0;
+    const cam: Camera = { x: 0, y: 0, k: 1, target: null };
+    for (const opacity of [GRAPH.alpha.dimmed, GRAPH.alpha.searchMiss]) {
+      main.a = opacity;
+      expect(hitTest(model, cam, view, 100, 50)).toBe(main);
+    }
+  });
+
+  it('does not hit filtered packages or gaps while they fade out, or nodes not yet drawn', () => {
+    const model = buildModel(graph);
+    for (const n of model.nodes) { n.x = 1000; n.y = 1000; n.a = 1; }
+    const cam: Camera = { x: 0, y: 0, k: 1, target: null };
+    for (const [id, filter] of [['pkg:zod', 'packages'], ['gap:main.ts#2', 'gaps']] as const) {
+      const target = node(model, id);
+      target.x = 0; target.y = 0;
+      expect(hitTest(model, cam, view, 100, 50)).toBe(target);
+      expect(hitTest(model, cam, view, 100, 50, { ...DEFAULT_FILTERS, [filter]: false })).toBeNull();
+      target.x = 1000; target.y = 1000;
+    }
+    const future = node(model, 'main.ts');
+    future.x = 0; future.y = 0; future.born = 101;
+    expect(hitTest(model, cam, view, 100, 50, DEFAULT_FILTERS, 100)).toBeNull();
+    expect(hitTest(model, cam, view, 100, 50, DEFAULT_FILTERS, 101)).toBe(future);
   });
 
   it('zooms around the pointer and clamps to 0.25–3.5', () => {

@@ -25,7 +25,6 @@ export const GRAPH = {
     minScreen: 2.2,           // never draw a dot smaller than this on screen
     hitPad: 5,                // screen px added to the radius for hit testing
     hitMin: 6,                // minimum hit radius in screen px
-    hitMinAlpha: 0.3,         // dots fainter than this can't be hovered or clicked
   },
   force: {
     repulsion: 1700,          // pairwise, divided by distance²
@@ -263,10 +262,12 @@ export function zoomAt(c: Camera, v: Viewport, sx: number, sy: number, deltaY: n
 
 /* ───────────────────────────── Hit testing ───────────────────────────── */
 
-export function hitTest(model: GraphModel, c: Camera, v: Viewport, sx: number, sy: number): GraphNode | null {
+export function hitTest(model: GraphModel, c: Camera, v: Viewport, sx: number, sy: number,
+  filters: GraphFilters = DEFAULT_FILTERS, now = performance.now()): GraphNode | null {
   let best: GraphNode | null = null, bestD = Infinity;
   for (const n of model.nodes) {
-    if (n.a < GRAPH.radius.hitMinAlpha) continue;
+    // Focus/search dim visible dots; they must stay selectable. Actual filters still exclude them.
+    if (n.a < GRAPH.alpha.drawMin || n.born > now || !nodeVisible(n, filters)) continue;
     const [x, y] = toScreen(c, v, n.x, n.y);
     const d = Math.hypot(x - sx, y - sy); const r = Math.max(GRAPH.radius.hitMin, n.r * c.k + GRAPH.radius.hitPad);
     if (d < r && d < bestD) { bestD = d; best = n; }
