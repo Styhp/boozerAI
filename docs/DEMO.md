@@ -1,76 +1,59 @@
-# Demo script
+# One-minute MSI demo
 
-The script for the 3–4 minute submission video and the 06:20 rehearsal on the MSI. Times are UTC+8 on 2026-10-10; the schedule is in [SUBMISSION.md](SUBMISSION.md).
+The human lead requested a **60-second video**, initially with natural AI narration; the human then chose a **silent version for now** when no API key was configured on 2026-10-10 (UTC+8). This replaces the earlier 3–4-minute storyboard. M7 publication and submission remain with the human lead.
 
-**Ground rules (P-10):** every shot shows real parser output and real local-model output, recorded live on the MSI. Nothing is mocked, canned or pre-recorded. If a shot's feature isn't working at the 06:00 freeze, drop the shot. Don't fake it.
+## Current production
 
-## Status of each shot
+Codex (MSI demo session) recorded the real production app at application commit `8d52d37`, opening Boozer AI's own repository. Footage and production files are local at `/home/boozer/Videos/BoozerAI/`; video binaries and credentials do not belong in Git. The screen capture uses installed Chromium on an isolated X11 display and ffmpeg at 1920×1080, 30 fps, without desktop audio.
 
-Check this table again at 06:00. Only shots marked **Ready** go in the video.
+The app reads the chosen folder through its normal input/parser/session routes. Chat runs through the real local model adapter, using Ollama 0.40.2 and `qwen3:4b-instruct` on the MSI. No fake model replies, substituted source text or graph edges are used.
 
-| Shot | Needs | Status (2026-10-09 18:45) |
-|---|---|---|
-| 1. Offline proof | MSI with Wi-Fi off | Pending: M6 (MSI setup tonight) |
-| 2. Open a project | Launcher `--project`, UI confirmation, graph API | M2 independently Approved. Agent verified explicit dev confirmation and the real own-repo map; human/MSI rehearsal pending. No fixture preview in video |
-| 3. Map and inspect | Map screen (1.5) on real parser output | Built, approved (1.5); own-repo HTTP source and import highlight verified by agent. Human/MSI acceptance pending |
-| 4. Local explanation | Explanation panel, ModelAdapter, prompt (M3) | M2 Approved, local M3 Approved with C9 after grounding/file-name fixes. Real local route requests completed; injection disclosure and human browser/MSI rehearsal pending |
-| 5. Verify a citation | `[S#]` links, citation and file-name checks, injection warning (M3) | Local M3 fixes independently rechecked; native route returned current-snapshot snippets. Citation click in the live app and human/MSI rehearsal pending |
-| 6. Potential impact | Impact panel (M4) | Built, approved (M4, C10 fixed). Browser check pending |
-| 7. Technical proof | `npm test`, benchmark numbers | Ready: the parser matches the hand-written answer key (1.4 review). MSI timings pending M6 |
+## Narration
 
-## Shot list (about 3:40)
+> Ever opened a codebase and had no idea where to start? Meet Boozer AI.
+>
+> Open a local project, and its imports become an interactive map. Pick a file to explore the code and the connections around it.
+>
+> Got a question? Just ask Boozer. Here, we're asking which errors the folder picker can report. The answer streams from a model running right here on this laptop.
+>
+> And you don't have to take its word for it. Click a citation to jump straight to the source lines. You can also see which files might be affected by a change, and follow the imports behind that connection.
+>
+> That's Boozer AI: a way into unfamiliar code, with the evidence right beside you.
 
-| Time | Shot | What's on screen | Say (short) | Rubric |
-|---|---|---|---|---|
-| 0:00–0:15 | Problem | Title card: "Boozer AI: understand unfamiliar code with evidence." | Unfamiliar or AI-written code is slow to read, and AI answers about it are hard to check. | Usefulness |
-| 0:15–0:30 | 1. Offline proof | MSI network menu showing Wi-Fi off. A terminal: `curl -sS -m 5 https://example.com` fails. | Everything you'll see runs on this laptop with networking off. | Local AI |
-| 0:30–0:50 | 2. Open a project | `npm start -- --project <folder>` (pending M2: confirm the flag), then the in-app confirmation. The summary panel shows files found, parsed and skipped, imports, and "possibly incomplete" reasons. | Boozer reads the project as text, never runs it, and says what it couldn't analyze. | Technical execution, Product |
-| 0:50–1:20 | 3. Map and inspect | The map. Click a file: its source with line numbers. Click an arrow: the import line highlighted. Show the full list beside the map. | Every arrow comes from the parser, and each one points at the line that created it. | Technical execution, Innovation |
-| 1:20–2:15 | 4. Local explanation | Select **the file chosen in rehearsal** (checklist below) and ask for an explanation. It streams in. The labels show model `qwen3:4b-instruct`, runtime Ollama, **local**, and the duration. The snippets sent are visible. If a "Possible prompt injection" warning appears, keep it on screen; never crop it out. Trim the wait (see below). | The model runs on this CPU, sees only these snippets, and must cite them. | Local AI, Usefulness |
-| 2:15–2:40 | 5. Verify a citation | Click an `[S#]` marker: the cited lines open; click "Back to the explanation". If a marker or file name is flagged with `?`, or a warning is shown, show it and click its link. | Each citation links to real lines. A valid citation shows where a claim came from; it doesn't prove the claim is right. | Innovation, Usefulness |
-| 2:40–3:10 | 6. Potential impact | On the same file: "Potentially affected files" at depth 1, then "Expand", then click a chain link to its import line. | These files could be affected through their imports. It's potential, with the chain as evidence. | Innovation, Usefulness |
-| 3:10–3:35 | 7. Technical proof | A terminal: `npm test` passing, highlighting the parser-vs-answer-key test. A caption with MSI CPU, RAM, model, quantization, and measured time to first token and total time from M6. Then the **injection disclosure** caption (below). | The parser is checked against a hand-written answer key. These timings were measured on this machine. Prompt injection is partly resisted, not solved. | Technical execution, Local AI |
-| 3:35–3:45 | Close | Card: what runs locally; what's planned (GitHub import, agent, cloud options are later phases). | Local-first, evidence-bound, honest about its limits. | Product |
+The exact text and speech request are prepared in `narration.txt` and `speech-request.json` in the local video directory. The proposed voice was OpenAI Cedar, with conversational delivery directions. The human approved the narration-only cloud request, but the generator stopped locally because this device had neither the ignored `.env` nor an exported key. **No cloud request was sent.** The human then requested the silent version. If narration is added later, use the already prepared request and put **AI-generated narration** visibly in that version. The current silent cut contains action captions and no audio track.
 
-**Project (P-14, decided).** Shots 2–6 open Boozer AI's own repository (49 nodes and 144 relationships at `d964188`). The fixture appears only in shot 7 as the known-answer proof.
+## Storyboard
 
-**Injection disclosure (required, P-10 honesty).** Show this caption in shot 7, and keep it in the written answers:
+| Approximate time | Actual footage |
+|---|---|
+| 0–4.5 s | Recorded confirmation and reading state for the chosen local project |
+| 4.5–17.8 s | Recorded animated graph, hover/click, selected folder-picker file and chat navigation |
+| 17.8–25.1 s | Type the question and show the entire real local generation wait |
+| 25.1–31.7 s | Finished answer, source-link caution, model/runtime and 4.0-second label |
+| 31.7–38.5 s | Click the citation; inspect highlighted constructor source |
+| 38.5–44.2 s | Potentially affected files and the incompleteness warning |
+| 44.2–49.13 s | Click the import-evidence link and inspect its highlighted source |
+| 49.13–60 s | Recorded graph hover/drag/movement with closing caption |
 
-> Prompt injection: partly resisted, not solved. A hidden instruction planted in our test project was obeyed in 0 of 24 runs. Two of five differently worded instructions in other test files were still obeyed. Boozer shows a warning where code contains text addressed to AI tools.
+The entire video is app footage: **no slides, screenshots, freeze frames or sped-up generation**. Editing joins three actual X11 recordings, adds action captions, and gently zooms toward the chat/source pane for readability. The main 44.63-second take remains continuous, including its entire generation wait.
 
-These numbers come from the Mac (docs/BENCHMARKS.md, M3 section). If M6 re-runs them on the MSI, use the MSI numbers and say so. Boozer's own repo contains its injection test cases (`tests/model/injection-variants.test.ts`) and its prompt (`src/server/explain/prompt.ts`), so explaining either should trigger the warning. Don't use them for shot 4 unless rehearsal showed exactly what happens.
+## Rehearsal evidence and limits
 
-## Handling the model wait
+The chosen question is: **Which error codes are declared in FolderPickerError? Answer in one sentence.** The focused rehearsal returned all five literal constructor codes and one valid citation. Clicking that citation highlighted lines 2–13 of `src/server/folder-picker.ts`, including the constructor. Its UI showed 7.8 seconds while ffmpeg was recording; this is an observed rehearsal duration, not a formal M6 benchmark or a general latency claim.
 
-With the final prompt, whole answers took 16–65 s on the contended Mac (125–180 tokens). The MSI is unmeasured until M6.
+Discarded rehearsal: asking what happens when a user cancels the picker produced a misleading error-vs-null explanation despite valid citation links. A second broad error-code question included unsupported absence claims beyond its correct list. Neither answer belongs in the final cut. The actual take was checked: its answer lists exactly the five constructor codes with one valid `[S1]` citation, highlights lines 2–13, and displays 4.0 seconds. The impact panel lists three direct importing files, then the clicked chain opens the import in `src/server/project-session.ts`.
 
-- Record in real time. Never speed up footage without saying so.
-- Show the first streamed words, then cut, with an on-screen caption: **"Cut: about N s of on-device generation. Real time shown in the duration label."** Use the real N from that take.
-- End the shot on the finished answer with its duration label readable.
-- If the answer fails (runtime error, timeout, an obeyed injection), don't cut it into a success. Either show the failure state honestly or drop the shot, and tell the human lead before recording continues.
+Wi-Fi remains on: the human could not disable it. This video must not claim a Wi-Fi-off rehearsal, injection resistance, complete analysis, guaranteed impact, or submission readiness. Existing M6 gates and independent review statuses remain open. The graph's incompleteness warnings and the answer's citation caution remain visible; a valid source link is not proof that an AI claim is correct.
 
-## Words to avoid
+## Delivery checks
 
-Never say "will break", "safe to change", "no impact", "unused" or "dead code". Don't claim GPU acceleration unless M6 measured it. Don't call the app injection-proof or say the warning catches every injection; it was written after seeing the test phrasings. A valid citation is not proof that the explanation is correct.
+- Verify the actual take's entire answer against the constructor and click its citation.
+- Check final video duration, resolution, codecs, absence of an audio track for this silent version, and representative frames.
+- Preserve raw footage and metadata for the human lead.
+- Human acceptance covers readability and final viewing. Voice naturalness is unverified because no voice was generated.
+- Do not upload, publish, push, or mark the complete M7 submission done without separate authorization.
 
-## Rehearsal checklist (MSI, 06:20–07:00)
 
-Before 06:20:
+## Rendered artifact
 
-- [ ] The MSI checkout is at the frozen commit (`git log -1` matches the Mac). `npm ci --ignore-scripts`, `npm run typecheck`, `npm test` and `npm run build` pass on the MSI.
-- [ ] `ollama serve` is listening on `127.0.0.1:11434` only (`ss -ltn`), and `/api/tags` shows digest `0edcdef34593…168ba0`.
-- [ ] The demo project folder is on the MSI and outside the Boozer checkout.
-
-Rehearsal, with Wi-Fi off:
-
-- [ ] `curl -sS -m 5 https://example.com` fails.
-- [ ] Start the app, open the project, and walk shots 2–6 once with a timer. Write down the real first-token and total times.
-- [ ] **Choose the shot-4 file now and read its whole answer.** Pick one source file in Boozer's repo, explain it, and check: every citation is valid, no file name is flagged `?`, the answer isn't marked "cut short", and you know whether the injection warning appears. Use that same file in the take, so its result is known. If anything in the answer is wrong or surprising, pick another file and repeat.
-- [ ] The model is already loaded (the app preloads it at start). The first explanation in the take shouldn't pay the cold-start load.
-- [ ] Open the screen recorder, run one explanation with it recording, and note free memory (`free -h`) during generation. This is M6's recording-load check.
-- [ ] Don't reload the browser during the take. A reload loses the session token and needs a relaunch (0.2 note N1). Rehearse the relaunch once so a mistake costs seconds.
-- [ ] Browser zoom makes source and labels readable at the recording resolution. Close notifications and unrelated windows.
-- [ ] Decide which shots are Ready (table above) and cut the rest from the script.
-- [ ] If any shot fails, record what failed in TASKS.md under M6 and tell the human lead before 07:00.
-
-Recording (07:00–08:00): record two full takes and keep the better one. Keep the raw files until submission is confirmed.
+`/home/boozer/Videos/BoozerAI/BoozerAI-demo-60s-silent.mp4`: 60.000000 seconds, 1,800 frames, 1920×1080, 30 fps, H.264, 6,166,453 bytes, no audio stream. Full decode succeeded and representative final frames were inspected. Companion captions: `BoozerAI-demo-60s.srt`. Raw recordings and edit metadata remain in the same local folder. Human viewing acceptance remains pending.
