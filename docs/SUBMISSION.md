@@ -29,6 +29,8 @@ Development assistants are separate from the local model used by the app.
 | ChatGPT / “boozer” | Product/planning assistance reported by the human lead | Exact model/version not supplied |
 | Claude Design | Human lead's graph-workspace design session on 2026-10-09/10 | Exact version not recorded |
 
+Codex also documented the local Ollama flow and corrected repository-chat lexical retrieval after a question about Ollama returned unrelated UI excerpts. This adds cited source context, not a trained model or a stored answer.
+
 These tools are not dependencies of Boozer's local inference. Commits and the [historical task register](https://github.com/Styhp/boozerAI/blob/a5ece9d6da3eedbd9e6fb585b2565cfd90d2f7e7/docs/TASKS.md) retain development chronology, ownership, reviews and failures.
 
 ## Runtime model and API

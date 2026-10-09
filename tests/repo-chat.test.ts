@@ -100,6 +100,38 @@ describe('bounded repo chat retrieval', () => {
     expect(retrieveChatSnippets(long.snapshot, long.graph, long.body)).toEqual([]);
     expect(retrieveChatSnippets(f.snapshot, f.graph, f.body, NaN)).toEqual([]);
   });
+  it('lets a newly named method replace the prior topic even when the question contains a pronoun', () => {
+    const f = workspace({
+      'src/auth.ts': 'export function authorized(token: string) { return token === "local"; }\n',
+      'src/view.ts': 'export function render(answer: string) { return answer; }\n',
+    });
+    const snippets = retrieveChatSnippets(f.snapshot, f.graph, { ...f.body,
+      question: 'How does View.render display its answer?', history: ['How does Session.authorized check a token?'] });
+    expect(snippets[0]!.ref.file).toBe('src/view.ts');
+  });
+  it('ranks a named runtime above common local UI words and unrelated selected-file context', () => {
+    const f = workspace({
+      'src/server/model-adapter.ts': '// Ollama runs the installed model on this computer.\nexport const OLLAMA_ENDPOINT = "http://127.0.0.1:11434";\n',
+      'src/client/Locality.tsx': '// The local workspace works here.\nexport const Locality = "local";\n',
+      'src/client/local-status.ts': '// The local workspace works here.\nexport const localStatus = "local";\n',
+      'src/client/local-tree.ts': '// The local workspace works here.\nexport const localTree = "local";\n',
+      'src/client/local-project.ts': '// The local workspace works here.\nexport const localProject = "local";\n',
+    });
+    for (const contextPath of [undefined, 'src/client/Locality.tsx']) {
+      const snippets = retrieveChatSnippets(f.snapshot, f.graph, { ...f.body,
+        question: 'how does ollama works here as local ai', ...(contextPath ? { contextPath } : {}) });
+      expect(snippets[0]!.ref.file).toBe('src/server/model-adapter.ts');
+      expect(snippets[0]!.text).toContain('http://127.0.0.1:11434');
+    }
+  });
+  it('matches identifier words without treating an unrelated longer word as the requested subject', () => {
+    const f = workspace({
+      'src/adapter.ts': 'export const REDIS_ENDPOINT = "loopback";\n',
+      'src/redistribute.ts': '// Redistribute the local workspace here.\nexport const redistribution = true;\n',
+    });
+    const snippets = retrieveChatSnippets(f.snapshot, f.graph, { ...f.body, question: 'How does Redis work here?' });
+    expect(snippets.map((snippet) => snippet.ref.file)).toEqual(['src/adapter.ts']);
+  });
   it('handles a bounded file containing many blank lines without argument-stack overflow', () => {
     const f = workspace({ 'token.ts': '\n'.repeat(150000) + 'export const token = 1;\n' });
     expect(retrieveChatSnippets(f.snapshot, f.graph, f.body)[0]!.text).toContain('export const token');

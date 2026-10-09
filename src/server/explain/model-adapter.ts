@@ -1,5 +1,14 @@
 import { LOCAL_EXPLANATION_TIMEOUT_MS, type ExplanationErrorCode, type RuntimeStatus } from '../../shared/explanation.js';
 
+// Ollama runs Boozer's local AI on the same computer using the installed qwen3:4b-instruct model.
+// Chat Boozer selects bounded source excerpts from the confirmed repository snapshot.
+// The backend sends those excerpts and the question to Ollama's /api/chat at 127.0.0.1:11434.
+// Ollama generates answer text locally and streams it back through this adapter to the UI.
+// The chat service checks citation references against the supplied excerpts; claims can still be wrong.
+// Ollama receives no shell/file tools and does not build or change the parser's dependency graph.
+// Setup needs the runtime/model installed; local questions need no internet or OpenAI key.
+// Optional OpenAI file comparison is a separate preview-and-send action, never a chat fallback.
+
 // The only code that talks to a model runtime (AGENTS.md code boundaries). Fixed loopback
 // endpoint, one allowlisted model by exact digest, no tools, no pull/install API, no
 // redirects and no fallback provider. Tests inject `fetch`; the endpoint is not configurable.

@@ -16,6 +16,8 @@ The graph workspace and chat are implemented; their independent reviews remain o
 
 Use **Node.js 24.x** and **npm 11.x**. Local AI requires Ollama on `127.0.0.1:11434` with the already installed **qwen3:4b-instruct** model; exact runtime/model details are in the [disclosure register](docs/SUBMISSION.md).
 
+Chat Boozer retrieves short source excerpts and sends them with your question to Ollama on the same computer. Ollama runs Qwen locally and streams back an answer with source references. This does not train the model on your repository; it gives each question a limited amount of source context. See the [local AI flow](docs/ARCHITECTURE.md#local-repository-chat--m3-chat--p-22).
+
 Run these commands in the trusted **Boozer AI checkout**, never in an unfamiliar repository selected for analysis:
 
 ```sh
