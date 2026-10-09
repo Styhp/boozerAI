@@ -145,3 +145,12 @@ code, .source, .path, .snapshot-id { font-family: var(--font-mono); }
 .ws-chat-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ws-chat-context { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12px; }
 .ws-chat-memory { font-size: 11px; margin: 0; line-height: 1.6; }
+
+.ws-graph-scope { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 12px; }
+.ws-graph-scope-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.ws-graph-scope-controls label { display: grid; gap: 5px; min-width: 0; flex: 1 1 150px; }
+.ws-graph-scope-controls input, .ws-graph-scope-controls select { min-width: 0; width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface-code); font: inherit; }
+.ws-graph-scope p { margin: 8px 0 0; line-height: 1.5; }
+.ws-graph-empty { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center; color: var(--text-secondary); overflow: auto; }
+.ws-graph-empty h2 { font-size: 18px; color: var(--text); }
+.ws-graph-empty p { max-width: 480px; font-size: 13px; line-height: 1.6; }

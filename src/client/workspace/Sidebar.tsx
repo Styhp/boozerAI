@@ -16,7 +16,7 @@ export function Locality({ cloudSends }: { cloudSends: number }) {
 export const hoverIdOf = (event: MouseEvent) =>
   (event.target as Element).closest('[data-hover-id]')?.getAttribute('data-hover-id') ?? null;
 
-export function Sidebar({ open, mode, label, files, tree, collapsed, current, gaps, search, cloudSends,
+export function Sidebar({ open, mode, label, files, tree, collapsed, current, gaps, search, scopedGraph = false, cloudSends,
   onSearch, onToggleFolder, onCollapseAll, onClose, onOpen, onHover }: {
   open: boolean;
   mode: SideMode;
@@ -27,6 +27,7 @@ export function Sidebar({ open, mode, label, files, tree, collapsed, current, ga
   current: FilePath | null;
   gaps: ReadonlyMap<FilePath, number>;
   search: string;
+  scopedGraph?: boolean;
   cloudSends: number;
   onSearch: (query: string) => void;
   onToggleFolder: (path: string) => void;
@@ -56,7 +57,7 @@ export function Sidebar({ open, mode, label, files, tree, collapsed, current, ga
           <input className="ws-search" style={{ marginBottom: 8 }} autoFocus placeholder="Filter files and graph" aria-label="Filter files and graph"
             value={search} spellCheck={false} onChange={(event) => onSearch(event.target.value)} />
           <p className="ws-sub" style={{ margin: '0 6px 8px' }}>
-            {query === '' ? 'Type part of a name or folder.' : `${plural(matches.length, 'file')} match. Other dots fade in the graph.`}
+            {query === '' ? 'Type part of a name or folder.' : `${plural(matches.length, 'file')} match. ${scopedGraph ? 'The graph shows matching files when the view fits; clear the search to see the full file list.' : 'Other dots fade in the graph.'}`}
           </p>
           <ul className="ws-tree">{matches.map((file) => <FileRow key={file.path} file={file} {...rows} />)}</ul>
         </> : <FileTree folder={tree} collapsed={collapsed} onToggle={onToggleFolder} {...rows} />}

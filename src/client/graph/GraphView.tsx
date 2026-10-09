@@ -3,17 +3,17 @@
 // hover card, the hint, the legend and the settings popover. Everything else (tree, pane, routing)
 // talks to it through props. The reading replay overlay joins in S4.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref } from 'react';
-import type { DependencyGraph, FilePath } from '../../shared/contracts';
+import type { FilePath } from '../../shared/contracts';
 import { Icon } from '../ui/Icon';
 import { GRAPH_COPY as C, ISSUE_WORDS, SKIP_WORDS } from './copy';
 import {
   GRAPH, buildModel, drawGraph, fitCamera, hitTest, hoverCardData, readColors, reheat, revealNode,
   stepCamera, stepSimulation, toWorld, zoomAt,
-  type Camera, type GraphColors, type GraphFilters, type GraphModel, type GraphNode, type Viewport,
+  type Camera, type GraphColors, type GraphData, type GraphFilters, type GraphModel, type GraphNode, type Viewport,
 } from './engine';
 
 export interface GraphViewProps {
-  graph: DependencyGraph;
+  graph: GraphData;
   selectedPath: FilePath | null;          // file open in the detail pane (ring + lit neighbourhood)
   externalHoverId: string | null;         // node id hovered in the tree or pane (path, pkg:…, gap:…)
   filters: GraphFilters;

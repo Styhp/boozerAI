@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { FileNode } from '../src/shared/contracts.js';
 import {
-  buildTree, fileGapCounts, fileLinks, folderPaths, formatReadTime, gapCount, plural,
+  buildTree, fileGapCounts, fileLinks, filterGraph, folderPaths, formatReadTime, gapCount, graphNodeCount, plural,
 } from '../src/client/workspace/model.js';
 import { Workspace } from '../src/client/workspace/Workspace.js';
 import { loadExpectedGraph } from './support/fixture-snapshot.js';
@@ -42,6 +42,29 @@ describe('workspace display rules', () => {
   it('pluralises with the noun and formats the read time like the copy deck', () => {
     expect([plural(1, 'gap'), plural(2, 'gap'), plural(0, 'file')]).toEqual(['1 gap', '2 gaps', '0 files']);
     expect(formatReadTime(new Date(2026, 9, 8, 15, 20))).toBe('Thu 8 Oct, 15:20');
+  });
+
+  it('narrows a drawing to matching files and their original internal edges without changing the full graph', () => {
+    const before = JSON.stringify(graph);
+    const drawing = filterGraph(graph, '  UTILS/ ');
+    expect(drawing.files.map(({ path }) => path)).toEqual(['utils/index.ts', 'utils/math.ts', 'utils/text.ts']);
+    expect(drawing.edges.map(({ id }) => id)).toEqual(['utils/index.ts#1', 'utils/index.ts#2']);
+    for (const edge of drawing.edges) expect(graph.edges.find(({ id }) => id === edge.id)).toBe(edge);
+    for (const file of drawing.files) expect(graph.files.find(({ path }) => path === file.path)).toBe(file);
+    expect(graphNodeCount(drawing)).toBe(3);
+    expect(drawing).not.toHaveProperty('coverage');
+    expect(JSON.stringify(graph)).toBe(before);
+    expect(filterGraph(graph, ' ')).toBe(graph);
+    expect(filterGraph(graph, 'no-such-folder/')).toEqual({ files: [], edges: [] });
+  });
+
+  it('counts package and excluded terminal nodes in a narrowed view', () => {
+    // main.ts has external node:path and one excluded import; its file targets are outside this view.
+    const drawing = filterGraph(graph, 'main.ts');
+    expect(drawing.files.map(({ path }) => path)).toEqual(['main.ts']);
+    expect(drawing.edges.map(({ id }) => id)).toEqual(['main.ts#2', 'main.ts#6']);
+    expect(graphNodeCount(drawing)).toBe(3);
+    expect(drawing.edges.every((edge) => edge.target.type !== 'file')).toBe(true);
   });
 });
 
@@ -89,5 +112,23 @@ describe('workspace shell (S1)', () => {
     const html = render({ onRefresh: noop, onClose: noop });
     expect(html).toContain('aria-label="Refresh: read the folder again"');
     expect(html).toContain('aria-label="Close project"');
+  });
+
+  it('keeps a large project list-first and exposes folder/search controls without a partial canvas', () => {
+    const large = { ...graph, files: Array.from({ length: 301 }, (_, i) => file(`src/f${i}.ts`)), edges: [] };
+    const html = render({ graph: large });
+    expect(html).not.toContain('<canvas');
+    expect(html).toContain('Choose a folder to show the animated graph');
+    expect(html).toContain('This view needs 301 nodes');
+    expect(html).toContain('aria-label="Graph filter"');
+    expect(html).toContain('<option value="src/">src/</option>');
+    expect(html.match(/class="ws-tree-row is-file"/g)).toHaveLength(301);
+  });
+
+  it('still renders all 300 nodes at the canvas boundary', () => {
+    const full = { ...graph, files: Array.from({ length: 300 }, (_, i) => file(`src/f${i}.ts`)), edges: [] };
+    const html = render({ graph: full });
+    expect(html).toContain('<canvas');
+    expect(html).not.toContain('aria-label="Graph filter"');
   });
 });

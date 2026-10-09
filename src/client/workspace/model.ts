@@ -1,5 +1,5 @@
 import type { DependencyGraph, FileNode, FilePath } from '../../shared/contracts';
-import { targetId } from '../graph/engine';
+import { targetId, type GraphData } from '../graph/engine';
 
 // Pure display rules for the workspace shell (SPEC §4, §7.1, §8). Counts come only from
 // parser output; nothing here guesses roles or fills a gap.
@@ -37,8 +37,18 @@ export function fileLinks(graph: DependencyGraph, path: FilePath): { uses: numbe
 }
 
 // Dots the graph would draw: files, distinct packages and one ring per import not followed.
-export function graphNodeCount(graph: DependencyGraph): number {
+export function graphNodeCount(graph: GraphData): number {
   return new Set([...graph.files.map((file) => file.path), ...graph.edges.map(targetId)]).size;
+}
+
+// Narrow only the drawing. Preserve parser objects, and keep both endpoints of file links.
+export function filterGraph(graph: GraphData, query: string): GraphData {
+  if (query.trim() === '') return graph;
+  const files = graph.files.filter((file) => matchesSearch(file.path, query));
+  const shown = new Set(files.map((file) => file.path));
+  const edges = graph.edges.filter((edge) => shown.has(edge.from)
+    && (edge.target.type !== 'file' || shown.has(edge.target.path)));
+  return { files, edges };
 }
 
 export interface TreeFolder {

@@ -1,0 +1,93 @@
+{
+  "at": "2026-10-09T22:24:21.368Z",
+  "node": "v24.16.0",
+  "records": [
+    {
+      "check": "ListingFlow requires confirmation before indexing",
+      "passed": true
+    },
+    {
+      "check": "Confirmed ListingFlow opens the graph workspace",
+      "passed": true
+    },
+    {
+      "check": "314 primary sources indexed; duplicate worktrees excluded and reported",
+      "passed": true
+    },
+    {
+      "check": "Large project exposes graph controls without silently truncating the graph",
+      "passed": true
+    },
+    {
+      "check": "Choosing server/ mounts and paints the animated canvas",
+      "passed": true
+    },
+    {
+      "check": "Canvas renders multiple changed frames at usable dimensions",
+      "passed": true
+    },
+    {
+      "check": "Moving pointer onto a painted node opens its hover card",
+      "passed": true
+    },
+    {
+      "check": "Actual pointer drag engages graph interaction",
+      "passed": true
+    },
+    {
+      "check": "An over-cap folder does not draw an arbitrary subset",
+      "passed": true
+    },
+    {
+      "check": "An unmatched search has an explicit empty state",
+      "passed": true
+    },
+    {
+      "check": "Case-insensitive search restores the animated subset and full-project counts",
+      "passed": true
+    },
+    {
+      "check": "Clearing the filter returns to the complete list-first view",
+      "passed": true
+    },
+    {
+      "check": "Reload restores the ListingFlow graph and file count",
+      "passed": true
+    }
+  ],
+  "summary": {
+    "sourceFiles": 314,
+    "sourceBytes": 1917789,
+    "prunedDirectories": 6,
+    "graphFiles": 314,
+    "graphEdges": 1461,
+    "coverage": {
+      "files": {
+        "found": 640,
+        "parsed": 314,
+        "skipped": 326
+      },
+      "imports": {
+        "seen": 1461,
+        "resolved": 276,
+        "external": 630,
+        "excluded": 1,
+        "failed": 554
+      },
+      "gapReasons": {
+        "not-found": 1,
+        "unsupported-alias": 553,
+        "unsupported-extension": 1
+      }
+    },
+    "confirmToWorkspaceMs": 1222,
+    "scope": "server/",
+    "scopeCounts": "Showing 116 of 314 files · 449 of 1461 relationships. 198 files and 1012 relationships hidden from this view; the full project remains indexed.",
+    "motion": {
+      "frames": 21,
+      "pixelsChanged": true,
+      "width": 536,
+      "height": 662
+    }
+  }
+}

@@ -11,6 +11,9 @@
 //  - Positions come from a physics layout and carry no meaning.
 import type { DependencyEdge, DependencyGraph, FilePath } from '../../shared/contracts';
 
+// A display subset carries original parser entries, never a replacement coverage report.
+export type GraphData = Pick<DependencyGraph, 'files' | 'edges'>;
+
 /* ───────────────────────────── Design constants ───────────────────────────── */
 
 export const GRAPH = {
@@ -149,7 +152,7 @@ export function targetId(edge: DependencyEdge): string {
 }
 
 /** Builds (or rebuilds after Refresh) the drawable model. Existing nodes keep their positions. */
-export function buildModel(graph: DependencyGraph, previous?: GraphModel, appearNow = true): GraphModel {
+export function buildModel(graph: GraphData, previous?: GraphModel, appearNow = true): GraphModel {
   const old = previous?.byId ?? new Map<string, GraphNode>();
   const nodes: GraphNode[] = [];
   const byId = new Map<string, GraphNode>();
