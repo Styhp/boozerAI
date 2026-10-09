@@ -67,6 +67,7 @@ describe('NotesPanel (phase 1)', () => {
     expect(html).toContain('Notes not linked to lines (1)');
     for (const id of ['note-kind', 'note-text', 'note-from', 'note-to', 'note-link', 'note-save', 'notes-disable', 'notes-clear']) expect(html).toContain(`id="${id}"`);
     expect(html).toContain('Link to these lines');
+    expect(html).toContain('Notes stay on for this folder on later launches. To stop that, delete this folder&#x27;s notes file in Boozer&#x27;s app data folder.');
     expect(html).not.toMatch(/verified|fact/i);
   });
 

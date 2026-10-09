@@ -1,6 +1,6 @@
 # Project notes, phase 1: handoff
 
-Branch `feat/project-notes`. It was created from local `main`, which was already at `04ddf4f` (`93d300d` plus the docs-only P-17 line in PRODUCT.md). Current `main` (`34a9288`, the P-16 cloud transport in `7dc92cd`) was then merged in, in merge commit `c0ab37a`. A later docs-only `main` commit (`f14bf31`, P16 handoff wording) was merged the same way. So `git diff main` at push time shows only notes changes. Typecheck, the full suite (261 passed) and the build were rerun after each merge. Built by one Claude Code session (Agent B, implementer) on 2026-10-09, about 21:32–22:30 UTC+8. Under P-17 it merges only after independent review and a passing full suite by 05:00 UTC+8. Nothing here is on `main`.
+Branch `feat/project-notes`. It was created from local `main`, which was already at `04ddf4f` (`93d300d` plus the docs-only P-17 line in PRODUCT.md). Current `main` (`34a9288`, the P-16 cloud transport in `7dc92cd`) was then merged in, in merge commit `c0ab37a`. A later docs-only `main` commit (`f14bf31`, P16 handoff wording) was merged the same way. So `git diff main` at push time shows only notes changes. Typecheck, the full suite (261 passed) and the build were rerun after each merge. Built by a separate Claude Code agent session (Agent B, implementer) running in an isolated git worktree on the dev Mac, not a claude.ai/code cloud session. Commit times on 2026-10-09 (UTC+8): work started after `04ddf4f` (21:32); `2497324` feature at 21:41; `4288ac7` tests at 21:47; `cfd3a94` handoff at 21:50; merges and handoff updates through `997d018` at 21:53. The review fixes (B1, N1, N2, N4) were committed after 22:05; see "Review fixes" below. Under P-17 it merges only after independent review and a passing full suite by 05:00 UTC+8. Nothing here is on `main`.
 
 **Status:** built and agent-verified. The typecheck, the full suite (also run with networking denied) and the build pass. Human browser check: **not run**. Independent review: **not done**.
 
@@ -11,6 +11,8 @@ Notes the user writes, each linked to at most one line range, saved on this comp
 - **Off by default.** Notes start disabled on each launch. They turn on when the user clicks "Remember notes for this folder", or when a notes file for this folder already exists from an earlier explicit enable (persisted consent is that file existing). While notes are off, nothing is created in the app data directory (tested).
 - **Storage.** One file per folder at `<data dir>/notes-<key>.json`, schema `{ schemaVersion: 1, notes: [...] }`. The data dir is `~/Library/Application Support/Boozer AI/` on macOS. On Linux it is `$XDG_DATA_HOME/boozer-ai/`, falling back to `~/.local/share/boozer-ai/`. `key` = sha256 hex of `"boozer-notes-v1\0" + canonical root`. The directory is mode 0700 and files are 0600. Each write goes to a temp file in the same directory, is fsynced, then renamed over the target. Writes are serialized in-process. Caps: 500 notes, 2,000 chars per note (after trim), 2 MiB per file.
 - **A store that fails to read** (corrupt, wrong schema, oversize, unreadable or a symlink) returns `state: 'error'` with a sanitized code. It stays read-only for that launch, and nothing is deleted or rewritten. Graph, source, explanations and refresh keep working (tested through the API).
+- **Data directory must be a real directory.** Before creating or changing anything, the store `lstat`s the data directory's final component. If that component is a symlink (including a dangling one) or not a directory, the store refuses with 409 `store-unavailable` and writes nothing. The mode is set with `chmod` on a no-follow (`O_NOFOLLOW | O_DIRECTORY`) handle of the verified directory, and the file mode on the temp file's own handle. No path-based `chmod` remains.
+- **Notes stay on.** Once enabled, notes stay enabled for this folder on later launches. To stop that, delete this folder's `notes-<key>.json` in the app data folder. "Turn notes off for this launch" and "Delete all notes…" keep the file. The panel says this next to those buttons.
 - **Overlap refusal.** Enable, and every write, is refused with 409 `notes-overlap` when the selected root and the data dir overlap in either direction. The check uses canonical real paths. For a data dir that doesn't exist yet, it uses the nearest existing ancestor. On macOS the comparison is case-insensitive, so it can only refuse more. If the check can't run, it counts as an overlap.
 - **Server-stamped links.** The browser sends `{path, startLine, endLine}`. The path must exactly name a source file in the current in-memory snapshot (404 `invalid-file` otherwise). The server stamps the hashes from that snapshot. The browser never sends a hash or a path to read, and no response contains a hash, the key, the root or the data dir (tested).
 
@@ -69,12 +71,26 @@ All routes are under `/api/projects/:id/notes`. They use the existing bearer cap
 | Method and path | Body or query | Result |
 |---|---|---|
 | `GET notes` | `?snapshotId=` (exactly this one parameter) | `{ enabled, state, errorCode?, notes: [{ note, status, movedTo?, currentText? }] }`. A stale snapshot returns 409. |
-| `POST notes/enable` | `{}` | `{ enabled: true }`. 409 `notes-overlap`. |
+| `POST notes/enable` | `{}` | `{ enabled: true }`. 409 `notes-overlap`, or 409 `store-unavailable` when the data dir is a symlink or not a directory. |
 | `POST notes/disable` | `{}` | `{ enabled: false }`. Off for this launch; the file is kept. |
 | `POST notes` | `{ snapshotId, kind, text, link?: { path, startLine, endLine } }` | `{ note }`. Errors: 404 `invalid-file`, 400 `invalid-range` / `note-too-long` / `invalid-body`, 409 `notes-disabled` / `note-limit` / `store-full` / `store-read-only`. |
 | `POST notes/:noteId` | `{ snapshotId, revision, text?, kind?, relink?: 'moved' }` | `{ note }`. Errors: 409 `revision-conflict` / `not-moved`, 404 `note-not-found`. |
 | `POST notes/:noteId/delete` | `{ revision }` | `{ deleted: true }` |
 | `POST notes/clear` | `{}` | `{ cleared: true }`. Empties this folder's notes and keeps the file, so consent stays. |
+
+## Review fixes (after the independent review of `997d018`)
+
+- **B1 (blocking), symlinked data dir.** Before the fix, `mkdir` succeeded on a link to a directory, `chmod` followed it, and the notes were written into the link's target. Now the store refuses with `store-unavailable` (see "What it does"). New tests:
+  - `tests/local-store.test.ts` "refuses a data directory that is a link or not a directory…": a link to an outside dir; a dangling link (nothing created at its target); a regular file in the directory's place.
+  - `tests/notes-api.test.ts` "refuses a data directory that is a symlink outside the root…": the target stays empty with mode 0755 unchanged, and the graph still works.
+  - `tests/notes-api.test.ts` "…symlink into the root as an overlap": still `notes-overlap`.
+
+  The existing symlinked-notes-file test is unchanged and passes. With `local-store.ts` temporarily swapped back to the reviewed version, both new symlink tests failed: 2 failed, 27 passed. The fixed file was restored afterwards.
+- **N1, 404 writes nothing.** Edit and delete now throw `note-not-found` inside the store's change callback, so an unknown ID writes nothing. New test "an unknown note ID returns 404 and leaves the notes file untouched" checks bytes, inode and mtime. It failed against the reviewed `project-notes.ts` (1 failed, 16 passed) and passes now.
+- **N2.** Panel copy is under "Your notes", above the folder buttons: "Notes stay on for this folder on later launches. To stop that, delete this folder's notes file in Boozer's app data folder." It is asserted in `tests/notes-panel.test.tsx`.
+- **N4.** The timeline and the description of this session are corrected at the top of this file.
+
+Files changed by the fixes: `src/server/local-store.ts`, `src/server/project-notes.ts`, `src/client/components/NotesPanel.tsx`, the three notes test files, and this file. No Codex-owned hook file changed, so the hook line ranges below still hold.
 
 ## Commands run (macOS 15.7.7 x86_64, Node v24.16.0, npm 11.13.0)
 

@@ -165,6 +165,30 @@ describe('LocalStore (the only disk writer)', () => {
     expect(JSON.parse(await readFile(elsewhere, 'utf8')).notes).toHaveLength(1);
   });
 
+  it.skipIf(!posix)('refuses a data directory that is a link or not a directory, and never changes the link target', async () => {
+    const base = await temp('boozer-store-');
+    const outside = await temp('boozer-outside-');
+    await chmod(outside, 0o755);
+    const linked = join(base, 'data');
+    await symlink(outside, linked);
+    const store = new LocalStore(linked);
+    await expect(store.create(key)).rejects.toMatchObject({ code: 'store-unavailable' });
+    await expect(store.update(key, () => [note('1')])).rejects.toMatchObject({ code: 'store-unavailable' });
+    expect(await readdir(outside)).toEqual([]);
+    expect((await stat(outside)).mode & 0o777).toBe(0o755);
+    // A dangling link: nothing is created at the link's target.
+    const dangling = join(base, 'dangling');
+    const missing = join(outside, 'not-created');
+    await symlink(missing, dangling);
+    await expect(new LocalStore(dangling).create(key)).rejects.toMatchObject({ code: 'store-unavailable' });
+    await expect(stat(missing)).rejects.toMatchObject({ code: 'ENOENT' });
+    // A regular file where the directory should be: the read already fails, so nothing is written.
+    const file = join(base, 'file');
+    await writeFile(file, 'not a directory');
+    expect(await new LocalStore(file).create(key)).toEqual({ state: 'error', code: 'store-unreadable' });
+    expect(await readFile(file, 'utf8')).toBe('not a directory');
+  });
+
   it('parses only the exact v1 schema', () => {
     expect(parseStore(JSON.stringify({ schemaVersion: 1, notes: [note('1')] }))).toEqual({ state: 'ok', exists: true, notes: [note('1')] });
     expect(parseStore(JSON.stringify({ schemaVersion: 1, notes: [{ ...note('1'), text: '   ' }] }))).toMatchObject({ state: 'error' });

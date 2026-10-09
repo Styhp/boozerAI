@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
-import { chmod, lstat, mkdir, open, rename, unlink } from 'node:fs/promises';
+import { lstat, mkdir, open, rename, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import type { NoteKind } from '../shared/notes.js';
@@ -193,35 +193,57 @@ export class LocalStore {
     });
   }
 
+  // The data directory must be a real directory, never a link: mkdir succeeds on a link to a
+  // directory, and chmod or writes through it would land in the link's target. A link or a
+  // non-directory is refused before anything is created or changed. Mode is set through a
+  // no-follow handle on the verified directory, never by path.
+  async #prepareDirectory(): Promise<void> {
+    const unavailable = () => new StoreError(409, 'store-unavailable');
+    try {
+      const info = await lstat(this.directory);
+      if (info.isSymbolicLink() || !info.isDirectory()) throw unavailable();
+    } catch (error) {
+      if (error instanceof StoreError) throw error;
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw unavailable();
+      try { await mkdir(this.directory, { recursive: true, mode: 0o700 }); } catch { throw new StoreError(500, 'store-write-failed'); }
+    }
+    let dir;
+    try { dir = await open(this.directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW); } catch { throw unavailable(); }
+    try {
+      if (!(await dir.stat()).isDirectory()) throw unavailable();
+      await dir.chmod(0o700);
+    } catch (error) {
+      throw error instanceof StoreError ? error : new StoreError(500, 'store-write-failed');
+    } finally { await dir.close().catch(() => undefined); }
+  }
+
   // Temp file in the same directory, fsync, then rename over the target: a reader sees the
   // old file or the new one, never a partial write.
   async #write(key: string, notes: readonly StoredNote[]): Promise<void> {
     const body = Buffer.from(`${JSON.stringify({ schemaVersion: 1, notes }, null, 1)}\n`, 'utf8');
     if (body.length > MAX_STORE_BYTES) throw new StoreError(409, 'store-full');
     const target = this.#file(key);
-    try {
-      await mkdir(this.directory, { recursive: true, mode: 0o700 });
-      await chmod(this.directory, 0o700);
-    } catch { throw new StoreError(500, 'store-write-failed'); }
+    await this.#prepareDirectory();
     const temp = join(this.directory, `.notes-${key}.${randomBytes(8).toString('hex')}.tmp`);
     let created = false;
     try {
       const handle = await open(temp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
       created = true;
       try {
+        // On the open handle, never by path: a path could be swapped for a link.
+        await handle.chmod(0o600);
         await handle.writeFile(body);
         await handle.sync();
       } finally { await handle.close(); }
       await rename(temp, target);
       created = false;
-      await chmod(target, 0o600);
     } catch {
       if (created) await unlink(temp).catch(() => undefined);
       throw new StoreError(500, 'store-write-failed');
     }
     // Best effort: persist the rename itself.
     try {
-      const dir = await open(this.directory, constants.O_RDONLY);
+      const dir = await open(this.directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
       try { await dir.sync(); } finally { await dir.close(); }
     } catch { /* Some platforms can't fsync a directory; the rename is still atomic. */ }
   }

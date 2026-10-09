@@ -133,37 +133,40 @@ export class ProjectNotes {
     await this.#writable();
     const files = fileMap(snapshot);
     let edited: StoredNote | undefined;
-    await this.#update((notes) => notes.map((note) => {
-      if (note.id !== noteId) return note;
-      if (note.revision !== input.revision) throw new NotesError(409, 'revision-conflict');
-      let link = note.link;
-      if (input.relink) {
-        const file = link === null ? undefined : files.get(link.file);
-        const status = noteStatus(link, file);
-        // Re-link only to the one place the exact lines moved to; never to a guess.
-        if (link === null || file === undefined || status.status !== 'moved' || status.movedTo === undefined) throw new NotesError(409, 'not-moved');
-        link = stampLink(link.file, file, status.movedTo.startLine, status.movedTo.endLine);
-      }
-      edited = {
-        ...note, link, kind: input.kind ?? note.kind, text: input.text ?? note.text,
-        revision: note.revision + 1, updatedAt: new Date().toISOString(),
-      };
-      return edited;
-    }));
+    await this.#update((notes) => {
+      // Inside the change callback, so an unknown ID writes nothing.
+      if (!notes.some((note) => note.id === noteId)) throw new NotesError(404, 'note-not-found');
+      return notes.map((note) => {
+        if (note.id !== noteId) return note;
+        if (note.revision !== input.revision) throw new NotesError(409, 'revision-conflict');
+        let link = note.link;
+        if (input.relink) {
+          const file = link === null ? undefined : files.get(link.file);
+          const status = noteStatus(link, file);
+          // Re-link only to the one place the exact lines moved to; never to a guess.
+          if (link === null || file === undefined || status.status !== 'moved' || status.movedTo === undefined) throw new NotesError(409, 'not-moved');
+          link = stampLink(link.file, file, status.movedTo.startLine, status.movedTo.endLine);
+        }
+        edited = {
+          ...note, link, kind: input.kind ?? note.kind, text: input.text ?? note.text,
+          revision: note.revision + 1, updatedAt: new Date().toISOString(),
+        };
+        return edited;
+      });
+    });
     if (edited === undefined) throw new NotesError(404, 'note-not-found');
     return { note: publicView(edited, files, new Map()) };
   }
 
   async remove(noteId: string, revision: number): Promise<{ deleted: true }> {
     await this.#writable();
-    let found = false;
-    await this.#update((notes) => notes.filter((note) => {
-      if (note.id !== noteId) return true;
+    await this.#update((notes) => {
+      // Inside the change callback, so an unknown ID writes nothing.
+      const note = notes.find((entry) => entry.id === noteId);
+      if (note === undefined) throw new NotesError(404, 'note-not-found');
       if (note.revision !== revision) throw new NotesError(409, 'revision-conflict');
-      found = true;
-      return false;
-    }));
-    if (!found) throw new NotesError(404, 'note-not-found');
+      return notes.filter((entry) => entry.id !== noteId);
+    });
     return { deleted: true };
   }
 

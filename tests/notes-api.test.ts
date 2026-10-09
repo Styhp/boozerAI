@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -333,6 +333,50 @@ describe('notes safety boundaries', () => {
     await f.confirm();
     expect((await f.call('notes/enable', 'POST', {})).json).toEqual({ error: { code: 'notes-overlap' } });
     expect((await readdir(data)).sort()).toEqual(['project']);
+  });
+
+  it('refuses a data directory that is a symlink outside the root: nothing written, target mode unchanged', async () => {
+    const outside = await temp('boozer-outside-');
+    await chmod(outside, 0o755);
+    const data = join(await temp('boozer-data-'), 'app');
+    await symlink(outside, data);
+    const f = await launch(await project(), data);
+    const snapshotId = (await f.confirm()).graph.snapshotId;
+    expect((await f.call('notes/enable', 'POST', {})).json).toEqual({ error: { code: 'store-unavailable' } });
+    expect(await f.list(snapshotId)).toEqual({ enabled: false, state: 'ok', notes: [] });
+    expect((await f.call('notes', 'POST', { snapshotId, kind: 'decision', text: 'x' })).json).toEqual({ error: { code: 'notes-disabled' } });
+    expect(await readdir(outside)).toEqual([]);
+    expect((await stat(outside)).mode & 0o777).toBe(0o755);
+    expect((await f.call('graph')).statusCode).toBe(200);
+  });
+
+  it('refuses a data directory that is a symlink into the root as an overlap', async () => {
+    const root = await project();
+    await mkdir(join(root, 'inside'));
+    const data = join(await temp('boozer-data-'), 'app');
+    await symlink(join(root, 'inside'), data);
+    const f = await launch(root, data);
+    await f.confirm();
+    expect((await f.call('notes/enable', 'POST', {})).json).toEqual({ error: { code: 'notes-overlap' } });
+    expect(await readdir(join(root, 'inside'))).toEqual([]);
+  });
+
+  it('an unknown note ID returns 404 and leaves the notes file untouched', async () => {
+    const data = join(await temp('boozer-data-'), 'app');
+    const f = await launch(await project(), data);
+    const snapshotId = (await f.confirm()).graph.snapshotId;
+    await f.call('notes/enable', 'POST', {});
+    await f.call('notes', 'POST', { snapshotId, kind: 'decision', text: 'Keep' });
+    const target = join(data, `notes-${f.key}.json`);
+    const bytes = await readFile(target);
+    const before = await stat(target);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const unknown = 'd'.repeat(32);
+    expect((await f.call(`notes/${unknown}`, 'POST', { snapshotId, revision: 1, text: 'x' })).json).toEqual({ error: { code: 'note-not-found' } });
+    expect((await f.call(`notes/${unknown}/delete`, 'POST', { revision: 1 })).json).toEqual({ error: { code: 'note-not-found' } });
+    const after = await stat(target);
+    expect((await readFile(target)).equals(bytes)).toBe(true);
+    expect([after.ino, after.mtimeMs]).toEqual([before.ino, before.mtimeMs]);
   });
 
   it('a corrupt notes file is reported, read-only and untouched; the rest of Boozer keeps working', async () => {

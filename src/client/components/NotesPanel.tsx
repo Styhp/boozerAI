@@ -223,7 +223,8 @@ export function NotesPanel({ notes, graph, path, onSelect, initial }: {
           <button type="submit" id="note-save" disabled={busy || text.trim() === '' || (linked && (!Number.isSafeInteger(fromLine) || !Number.isSafeInteger(toLine)))}>Save</button>
         </div>
       </form>
-      <div className="note-actions note-folder">
+      <p className="muted small note-folder">Notes stay on for this folder on later launches. To stop that, delete this folder's notes file in Boozer's app data folder.</p>
+      <div className="note-actions">
         <button type="button" id="notes-disable" className="secondary" disabled={busy} onClick={() => void run(() => notes.disable())}>Turn notes off for this launch</button>
         {confirmClear ? <>
           <button type="button" id="notes-clear-confirm" className="danger" disabled={busy} onClick={() => { setConfirmClear(false); void run(() => notes.clear()); }}>Delete every note for this folder</button>
