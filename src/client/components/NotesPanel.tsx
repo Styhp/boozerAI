@@ -44,6 +44,15 @@ const MESSAGES: Readonly<Record<string, string>> = {
 };
 const messageFor = (code: string) => MESSAGES[code] ?? `The notes request failed (${code}). Nothing else was affected.`;
 
+// The only way a note opens lines: a range selection bound to this snapshot's file hash, and
+// only while the server says the link is current. Moved/stale/missing links never highlight.
+export function noteSelection(view: NoteView, graph: DependencyGraph): Selection | null {
+  const link = view.note.link;
+  const file = link === null ? undefined : findFile(graph, link.file);
+  if (view.status !== 'current' || link === null || file === undefined) return null;
+  return { kind: 'range', ref: { snapshotId: graph.snapshotId, file: link.file, startLine: link.startLine, endLine: link.endLine, contentHash: file.contentHash } };
+}
+
 function NoteItem({ view, graph, busy, onSelect, onRun, notes }: {
   view: NoteView; graph: DependencyGraph; busy: boolean;
   onSelect: (selection: Selection) => void; onRun: (action: () => Promise<void>) => Promise<boolean>; notes: NotesSource;
@@ -53,7 +62,7 @@ function NoteItem({ view, graph, busy, onSelect, onRun, notes }: {
   const [kind, setKind] = useState<NoteKind>(note.kind);
   const [text, setText] = useState(note.text);
   const link = note.link;
-  const file = link === null ? undefined : findFile(graph, link.file);
+  const target = noteSelection(view, graph);
   const label = link === null ? null : `${link.file}:${link.startLine}–${link.endLine}`;
 
   return (
@@ -61,10 +70,8 @@ function NoteItem({ view, graph, busy, onSelect, onRun, notes }: {
       <p className="note-meta">
         <span className="badge note-kind">{kindLabel(note.kind)}</span>{' '}
         <span className={`badge note-status status-${status}`}>{STATUS_LABELS[status]}</span>{' '}
-        {link !== null && label !== null && (status === 'current' && file !== undefined
-          ? <button type="button" className="link" onClick={() => onSelect({ kind: 'range', ref: {
-            snapshotId: graph.snapshotId, file: link.file, startLine: link.startLine, endLine: link.endLine, contentHash: file.contentHash,
-          } })}>{label}</button>
+        {label !== null && (target !== null
+          ? <button type="button" className="link" onClick={() => onSelect(target)}>{label}</button>
           : <code className="note-range">{label}</code>)}
       </p>
       {editing ? (

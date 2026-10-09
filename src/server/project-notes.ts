@@ -190,7 +190,7 @@ export async function routeNotes({ method, path, query, body, notes, snapshot }:
   const parts = path === '' ? [] : path.slice(1).split('/');
   if (path !== '' && (!path.startsWith('/') || parts.some((part) => part === ''))) throw new NotesError(404, 'not-found');
   const noteId = parts[0] !== undefined && NOTE_ID.test(parts[0]) ? parts[0] : undefined;
-  const action = parts.length === 0 ? 'list'
+  const action = parts.length === 0 ? 'collection'
     : parts.length === 1 && ['enable', 'disable', 'clear'].includes(parts[0]!) ? parts[0]!
     : parts.length === 1 && noteId !== undefined ? 'edit'
     : parts.length === 2 && noteId !== undefined && parts[1] === 'delete' ? 'delete'
@@ -198,7 +198,7 @@ export async function routeNotes({ method, path, query, body, notes, snapshot }:
   if (action === null) throw new NotesError(404, 'not-found');
 
   if (method === 'GET') {
-    if (action !== 'list') throw new NotesError(405, 'method-not-allowed');
+    if (action !== 'collection') throw new NotesError(405, 'method-not-allowed');
     const params = new URLSearchParams(query ?? '');
     const id = params.get('snapshotId');
     if (query === undefined || id === null || !SNAPSHOT.test(id) || [...params.keys()].length !== 1) throw new NotesError(400, 'snapshot-required');
@@ -211,7 +211,8 @@ export async function routeNotes({ method, path, query, body, notes, snapshot }:
     case 'enable': keys(input, []); return notes.enable();
     case 'disable': keys(input, []); return notes.disable();
     case 'clear': keys(input, []); return notes.clear();
-    case 'list': {
+    case 'collection': {
+      // POST to the collection creates one note.
       keys(input, ['snapshotId', 'kind', 'text'], ['link']);
       const current = snapshot(snapshotId(input.snapshotId));
       let link = null;

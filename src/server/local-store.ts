@@ -4,7 +4,7 @@ import { chmod, lstat, mkdir, open, rename, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import type { NoteKind } from '../shared/notes.js';
-import type { StoredLink } from './note-status.js';
+import { MAX_LINK_LINES, type StoredLink } from './note-status.js';
 
 // LocalStore is the only code that writes to disk (AGENTS.md "Code boundaries"). Phase 1
 // stores project notes: one JSON file per project key in the app data directory, never in
@@ -65,7 +65,7 @@ function parseLink(value: unknown): StoredLink | null | undefined {
   if (!record(value) || !exact(value, ['file', 'startLine', 'endLine', 'fileHash', 'rangeHash', 'headHash'])) return undefined;
   const { file, startLine, endLine, fileHash, rangeHash, headHash } = value;
   if (typeof file !== 'string' || file.length === 0 || file.length > 4_096 || !line(startLine) || !line(endLine)
-    || endLine < startLine || [fileHash, rangeHash, headHash].some((hash) => typeof hash !== 'string' || !HASH.test(hash))) return undefined;
+    || endLine < startLine || endLine - startLine + 1 > MAX_LINK_LINES || [fileHash, rangeHash, headHash].some((hash) => typeof hash !== 'string' || !HASH.test(hash))) return undefined;
   return { file, startLine, endLine, fileHash: fileHash as string, rangeHash: rangeHash as string, headHash: headHash as string };
 }
 
