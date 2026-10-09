@@ -1,0 +1,22 @@
+npm warn Unknown user config "allow-scripts". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+ RUN  v5.0.3 /home/boozer/boozer-ai
+
+ ❯ tests/model/benchmark.test.ts (1 test | 1 failed) 88ms
+   ❯ 1.6 benchmark (1)
+     × records one cold and three warm runs 87ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/model/benchmark.test.ts > 1.6 benchmark > records one cold and three warm runs
+Error: Command failed: sysctl -n vm.loadavg
+sysctl: cannot stat /proc/sys/vm/loadavg: No such file or directory
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  06:19:41
+   Duration  230ms (tests 61%, transform 26%, import 10%, worker 2%)
+
