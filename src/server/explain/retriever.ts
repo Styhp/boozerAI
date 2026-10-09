@@ -1,13 +1,16 @@
 import type { DependencyGraph, FilePath, Snippet, SnapshotFile, WorkspaceSnapshot } from '../../shared/contracts.js';
 
-// Picks hash-bound source excerpts for a file-level explanation (P-3), within a budget
-// sized for CPU inference (P-5: about 500 prompt tokens in total). Snippet text is always
-// the exact source lines its EvidenceRef names.
+// Picks hash-bound source excerpts for a file-level explanation (P-3), within P-5's cap of
+// about 500 snippet tokens (about 750 prompt tokens with instructions; the M2 end-to-end
+// run measured 9.2 s to first token at 494). Snippet text is always the exact source lines
+// its EvidenceRef names.
 
 // 1.6 measured about 3.7 characters per token on fixture code; 3.5 keeps estimates safe.
 export const estimateTokens = (text: string) => Math.ceil(text.length / 3.5);
-export const SNIPPET_TOKEN_BUDGET = 240;   // plus about 250 tokens of instructions and delimiters: about 500 in total
-const SELECTED_SHARE = 0.65;
+export const SNIPPET_TOKEN_BUDGET = 480;
+// The selected file is what the user asked about; on a 240-token budget a 108-line file was
+// cut to its 10-line import block (M2 end-to-end run), so it gets most of the room.
+const SELECTED_SHARE = 0.8;
 const RELATED_MAX_LINES = 12;
 const MAX_IMPORTERS = 2;
 const MAX_DEPENDENCIES = 2;
@@ -73,7 +76,8 @@ export function retrieveSnippets(snapshot: WorkspaceSnapshot, graph: DependencyG
     .slice(0, MAX_DEPENDENCIES);
   for (const path of dependencies) {
     const file = files.get(path);
-    if (file !== undefined && remaining > 20) {
+    // A truncated selected file needs the room more than a dependency's opening lines do.
+    if (file !== undefined && remaining > 20 && !snippets[0]!.reason.includes('(lines')) {
       add(file, 1, Math.min(RELATED_MAX_LINES, linesOf(file.text).length), remaining, `imported by ${selected}`);
     }
   }

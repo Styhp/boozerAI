@@ -1,6 +1,6 @@
 # Architecture (proposed)
 
-**Status:** scaffold approved in 1.2; C5 independently Approved by Claude at `dc22467`. Snapshot foundation and pure 1.4 parser/resolver are independently Approved; C7 (`22ba446`) and C8 (`c3fbbfb`) were rechecked Approved at `849367a`, with S-4 Accepted. Fixture output matches the hand-written oracle; C1/C4 remain the shared contracts. M2 launcher/authenticated APIs/real-project UI are implemented and in independent review. Map/impact are approved after C10; Agent B's M3 engine/panel awaits review. See [TASKS.md](TASKS.md), [M2 handoff](M2-WIRING-HANDOFF.md), [C5/M2 foundation review](reviews/2026-10-09-c5-and-m2-foundation.md) and [1.4 review](reviews/2026-10-09-1.4-parser.md).
+**Status:** scaffold approved in 1.2; C5 independently Approved by Claude at `dc22467`. Snapshot foundation and pure 1.4 parser/resolver are independently Approved; C7 (`22ba446`) and C8 (`c3fbbfb`) were rechecked Approved at `849367a`, with S-4 Accepted. Fixture output matches the hand-written oracle; C1/C4 remain the shared contracts. M2 launcher/authenticated APIs/real-project UI are implemented and in independent review. Map/impact are approved after C10; [M3 review](reviews/2026-10-09-m3-engine-panel.md) requires two grounding/file-name corrections from Agent B. See [TASKS.md](TASKS.md), [M2 handoff](M2-WIRING-HANDOFF.md), [C5/M2 foundation review](reviews/2026-10-09-c5-and-m2-foundation.md) and [1.4 review](reviews/2026-10-09-1.4-parser.md).
 
 ## Principles
 

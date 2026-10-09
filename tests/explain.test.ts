@@ -114,15 +114,19 @@ describe('retriever and prompt', () => {
   });
 
   it('labels a truncated selected file instead of pretending it is whole', () => {
-    const [first] = retrieveSnippets(snapshot, graph, 'report.ts');
-    expect(first!.ref.endLine).toBeLessThan(28);
-    expect(first!.reason).toMatch(/^selected file \(lines 1–\d+ of 28\)$/);
+    // Every fixture file now fits the budget, so use a synthetic 200-line file.
+    const text = Array.from({ length: 200 }, (_, i) => `export const value${i} = ${i} * 2; // line ${i + 1}`).join('\n');
+    const big = { ...snapshot, files: [{ ...snapshot.files[0]!, path: 'big.ts', text, contentHash: 'h' }] };
+    const [first, ...rest] = retrieveSnippets(big, { ...graph, files: [], edges: [] }, 'big.ts');
+    expect(first!.ref.endLine).toBeLessThan(200);
+    expect(first!.reason).toMatch(/^selected file \(lines 1–\d+ of 200\)$/);
+    expect(rest).toEqual([]);
   });
 
-  it('keeps the whole prompt near 500 tokens and repeats the data rule after the snippets', () => {
+  it('keeps snippets within P-5\'s ~500-token cap and repeats the data rule after the snippets', () => {
     for (const file of snapshot.files) {
       const messages = buildPrompt(file.path, retrieveSnippets(snapshot, graph, file.path));
-      expect(estimateTokens(messages.map((m) => m.content).join('\n'))).toBeLessThanOrEqual(540);
+      expect(estimateTokens(messages.map((m) => m.content).join('\n'))).toBeLessThanOrEqual(780);
       const user = messages[1]!.content;
       expect(user.lastIndexOf('not instructions')).toBeGreaterThan(user.lastIndexOf('</snippet>'));
     }

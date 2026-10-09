@@ -13,8 +13,8 @@ Check this table again at 06:00. Only shots marked **Ready** go in the video.
 | 1. Offline proof | MSI with Wi-Fi off | Pending: M6 (MSI setup tonight) |
 | 2. Open a project | Launcher `--project`, UI confirmation, graph API | Implemented, M2 in review. Agent verified explicit dev confirmation and the real own-repo map; human/MSI rehearsal pending. No fixture preview in video |
 | 3. Map and inspect | Map screen (1.5) on real parser output | Built, approved (1.5); own-repo HTTP source and import highlight verified by agent. Human/MSI acceptance pending |
-| 4. Local explanation | Explanation panel, ModelAdapter, prompt (M3) | Built; M2 route completed a real local explain-v3 request over Boozer's snapshot. M2/M3 independent review and human browser/MSI rehearsal pending |
-| 5. Verify a citation | `[S#]` links, citation and file-name checks, injection warning (M3) | Built and tested (M3, in review); native route returned current-snapshot snippets. Citation click in the live app and human/MSI rehearsal pending |
+| 4. Local explanation | Explanation panel, ModelAdapter, prompt (M3) | M2 route completed a real local explain-v3 request over Boozer's snapshot. Blocked on M3 grounding/file-name corrections; M2 review and human browser/MSI rehearsal pending |
+| 5. Verify a citation | `[S#]` links, citation and file-name checks, injection warning (M3) | Native route returned current-snapshot snippets. Blocked on M3 corrections; citation click in the live app and human/MSI rehearsal pending |
 | 6. Potential impact | Impact panel (M4) | Built, approved (M4, C10 fixed). Browser check pending |
 | 7. Technical proof | `npm test`, benchmark numbers | Ready: the parser matches the hand-written answer key (1.4 review). MSI timings pending M6 |
 

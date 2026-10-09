@@ -4,7 +4,7 @@ Boozer AI is a codebase intelligence project for developers who need to understa
 
 ## Status
 
-**Local-project wiring is implemented and in independent review.** The launcher asks for confirmation before indexing, then the authenticated UI shows the pure parser's graph and snapshot-bound source. C5, C7 and C8 are independently resolved; the map and potential-impact code are approved after C10. Agent B's explanation engine/panel is implemented and awaits review; the M2 route streams its events. Wider prompt-injection cases still fail and are disclosed. Human browser acceptance and MSI verification remain open. Status and evidence are in [TASKS.md](docs/TASKS.md) and the [M2 handoff](docs/M2-WIRING-HANDOFF.md).
+**Local-project wiring is implemented and in independent review.** The launcher asks for confirmation before indexing, then the authenticated UI shows the pure parser's graph and snapshot-bound source. C5, C7 and C8 are independently resolved; the map and potential-impact code are approved after C10. Agent B's explanation engine/panel needs two grounding/file-name corrections in the [M3 review](docs/reviews/2026-10-09-m3-engine-panel.md); the M2 route streams its events. Wider prompt-injection cases still fail and are disclosed. Human browser acceptance and MSI verification remain open. Status and evidence are in [TASKS.md](docs/TASKS.md) and the [M2 handoff](docs/M2-WIRING-HANDOFF.md).
 
 The product capabilities below are delivery targets; Development describes the current code and its pending integration.
 

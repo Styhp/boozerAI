@@ -92,3 +92,20 @@ Synthetic two-file projects in `tests/model/injection-variants.test.ts`, kept ap
 - **v3 budget:** the longer v3 rule left less room, so the snippet budget dropped from 300 to 240 estimated tokens to keep prompts near 500 (453–481 measured).
 - **Quality (subjective, Claude Code):** the answers are accurate about `priceFor`, the 250-cent base, the low-stock doubling and the `inventory.ts` link, with citations on the right snippets. One loose phrase ("imports `priceFor` to potentially use it").
 - **P-5:** prompts of 400–481 tokens; whole answers took 16–65 s, inside the 60 s target in all but one run (65.0 s, at load average about 12). Time to first token wasn't measured through the service.
+
+## M2 end-to-end (API level) — Dev Mac — 2026-10-09
+
+Built app at `b4bb3fe` from a clean worktree, started in-process by a scratch harness so the per-launch token could be used with plain HTTP. The harness listened on 4174 because a running `npm run dev` held 4173, and sent the exact Host and Origin `127.0.0.1:4173` the app requires. Project: Boozer AI's own checkout. Explained file: `src/shared/graph-queries.ts`, which hadn't been explained before. Same runtime and model as above; load average 5.6–14.6, VM running.
+
+- **Security:** no token → 401; POST with Origin `https://evil.example` → 403; stale `snapshotId` → `stale-snapshot`.
+- **Indexing:** confirm 0.6 s; 70 files, 252 relationships, 104 map nodes; 115 found, 69 parsed, 46 skipped. The file fetch returned 109 lines with a hash matching the graph.
+- **Explanation stream:** HTTP 200, `application/x-ndjson`, snippets → tokens → done. Model `qwen3:4b-instruct`, "Ollama 0.40.2", `local`, explain-v3, approved digest. Every citation valid, every file name linked, no injection warning, no thinking text, not truncated.
+
+| Snippet budget | Selected file sent | Prompt tok | Load avg | TTFT s | Total s |
+|---|---|---|---|---|---|
+| 240 (first run) | lines 1–10 of 108 | 494 | 5.6 | 9.2 | 33.6 |
+| 480 (first run) | lines 1–31 of 108 | 648 | 12.4 | 21.2 | 39.5 |
+| 240 (A/B) | lines 1–10 | 494 | 11.8 | 16.7 | 36.4 |
+| 480 (A/B) | lines 1–31 | 648 | 13.0 | 16.3 | 35.3 |
+
+The A/B runs alternated the two builds under the same load. Repeat runs were prompt-cache hits (0.2 s) and are left out. At 240, the answer saw only the import block and said so. At 480 it described `possiblyIncomplete` and `walkGraph`. Time to first token tracked machine load, not the extra 154 prompt tokens, so the budget is now 480 snippet tokens (P-5's "about 500 prompt tokens of snippets") with the selected file getting 80%. The real-model suite re-run at 480 (`m3-explain-v3-budget480-dev-mac.jsonl`) gave the same results as before: fixture canary not leaked, the same 2 of 5 variants leaked, and the warning present in all 7 cases. **P-5's 15 s first-token target held only on a lightly loaded Mac (9.2 s); under load about 12–13 it was about 16–21 s.** For the demo, close other work.

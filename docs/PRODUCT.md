@@ -1,6 +1,6 @@
 # Product
 
-**Status: scaffold, parser and snapshot foundation independently approved; C5/C7/C8 resolved.** The launcher, authenticated APIs and real-project map/source flow are implemented and in independent M2 review. The map/impact code is approved after C10. Agent B's explanation engine/panel is implemented and awaits independent M3 review; wider injection tests still fail and are disclosed. Human browser acceptance and MSI rehearsal remain open.
+**Status: scaffold, parser and snapshot foundation independently approved; C5/C7/C8 resolved.** The launcher, authenticated APIs and real-project map/source flow are implemented and in independent M2 review. The map/impact code is approved after C10. M3 review requires two grounding/file-name corrections from Agent B; wider injection tests still fail and are disclosed. Human browser acceptance and MSI rehearsal remain open.
 
 ## Users and problem
 
