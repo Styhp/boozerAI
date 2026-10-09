@@ -1,6 +1,6 @@
 # Set up the graph workspace and Chat Boozer on MSI
 
-Use branch `feat/graph-workspace`, which contains the current graph view, browser refresh recovery and local Chat Boozer. The Mac commit is initially local; the GitHub fetch commands below work after the human authorizes and the Mac completes a push. This guide does not claim that this new revision has been tested on MSI.
+Use branch `feat/graph-workspace`, which contains the current graph view, browser refresh recovery and local Chat Boozer. The human authorized its push to the existing `Styhp/boozerAI` repository on 2026-10-10, and the remote branch is verified. The fetch commands below are ready to use. This guide does not claim that this new revision has been tested on MSI.
 
 Tested application commit: `feb281978705efe633aa043b0bed6fd945369ee8`. Its exported source passes **361 offline tests / 0 failures / 0 skips** and the build on the Mac without private configuration. The following handoff commit changes documentation only; use the final branch SHA supplied by the Mac when checking your checkout below.
 
