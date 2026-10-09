@@ -6,10 +6,18 @@ The human lead runs these steps on the MSI Bravo 15 (ParrotOS) **tonight**, in p
 
 ## 0. Get the code onto the MSI
 
-No Git remote exists yet. Pick one:
+The code is at **https://github.com/Styhp/boozerAI**. The repo is **private until 08:00**, so cloning needs a login:
 
-- **Private GitHub repository** (recommended). Easy to update after the freeze, and it can be made public at 08:00. Creating it needs the human lead's OK.
-- **USB:** on the Mac run `git bundle create boozer.bundle --all`, then on the MSI run `git clone boozer.bundle boozer-ai`. For updates, re-bundle and `git pull`.
+1. On GitHub: Settings → Developer settings → Fine-grained personal access tokens. Create a token for **only** `Styhp/boozerAI`, with **Contents: Read-only** and a 2-day expiry.
+2. On the MSI:
+
+   ```sh
+   git clone https://github.com/Styhp/boozerAI.git boozer-ai   # username: Styhp, password: the token
+   ```
+
+3. Later updates: push from the Mac first (`git push`), then run `git pull` on the MSI. After the 08:00 public flip, no token is needed. Delete the token once you're done.
+
+Without network access, a USB copy still works: on the Mac run `git bundle create boozer.bundle --all`, then on the MSI run `git clone boozer.bundle boozer-ai`.
 
 ## 1. Record the machine
 

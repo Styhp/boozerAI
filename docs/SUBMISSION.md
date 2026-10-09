@@ -39,7 +39,7 @@
 | Project name | Done | Boozer AI |
 | Project description | Draft | See draft answers below |
 | Team | Missing | See P-6 |
-| Public GitHub repository | Not created | Local Git initialized in 1.1. No remote/public repository; publication still needs human approval |
+| Public GitHub repository | Created, **private** until 08:00 | [Styhp/boozerAI](https://github.com/Styhp/boozerAI). Created by the human lead on 2026-10-09; description and topics set. Kept private on purpose for MSI sync (human lead's decision). `main` first pushed at commit `c3847f2`. The human lead makes it public at 08:00. Still to do: license (P-6). Commit author email stays as is (human lead's decision). |
 | Demo video | Not recorded | The recording/live-demo machine depends on P-2; MSI reliance requires M6 for either use |
 | X or LinkedIn post with the video (URL) | Not posted | |
 | What runs locally | Draft | See below; must match the final build |
