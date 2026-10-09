@@ -13,11 +13,26 @@ describe('impact panel', () => {
   it('lists direct importers by default with depth, type-only labels and a clickable chain', () => {
     const html = panel('inventory.ts');
     expect(html).toContain('Potentially affected files (3 within depth 1)');
-    expect(html).toContain('type-only path');
     expect(html).toContain('main.ts:5');
     expect(html).toContain('pricing.ts:1');
     expect(html).toContain('report.ts:1');
     expect(html).toMatch(/aria-pressed="true">1</);
+  });
+
+  it('says "type-only path" only when no runtime chain reaches the file (C10)', () => {
+    // main.ts reaches inventory.ts first through its type import (main.ts#4), and also at
+    // runtime through report.ts, so the badge must not claim the path is type-only.
+    const html = panel('inventory.ts');
+    expect(html).toContain('shown chain includes a type import; a runtime path also exists');
+    expect(html).not.toContain('>type-only path<');
+
+    const onlyTypes: DependencyGraph = {
+      ...graph,
+      edges: graph.edges.filter((edge) => edge.id === 'main.ts#4'),
+    };
+    const typeOnly = panel('inventory.ts', onlyTypes);
+    expect(typeOnly).toContain('>type-only path<');
+    expect(typeOnly).not.toContain('a runtime path also exists');
   });
 
   it('uses the exact empty wording with the depth limit', () => {

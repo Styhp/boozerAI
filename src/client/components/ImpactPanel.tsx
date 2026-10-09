@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { DependencyGraph, FilePath, GraphWalkResult } from '../../shared/contracts';
-import { GraphQueryError, walkGraph } from '../../shared/graph-queries.js';
+import { GraphQueryError, runtimeReachable, walkGraph } from '../../shared/graph-queries.js';
 import type { Selection } from '../map/model';
 
 const DEPTHS: readonly (number | null)[] = [1, 2, 3, null];
@@ -13,8 +13,10 @@ export function ImpactPanel({ graph, path, onSelect }: { graph: DependencyGraph;
   const [maxDepth, setMaxDepth] = useState<number | null>(1);
 
   let result: GraphWalkResult;
+  let runtime: Set<FilePath>;
   try {
     result = walkGraph(graph, { selected: path, direction, maxDepth });
+    runtime = runtimeReachable(graph, path, direction);
   } catch (error) {
     const message = error instanceof GraphQueryError ? error.message : String(error);
     return <section className="impact" data-state="error"><p className="notice error" role="status">{message}</p></section>;
@@ -50,7 +52,9 @@ export function ImpactPanel({ graph, path, onSelect }: { graph: DependencyGraph;
             <li key={entry.path}>
               <button type="button" className="link" onClick={() => onSelect({ kind: 'file', path: entry.path })}>{entry.path}</button>
               <span className="badge">depth {entry.depth}</span>
-              {entry.includesTypeOnly && <span className="badge kind-type">type-only path</span>}
+              {entry.includesTypeOnly && (runtime.has(entry.path)
+                ? <span className="badge kind-type">shown chain includes a type import; a runtime path also exists</span>
+                : <span className="badge kind-type">type-only path</span>)}
               <span className="chain" aria-label="Evidence chain">
                 {entry.chain.map((edge, i) => (
                   <span key={edge.id}>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DependencyGraph, GraphWalkEntry } from '../src/shared/contracts.js';
-import { GraphQueryError, potentialImpact, walkGraph } from '../src/shared/graph-queries.js';
+import { GraphQueryError, potentialImpact, runtimeReachable, walkGraph } from '../src/shared/graph-queries.js';
 import { loadExpectedGraph } from './support/fixture-snapshot.js';
 
 // Expected sets below were derived by hand from the fixture's file edges (see
@@ -60,6 +60,15 @@ describe('potential impact (importers) on the fixture', () => {
     expect(impact.possiblyIncomplete).toBe(true);
     expect(impact.coverage).toBe(graph.coverage);
     expect(impact).toMatchObject({ schemaVersion: 1, algorithmVersion: 'bfs-v1', direction: 'importers', snapshotId: graph.snapshotId });
+  });
+});
+
+describe('runtime reachability for type-only labels (C10)', () => {
+  it('finds main.ts reaches inventory.ts at runtime even though its shortest chain is the type import', () => {
+    expect([...runtimeReachable(graph, 'inventory.ts', 'importers')].sort()).toEqual(['main.ts', 'pricing.ts', 'report.ts']);
+    const onlyTypes = { ...graph, edges: graph.edges.filter((edge) => edge.id === 'main.ts#4') };
+    expect(runtimeReachable(onlyTypes, 'inventory.ts', 'importers').size).toBe(0);
+    expect(potentialImpact(onlyTypes, 'inventory.ts').potentiallyAffected[0]).toMatchObject({ path: 'main.ts', includesTypeOnly: true });
   });
 });
 

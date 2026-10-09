@@ -98,3 +98,11 @@ export function potentialImpact(graph: DependencyGraph, selected: FilePath, maxD
   const { reachable, ...walk } = walkGraph(graph, { selected, direction: 'importers', maxDepth });
   return { ...walk, direction: 'importers', potentiallyAffected: reachable };
 }
+
+// Files reachable through at least one chain with no type-only import, at any depth. Used
+// to label "type-only path" only when no runtime chain exists (M4 review C10); the chosen
+// chain and its C1 `includesTypeOnly` flag are unchanged.
+export function runtimeReachable(graph: DependencyGraph, selected: FilePath, direction: GraphWalkQuery['direction']): Set<FilePath> {
+  const runtimeEdges = { ...graph, edges: graph.edges.filter((edge) => edge.kind !== 'type-import') };
+  return new Set(walkGraph(runtimeEdges, { selected, direction, maxDepth: null }).reachable.map((entry) => entry.path));
+}
