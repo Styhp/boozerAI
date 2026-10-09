@@ -1,6 +1,6 @@
 # Project notes, phase 1: handoff
 
-Branch `feat/project-notes`, created from `main` at `93d300d`. Built by one Claude Code session (Agent B, implementer) on 2026-10-09, about 21:32–22:30 UTC+8. Under P-17 it merges only after independent review and a passing full suite by 05:00 UTC+8. Nothing here is on `main`.
+Branch `feat/project-notes`. It was created from local `main`, which was already at `04ddf4f` (`93d300d` plus the docs-only P-17 line in PRODUCT.md). Current `main` (`34a9288`, the P-16 cloud transport in `7dc92cd`) was then merged in, in merge commit `c0ab37a`, so `git diff main` shows only notes changes. Built by one Claude Code session (Agent B, implementer) on 2026-10-09, about 21:32–22:30 UTC+8. Under P-17 it merges only after independent review and a passing full suite by 05:00 UTC+8. Nothing here is on `main`.
 
 **Status:** built and agent-verified. The typecheck, the full suite (also run with networking denied) and the build pass. Human browser check: **not run**. Independent review: **not done**.
 
@@ -58,7 +58,7 @@ Each hook is marked in the code with `--- Project notes hook (phase 1) ---` and 
 | `src/server/project-api.ts` | 75–88 | Notes route match, placed before the existing route regex and after the existing capability, Origin and URL checks. The body goes through the existing `body()` (JSON + 8 KiB cap), and output through the existing `json()` (no-store). `NotesError` becomes `ApiError`. |
 | `src/client/data/project-source.ts` | 3, 23–35 | optional `notes?: NotesSource` and the `NotesSource` interface |
 | `src/client/data/http-project-source.ts` | 3, 6 | imports |
-| `src/client/data/http-project-source.ts` | 80–103 | `notes` methods over the existing `ProjectConnection` and revocation signal. A note ID must be 32 lowercase hex before it goes into a URL. |
+| `src/client/data/http-project-source.ts` | 96–119 | `notes` methods over the existing `ProjectConnection` and revocation signal. A note ID must be 32 lowercase hex before it goes into a URL. |
 | `src/client/components/DetailPane.tsx` | 7–8, 54, 60–61, 124 | optional `notes` prop. Mounts `NotesPanel` after `ImpactPanel` for file selections only. |
 | `src/client/App.tsx` | 103 | **Deviation from the brief:** one prop, `notes={project.notes}`. DetailPane has no other way to reach the project source. The fixture preview has no `notes`, so it renders no panel. |
 
@@ -87,8 +87,11 @@ Node 24 was already installed, so nothing was downloaded.
 | `npx vitest run … tests/local-store.test.ts` (first run) | 1 failure: a 5 s timeout, because `toEqual` on 2 MiB Buffers was slow. Fixed by comparing with `Buffer.equals`; then 11/11 passed. |
 | `npm run typecheck` (mid-work) | Failed on test-only typing (an `ExplanationErrorCode` literal and two `StoreRead` casts). Fixed in the tests. |
 | `npm run typecheck` (final) | exit 0 |
-| `npm test` (final) | exit 0. **20 files, 243 tests passed**: the 194 existing ones plus 49 new. |
-| `sandbox-exec -p '(version 1)(allow default)(deny network-outbound (remote ip))(deny network-outbound (remote unix-socket))' /bin/sh -c 'curl … http://1.1.1.1; npm test'` | Inside the sandbox, curl failed with "Couldn't connect to server". `npm test` exit 0, 20 files, 243 tests passed. |
+| `npm test` (before merging main) | exit 0. 20 files, 243 tests passed: the 194 existing ones plus 49 new. |
+| `git merge main` (brings in `7dc92cd`, `34a9288`) | Conflicts in `src/server/project-api.ts` (route regex next to the notes hook) and `src/client/data/http-project-source.ts` (imports; the notes block next to `#previewCloud`). Both resolved by keeping both sides unchanged. `tests/notes-api.test.ts` then failed typecheck: the service double needed main's new `CloudComparison` members, copied from main's `project-api.test.ts` double. |
+| `npm test` (final, after merge) | exit 0. **20 files, 261 tests passed**. Main's 16 files on the merged code alone (`vitest run` with the 4 notes files excluded) give 212 passed, so 212 existing plus 49 new. |
+| `sandbox-exec -p '(version 1)(allow default)(deny network-outbound (remote ip))(deny network-outbound (remote unix-socket))' /bin/sh -c 'curl … http://1.1.1.1; npm test'` | Inside the sandbox, curl failed with "Couldn't connect to server". Before the merge: `npm test` exit 0, 243 passed. After the merge: `npm test` exit 0, **20 files, 261 tests passed**. |
+| `npm run typecheck` and `npm run build` (after merge) | both exit 0 |
 | `npm run build` | exit 0. The only warning is the existing `@xyflow/react` "use client" directive warning. |
 | Scratch smoke (`node <scratchpad>/smoke.mjs dist <worktree>`, not committed) | Ran on Boozer's own repo (88 files) with a temp data dir. Before enable: `{"enabled":false,…}`, and the data dir did not exist. 300 linked notes saved in 13.7 s (about 45 ms each, fsync per save). After a line was inserted at the top of the biggest file, listing the 300 notes took 13 ms: 288 moved, 12 stale (the stale ones are ranges whose lines repeat elsewhere, so "ambiguous" applies). |
 
