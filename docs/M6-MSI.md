@@ -144,6 +144,16 @@ The required post-commit `git pull --rebase` exited **0** and fetched through **
 
 This newest tested application revision still meets the midnight setup criterion. All recording/live restrictions below remain in force.
 
+## Requested OpenAI integration check at `18718d1`
+
+2026-10-09 about **22:14 UTC+8**, after the human requested testing the latest pull and its OpenAI integration. Exact app commit: `18718d14bbcc3ce427aec93211e9ca95a823cc8e`. `npm run typecheck`, `npm test`, and `npm run build` all exit **0**; **16 files / 213 offline tests**, including cloud transport/preview cases with test doubles. [Complete outputs](benchmarks/m6-app-checks-18718d1-msi.json). This is functional verification on MSI, not an independent code review or a successful live OpenAI call.
+
+`OPENAI_API_KEY` is absent from this agent shell; the built service reports `{ "available": false }`. The already-running Node server on `127.0.0.1:4173` also lacks that variable in its launch environment (checked presence only, no secret printed). [Safe service status](benchmarks/m6-cloud-status-18718d1-msi.json). Credential location was requested from the human; no key value requested in chat. The adapter reads the environment at launch and does not itself load `.env` files.
+
+The standard `python3 docs/benchmarks/m6-app-probes-msi.py docs/benchmarks/m6-app-probes-18718d1-msi.json` startup probe **exited 1**, with `Port already occupied; refusing to probe an unknown server`. It did not replace or stop the existing user server and created no probe-result file. Therefore a fresh actual-launch/five-probe check at this revision is **not verified**. The production bundle has been rebuilt, but an already-running host caches its assets and must be relaunched to serve the new build.
+
+**Real OpenAI request: not run**, pending a configured credential and the required outbound-payload preview/explicit send. No API-key bytes were printed or written to evidence, and no cloud call was made. Offline/recorder/browser gates remain unchanged.
+
 ## Handoff and decision
 
 Changed files: this report and MSI-named raw evidence/diagnostic scripts in `docs/benchmarks/`. Prior-session artifacts are preserved, including the malformed request and failing benchmark log. Only the MSI diagnostic memory arithmetic was repaired. No app, tests, fixtures, shared task/benchmark docs, dependencies, runtime configuration or model downloads changed.
