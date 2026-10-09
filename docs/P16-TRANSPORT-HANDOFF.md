@@ -26,6 +26,8 @@ The engine, cloud adapter, shared explanation interface and explanation-panel fi
 
 The new tests verify authenticated status without reading source or calling a model; exact preview output without secrets/root/token or rereading changed disk content; wrong/missing token, Origin, JSON, extra fields, queries and project/snapshot rejection; unavailable, invalid/skipped/escaping selection and long-first-line errors; refresh/close invalidation and sanitized exceptions; mismatching hash rejection with the fixed message unchanged; explicit matching-hash send to a **fake** provider with the exact preview payload and a cloud-labeled done event. Client cases cover availability, token/body forwarding, readable errors, stale selections, aborts and delayed JSON after close. Existing Host/C5 and local-route tests pass in the full suite.
 
+Final author verification at **`7dc92cd7b1fd02e9f45a8e462df8f29b4037083c`** reproduced `npm test` (**16 files / 212 passed, no failures/skips**) and `npm run build` (**188 modules**, both strict typechecks/server build passed), plus the clean client marker inspection, in a clean detached checkout. It reused the existing package install via a node_modules symlink; no install or download. Agent B's concurrent App/SummaryPanel mounting diff is excluded from these pinned results. This is author verification, not Claude's independent review.
+
 ## Follow-up
 
 - Claude independently reviews this transport; this author report is not an approval. The existing cloud engine/UI remains a separate Agent B contribution for cross-model review.
