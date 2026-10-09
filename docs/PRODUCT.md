@@ -73,6 +73,7 @@ Later phases remain on the roadmap even if they miss the hackathon. In particula
 | P-9 | Test the MSI before relying on it for recorded or live demos. | Neither suitability nor GPU acceleration has been verified. |
 | P-10 | Phase A splits into demo-critical and **[Hardening]** tiers (TASKS.md, 0.2 condition C2). The demo must show real parser and real local-model output: never mocked, canned or pre-recorded. (Human lead, 2026-10-09, after 0.2.) | Hardening items (persistence, race detection, content secret scanning, the evaluation report, dashboard/rail/insights) produce no demo output and remove no judged capability. Real output is a submission rule. |
 | P-2 | **The MSI Bravo 15 is the demo machine.** (Human lead, 2026-10-09, about 16:25 AWST.) M6 must pass for each use, recording and live. The Mac is the fallback only after its own offline rehearsal, decided at the 00:00 MSI go/no-go (SUBMISSION.md). | The human lead's choice. MSI setup runs tonight in parallel with the build, so it doesn't consume post-freeze time. Steps are in [MSI-SETUP.md](MSI-SETUP.md). |
+| P-5 | **Latency target (provisional):** first streamed token within 15 s on a warm model, complete answer within 60 s. Requests are capped near 500 prompt tokens of snippets and near 300 output tokens, and the model is preloaded at app start. Confirm or revise at M6 with MSI measurements. (Human lead, 2026-10-09, accepting Agent B's 1.6 proposal.) | 1.6 on the contended dev Mac CPU: about 11 s to first token for a new file, about 52 s for 300 tokens (see docs/BENCHMARKS.md). The MSI is unmeasured. Misses are recorded, not hidden. |
 | P-12 | Severity and scores are in scope as an optional JEV cloud feature, **deferred until after the hackathon**, with space reserved in the design. (Human lead, 2026-10-09, in a later Claude Code session.) | JEV is the candidate for structured decisions, but its API is unknown (P-11) and the consent, preview and guardrail work doesn't fit the remaining time. |
 
 ### P-12 guardrails (proposed by Claude Code; Codex reviews in 0.3)
@@ -91,7 +92,6 @@ Later phases remain on the roadmap even if they miss the hackathon. In particula
 | ID | Question | Proposed default | Decide by |
 |---|---|---|---|
 | P-3 | File-level or selected-range explanations first? | File-level first; ranges remain later scope. | Before M3 |
-| P-5 | Acceptable CPU latency? | Provisional, unmeasured target: first token within 10 s and complete answer within 60 s. Record failures honestly; tune only after measurement. | After 1.6 and before the demo |
 | P-6 | Team names and repository license? | Human lead supplies team list and chooses license. | Before publication |
 | P-11 | What does JEV provide, and under which endpoint/data terms? | Keep an optional provider boundary; do not assume an API or install a dependency. | Before M12 implementation |
 | P-13 | What do JEV scores rate? | Change risk for the selected file, based on parser facts and snippets. Not code quality or "issues found", so Boozer stays an explainer of structure rather than a code reviewer. | Before M12 implementation |
