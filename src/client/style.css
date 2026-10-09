@@ -80,3 +80,15 @@ code, .source, .path, .snapshot-id { font-family: ui-monospace, SFMono-Regular, 
 .line-number { color: var(--muted); text-align: right; padding-right: 0.75rem; user-select: none; }
 .line.evidence { background: #33402f; }
 .line.evidence .line-number { color: var(--accent); }
+
+.impact { margin: 0.5rem 0 0.75rem; padding: 0.5rem; border: 1px solid var(--line); border-radius: 6px; }
+.impact h3 { font-size: 0.85rem; margin: 0.5rem 0 0.25rem; }
+.impact-controls { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.impact-controls button { background: #2b302c; border: 1px solid var(--line); border-radius: 4px; padding: 0.1rem 0.5rem; cursor: pointer; }
+.impact-controls button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.impact-rows { margin: 0; padding-left: 1.2rem; }
+.impact-rows li { margin: 0.25rem 0; }
+.impact-rows .badge { margin-left: 0.35rem; }
+.chain { display: block; font-size: 0.75rem; color: var(--muted); }
+.badge.kind-type { color: var(--package); }
+.small { font-size: 0.75rem; }

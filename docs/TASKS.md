@@ -41,7 +41,7 @@ Future owners below are proposed assignments, not evidence that work has started
 | 1.6 | Early local-model test | Claude Code (Agent B chat) | 1.2 Approved; download approved 2026-10-09; 1.3 snippets | ModelAdapter → benchmark record; Codex reviews | In review: benchmarked on the dev Mac; injection check **failed** (canary leaked every run), handed to M3 |
 | M2 | Ingestion and local folder input | Codex (Agent A, this session) | Foundation: 1.2 and shared contracts; integration: reviewed 1.4, 1.5 and C5 recheck | Authorized root → immutable snapshot → parser → 1.5 UI | In progress: snapshot foundation Approved with condition C7 (oversize/case-collision must skip, not abort, before M2 opens real repos); integration pending |
 | M3 | Grounded explanations and initial evaluations | Codex | 1.4, 1.5, 1.6 on the fixture snapshot; M2 for real folders | Retriever/ModelAdapter/validator → detail pane | Not started |
-| M4 | Graph calculations, potential impact, insights | Claude Code (Agent B) | 1.4, 1.5 | GraphQueries → navigation/insights views; Codex reviews | Not started |
+| M4 | Graph calculations, potential impact, insights | Claude Code (Agent B chat) | 1.4, 1.5 | GraphQueries → navigation/insights views; Codex reviews | In review: walk and impact panel done (demo tier); browser check pending; [Hardening] insights not started |
 | M6 | MSI verification, if used for any demo | Human lead | M3, M4; approved setup | Actual runtime/app/display/recorder → evidence | Not started; MSI reliance blocked until pass |
 | M7 | Submission package and demo | Human lead | M1–M4 verified; M6 if MSI; chosen-machine rehearsal | Tested build → truthful video/disclosures/submission | Not started |
 | M5 | GitHub input | Codex | M2; human approval for development network use | Archive InputAdapter → same ingestion | Not started; later phase unless core and buffer secured |
@@ -402,12 +402,18 @@ Foundation status: **In review**, with 21 input cases and read-only fixture/own-
 
 ## M4: Graph calculations, potential impact and insights
 
-- [ ] Selecting a file lists direct importers by default (depth 1), with explicit depth expansion/full reachability, depthLimited status and a clickable shortest evidence chain. C1 direction/chain ordering, tie-breaking, type-only labels and invalid-query rejection are verified; the same iterative walk supports dependencies.
-- [ ] Hand-written expected impact sets for the fixture pass, including empty and cyclic graphs.
+- [x] Selecting a file lists direct importers by default (depth 1), with explicit depth expansion/full reachability, depthLimited status and a clickable shortest evidence chain. C1 direction/chain ordering, tie-breaking, type-only labels and invalid-query rejection are verified; the same iterative walk supports dependencies. (`src/shared/graph-queries.ts` `walkGraph`/`potentialImpact`; `tests/graph-queries.test.ts` and `tests/impact-panel.test.tsx`. Depth buttons 1/2/3/All, an "Expand to depth N+1" offer when `depthLimited`, and chain links that open each edge's evidence. Clicking is part of the human check below.)
+- [x] Hand-written expected impact sets for the fixture pass, including empty and cyclic graphs. (Sets for `inventory.ts`, `utils/math.ts` at depths 1/2/all, `pricing.ts` in the cycle, `main.ts` with no importers, `main.ts` dependencies, a one-file graph, a rejected empty-graph selection, and a 5,000-file cycle walked iteratively. All were derived by hand before running.)
 - [ ] **[Hardening]** Hand-written cycle groups and degree/count summaries pass.
 - [ ] **[Hardening]** Insights and navigation rail link each finding to the same snapshot and source/evidence in the detail pane.
-- [ ] The wording is "potentially affected". The UI never says "will break", "safe", or "no impact", and an empty result reads "No importers found by static analysis."
-- [ ] Type-only paths are labeled. Results are flagged as possibly incomplete for unresolved/non-literal imports, parse errors, skipped files and unsupported semantics.
+- [x] The wording is "potentially affected". The UI never says "will break", "safe", or "no impact", and an empty result reads "No importers found by static analysis." (Render test over every fixture file rejects "will break", "safe", "no impact", "unused" and "dead code". The empty text reads "No importers found by static analysis within depth N.", per C1's depth suffix.)
+- [x] Type-only paths are labeled. Results are flagged as possibly incomplete for unresolved/non-literal imports, parse errors, skipped files and unsupported semantics. (`includesTypeOnly` → "type-only path" badge. `possiblyIncomplete` is true for any skip, pruned directory, excluded or failed import, or unsupported diagnostic, and is shown as a notice; a clean graph shows none.)
+
+**Human check for M4** (`npm run dev`):
+1. Select `inventory.ts`. "Potentially affected files (3 within depth 1)" lists `main.ts` (type-only path), `pricing.ts` and `report.ts`.
+2. Click `main.ts:5` in its chain: the source opens with line 5 highlighted.
+3. Select `utils/math.ts`. Two rows appear, with "More files are reachable beyond depth 1". Click "Show all": four rows, ending with `main.ts` at depth 3.
+4. Click "Dependencies" on `main.ts`: ten dependencies, never called "potentially affected".
 
 ## M5: GitHub import (retained later phase)
 
@@ -661,6 +667,29 @@ Commands and results:
 - Dev smoke on port 5179: index 200; the fixture preview module and `?raw` fixture strings served (tripwire as `export default "…"`); foreign Host 403; port released after stop.
 
 Not verified: anything in a real browser (clicks, visuals, offline reload; see the human check above). The canvas isn't rendered in tests (no DOM package). Hardening (rail and insights) wasn't started.
+
+### M4 — Claude Code (Agent B chat), 2026-10-09
+
+**Status: In review (Codex). Demo-tier potential impact done. Browser human check pending. [Hardening] cycle/degree insights and the rail not started.**
+
+Files: new `src/shared/graph-queries.ts` (`walkGraph`, `potentialImpact`, `possiblyIncomplete`, `GraphQueryError`), `src/client/components/ImpactPanel.tsx`, `tests/graph-queries.test.ts`, `tests/impact-panel.test.tsx`. Changed: `src/client/components/DetailPane.tsx` (shows the panel for file selections) and `src/client/style.css`. No new package.
+
+Design notes for the reviewer:
+
+- One BFS for both directions. At each frontier, candidates are sorted by bytewise edge ID and the first claim wins, which is the C1 tie-break.
+- Chains keep import direction, and depth equals chain length.
+- `depthLimited` is true only when an unvisited file is reachable past the boundary.
+- `graph-queries.ts` imports only contract types, so the browser bundle stays free of the compiler (N5). The scratch build is 419 KB, with no `createSourceFile`/`node:crypto` and no fixture strings.
+- Interpretation: `main.ts` is labeled "type-only path" for `inventory.ts`, because its shortest chain (`main.ts#4`) is the type import, even though a runtime path exists at depth 2 via `report.ts`. This follows C1's "chosen chain contains a type-import" rule. Flag it if you read C1 differently.
+
+Commands and results:
+
+- `npx tsc --noEmit` and `npx tsc -p tsconfig.server.json --noEmit`: exit 0.
+- `sandbox-exec … (deny network*) npm test`: exit 0, 8 files / 110 tests in the shared tree, including Codex's uncommitted work. The new 14 cases passed.
+- A first long-cycle test with 20,000 files passed but took 3.7 s and used heavy memory, because each row carries its full chain. I cut it to 5,000 (real graphs cap at 2,000 files); the suite now runs in under 0.5 s.
+- Network-denied `vite build` to the scratchpad: exit 0.
+
+Not verified: clicks in a real browser (human check above), and impact on Boozer's own repo through the real parser, which waits on Codex's M2 API wiring.
 
 ## Review log
 

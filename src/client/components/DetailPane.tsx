@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { DependencyEdge, DependencyGraph } from '../../shared/contracts';
+import { ImpactPanel } from './ImpactPanel';
 import { describeTarget, findEdge, findFile, referenceState, sourceLines, type Selection, type SourceState } from '../map/model';
 
 function EvidenceLink({ edge, onSelect }: { edge: DependencyEdge; onSelect: (s: Selection) => void }) {
@@ -78,6 +79,7 @@ export function DetailPane({ graph, selection, source, onSelect }: {
       {file.parse.status === 'error' && (
         <p className="notice error" role="status">Parse error: this file contributed no relationships. Its source is shown as text.</p>
       )}
+      {selection.kind === 'file' && <ImpactPanel key={file.path} graph={graph} path={file.path} onSelect={onSelect} />}
     </header>
   );
 
