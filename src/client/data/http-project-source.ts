@@ -1,8 +1,9 @@
 import type { DependencyGraph } from '../../shared/contracts';
 import type { ExplanationEvent, ExplainRequestBody } from '../../shared/explanation';
+import type { NoteCreateBody, NoteEditBody, NotesResponse } from '../../shared/notes';
 import type { FileResponse, GraphResponse, SessionResponse } from '../../shared/project-api';
 import { readExplanationEvents } from './explanation-stream';
-import { sha256Hex, type ProjectSource } from './project-source';
+import { sha256Hex, type NotesSource, type ProjectSource } from './project-source';
 
 export class ProjectApiError extends Error {
   constructor(readonly status: number, readonly code: string) { super(`Project request failed: ${code}`); }
@@ -75,6 +76,31 @@ export class HttpProjectSource implements ProjectSource {
   }
 
   revoke(): void { this.#abort.abort(); }
+
+  // --- Project notes hook (phase 1): same connection, capability and revocation signal.
+  // Only opaque IDs, the snapshot ID and the user's own text/lines are sent.
+  readonly notes: NotesSource = {
+    list: async (snapshotId: string) => {
+      const response = await this.#connection.request(`/api/projects/${this.#id}/notes?snapshotId=${encodeURIComponent(snapshotId)}`, 'GET', undefined, this.#abort.signal);
+      return response.json() as Promise<NotesResponse>;
+    },
+    enable: async () => { await this.#notesPost('/enable', {}); },
+    disable: async () => { await this.#notesPost('/disable', {}); },
+    create: async (body: NoteCreateBody) => { await this.#notesPost('', body); },
+    edit: async (noteId: string, body: NoteEditBody) => { await this.#notesPost(`/${this.#noteId(noteId)}`, body); },
+    remove: async (noteId: string, revision: number) => { await this.#notesPost(`/${this.#noteId(noteId)}/delete`, { revision }); },
+    clear: async () => { await this.#notesPost('/clear', {}); },
+  };
+
+  #noteId(noteId: string): string {
+    if (!/^[0-9a-f]{32}$/.test(noteId)) throw new ProjectApiError(404, 'note-not-found');
+    return noteId;
+  }
+
+  async #notesPost(path: string, body: unknown): Promise<void> {
+    await this.#connection.request(`/api/projects/${this.#id}/notes${path}`, 'POST', body, this.#abort.signal);
+  }
+  // --- end project notes hook ---
 
   async loadGraph(): Promise<DependencyGraph> {
     const result = await this.#connection.request(`/api/projects/${this.#id}/graph`, 'GET', undefined, this.#abort.signal);

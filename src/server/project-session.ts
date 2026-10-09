@@ -3,6 +3,8 @@ import type { WorkspaceSnapshot } from '../shared/contracts.js';
 import type { FileResponse, GraphResponse, ProjectStatus } from '../shared/project-api.js';
 import { ANALYSIS_KEY, extractDependencies } from '../shared/extractor.js';
 import { InputError, LocalInputAdapter } from './local-input.js';
+import { defaultLocalStore, type LocalStore } from './local-store.js';
+import { ProjectNotes } from './project-notes.js';
 
 export class ApiError extends Error {
   constructor(readonly status: number, readonly code: string) { super(code); }
@@ -25,10 +27,24 @@ export class ProjectSession {
   #indexing: AbortController | null = null;
   readonly #streams = new Set<AbortController>();
 
-  constructor(input: LocalInputAdapter | null, label: string) {
+  // --- Project notes hook (phase 1) ---
+  // Notes stay off until a notes route enables them; constructing the store touches no disk.
+  // Tests pass their own LocalStore (or null); production uses the platform data directory.
+  readonly #notes: ProjectNotes | null;
+
+  constructor(input: LocalInputAdapter | null, label: string, notesStore: LocalStore | null = defaultLocalStore()) {
     this.#input = input;
     this.#label = label;
+    this.#notes = input === null || notesStore === null ? null : new ProjectNotes(notesStore, input.storageIdentity());
   }
+
+  // Same authority as the graph: this project, not revoked, and confirmed/indexed.
+  notes(id: string): ProjectNotes {
+    this.current(id);
+    if (this.#notes === null) throw new ApiError(404, 'notes-unavailable');
+    return this.#notes;
+  }
+  // --- end project notes hook ---
 
   // Used once by the launcher, never sent by an HTTP response or logged.
   launchUrl(development: boolean): string {

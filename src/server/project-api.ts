@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { ExplainRequestBody } from '../shared/explanation.js';
 import type { ExplanationService } from './explain/index.js';
 import { ApiError, ProjectSession } from './project-session.js';
+import { NotesError, routeNotes } from './project-notes.js';
 
 const MAX_BODY = 8_192;
 const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -71,6 +72,20 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
     if (method === 'GET' && pathname === '/api/session' && query === undefined) {
       json(response, 200, { project: session.descriptor() }); return;
     }
+    // --- Project notes hook (phase 1): its own route table behind the same auth, Origin,
+    // JSON and body-cap checks; errors become the same sanitized { error: { code } }.
+    const notesRoute = /^\/api\/projects\/([0-9a-f-]{36})\/notes((?:\/[0-9a-z-]+){0,2})$/.exec(pathname ?? '');
+    if (notesRoute !== null) {
+      const id = notesRoute[1]!;
+      try {
+        json(response, 200, await routeNotes({
+          method, path: notesRoute[2]!, query, body: () => body(request), notes: session.notes(id),
+          snapshot: (snapshotId) => session.current(id, snapshotId).snapshot,
+        }));
+      } catch (error) { throw error instanceof NotesError ? new ApiError(error.status, error.code) : error; }
+      return;
+    }
+    // --- end project notes hook ---
     const route = /^\/api\/projects\/([0-9a-f-]{36})\/(confirm|graph|files\/([0-9a-f-]{36})|refresh|close|explanations)$/.exec(pathname ?? '');
     if (route === null) throw new ApiError(404, 'not-found');
     const id = route[1]!;

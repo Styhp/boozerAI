@@ -1,0 +1,28 @@
+/* Project notes (phase 1). Uses the dark theme tokens from style.css. */
+.notes { margin: 0.5rem 0 0.75rem; padding: 0.5rem; border: 1px solid var(--line); border-radius: 6px; }
+.notes h3 { font-size: 0.85rem; margin: 0 0 0.25rem; }
+.notes p { margin: 0.3rem 0; }
+.notes button { background: #2f3a32; border: 1px solid var(--accent); border-radius: 4px; padding: 0.1rem 0.6rem; cursor: pointer; }
+.notes button.secondary { background: none; border-color: var(--line); }
+.notes button.danger { background: #33231f; border-color: var(--error); color: var(--error); }
+.notes button.link { background: none; border: 0; padding: 0; color: var(--accent); }
+.notes button:disabled { opacity: 0.5; cursor: default; }
+.note-list { list-style: none; margin: 0.4rem 0; padding: 0; }
+.note { border-top: 1px solid var(--line); padding: 0.4rem 0; }
+.note-meta { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: baseline; }
+.note-range { color: var(--muted); }
+.note-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; }
+.badge.note-status.status-current { color: var(--accent); }
+.badge.note-status.status-moved, .badge.note-status.status-stale { color: var(--warn); }
+.badge.note-status.status-missing { color: var(--error); }
+.note-current { font-size: 0.72rem; background: #111312; padding: 0.4rem; overflow: auto; white-space: pre-wrap; max-height: 12rem; margin: 0.2rem 0; }
+.note-form { display: grid; gap: 0.25rem; margin: 0.5rem 0; }
+.note-form select, .note-form textarea, .note-form input[type="number"] {
+  background: #111312; color: inherit; border: 1px solid var(--line); border-radius: 4px; padding: 0.2rem 0.4rem; font: inherit;
+}
+.note-form textarea { resize: vertical; min-height: 3.5rem; }
+.note-form input[type="number"] { width: 5rem; }
+.note-lines { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+.note-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.25rem; }
+.note-folder { border-top: 1px solid var(--line); padding-top: 0.4rem; }
+.note-unlinked summary { cursor: pointer; color: var(--accent); font-size: 0.8rem; }

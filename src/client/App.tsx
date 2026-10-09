@@ -100,7 +100,7 @@ export function App({ project }: { project: ProjectSource | null }) {
       <div className="workspace">
         <GraphList graph={graphState.graph} selection={selection} onSelect={setSelection} />
         <MapCanvas layout={layout!} selection={selection} filter={filter} onFilter={setFilter} onSelect={setSelection} />
-        <DetailPane graph={graphState.graph} selection={selection} source={source} onSelect={setSelection}
+        <DetailPane graph={graphState.graph} selection={selection} source={source} onSelect={setSelection} notes={project.notes}
           explanation={selection?.kind === 'file' ? {
             state: explanations.get(selection.path) ?? { status: 'idle' },
             onExplain: () => { void explain(selection.path); },

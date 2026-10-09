@@ -1,5 +1,6 @@
 import type { DependencyGraph, FilePath } from '../../shared/contracts';
 import type { CloudPreview, CloudStatus, ExplainRequestBody, ExplanationEvent } from '../../shared/explanation';
+import type { NoteCreateBody, NoteEditBody, NotesResponse } from '../../shared/notes';
 import type { LoadedSource } from '../map/model';
 
 // The map screen reads everything through this interface. The M2/M3 API integration
@@ -19,6 +20,19 @@ export interface ProjectSource {
     status(): Promise<CloudStatus>;
     preview(body: ExplainRequestBody): Promise<CloudPreview>;
   };
+  // Optional project notes (phase 1), present only with a project server. Failures reject
+  // with an error carrying a sanitized `code`.
+  readonly notes?: NotesSource;
+}
+
+export interface NotesSource {
+  list(snapshotId: string): Promise<NotesResponse>;
+  enable(): Promise<void>;
+  disable(): Promise<void>;
+  create(body: NoteCreateBody): Promise<void>;
+  edit(noteId: string, body: NoteEditBody): Promise<void>;
+  remove(noteId: string, revision: number): Promise<void>;
+  clear(): Promise<void>;
 }
 
 export async function sha256Hex(text: string): Promise<string> {

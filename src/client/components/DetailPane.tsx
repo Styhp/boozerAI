@@ -4,6 +4,8 @@ import type { CloudPreview, CloudStatus } from '../../shared/explanation';
 import { CloudComparePanel } from './CloudComparePanel';
 import { ExplanationPanel, type ExplanationState } from './ExplanationPanel';
 import { ImpactPanel } from './ImpactPanel';
+import { NotesPanel } from './NotesPanel';
+import type { NotesSource } from '../data/project-source';
 import { describeTarget, findEdge, findFile, referenceState, sourceLines, type Selection, type SourceState } from '../map/model';
 
 function EvidenceLink({ edge, onSelect }: { edge: DependencyEdge; onSelect: (s: Selection) => void }) {
@@ -49,12 +51,14 @@ export interface ExplanationControls {
   } | undefined;
 }
 
-export function DetailPane({ graph, selection, source, onSelect, explanation }: {
+export function DetailPane({ graph, selection, source, onSelect, explanation, notes }: {
   graph: DependencyGraph;
   selection: Selection | null;
   source: SourceState;
   onSelect: (selection: Selection) => void;
   explanation?: ExplanationControls | undefined;
+  // Project notes (phase 1); absent for the fixture preview.
+  notes?: NotesSource | undefined;
 }) {
   if (selection === null) {
     return <aside className="detail" data-state="empty"><p className="muted">Select a file or relationship to inspect its source.</p></aside>;
@@ -117,6 +121,7 @@ export function DetailPane({ graph, selection, source, onSelect, explanation }: 
           onPreview={explanation.cloud.onPreview} onSend={explanation.cloud.onSend} onCancel={explanation.cloud.onCancel} onSelect={onSelect} />
       )}
       {selection.kind === 'file' && <ImpactPanel key={file.path} graph={graph} path={file.path} onSelect={onSelect} />}
+      {selection.kind === 'file' && notes !== undefined && <NotesPanel key={file.path} notes={notes} graph={graph} path={file.path} onSelect={onSelect} />}
     </header>
   );
 

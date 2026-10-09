@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { constants, type BigIntStats, type Dirent } from 'node:fs';
 import { lstat, open, opendir, realpath } from 'node:fs/promises';
-import { basename, extname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
+import { basename, dirname, extname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import type { FileSkip, Language, SnapshotFile, SnapshotLimits, WorkspaceSnapshot } from '../shared/contracts.js';
 
 export const DEFAULT_SNAPSHOT_LIMITS: SnapshotLimits = Object.freeze({
@@ -88,6 +88,33 @@ function confinedPath(root: string, path: string): string {
   return absolute;
 }
 
+// --- Project notes hook (phase 1): helpers for storageIdentity() ---
+export interface StorageIdentity {
+  readonly key: string;
+  overlaps(directory: string): Promise<boolean>;
+}
+
+function contains(parent: string, child: string): boolean {
+  const rel = relative(parent, child);
+  return rel === '' || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`));
+}
+
+async function canonicalPath(directory: string): Promise<string> {
+  let existing = resolve(directory);
+  const missing: string[] = [];
+  for (;;) {
+    try {
+      return join(await realpath(existing), ...missing.reverse());
+    } catch (error) {
+      const parent = dirname(existing);
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || parent === existing) throw error;
+      missing.push(basename(existing));
+      existing = parent;
+    }
+  }
+}
+// --- end project notes hook helpers ---
+
 /** Server-only authority for one explicitly selected folder; never loads target code. */
 export class LocalInputAdapter {
   readonly #projectId = randomUUID();
@@ -124,6 +151,24 @@ export class LocalInputAdapter {
       throw new InputError('invalid-selection');
     }
   }
+
+  // --- Project notes hook (phase 1) ---
+  // Notes get a storage key and an overlap test, never the root itself: the root stays in
+  // this adapter and is not logged or sent anywhere. `overlaps` compares canonical real paths
+  // (nearest existing ancestor for a not-yet-created directory) in both directions, and on
+  // case-insensitive platforms compares case-insensitively so it can only refuse more.
+  storageIdentity(): StorageIdentity {
+    const root = this.#root;
+    return Object.freeze({
+      key: hash(`boozer-notes-v1\0${root}`),
+      overlaps: async (directory: string) => {
+        const target = await canonicalPath(directory);
+        const fold = (path: string) => (process.platform === 'darwin' || process.platform === 'win32' ? path.toLowerCase() : path);
+        return contains(fold(root), fold(target)) || contains(fold(target), fold(root));
+      },
+    });
+  }
+  // --- end project notes hook ---
 
   confirm(projectId: string): void {
     this.#authorize(projectId, false);
