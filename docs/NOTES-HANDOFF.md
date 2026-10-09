@@ -1,6 +1,6 @@
 # Project notes, phase 1: handoff
 
-Branch `feat/project-notes`. It was created from local `main`, which was already at `04ddf4f` (`93d300d` plus the docs-only P-17 line in PRODUCT.md). Current `main` (`34a9288`, the P-16 cloud transport in `7dc92cd`) was then merged in, in merge commit `c0ab37a`, so `git diff main` shows only notes changes. Built by one Claude Code session (Agent B, implementer) on 2026-10-09, about 21:32–22:30 UTC+8. Under P-17 it merges only after independent review and a passing full suite by 05:00 UTC+8. Nothing here is on `main`.
+Branch `feat/project-notes`. It was created from local `main`, which was already at `04ddf4f` (`93d300d` plus the docs-only P-17 line in PRODUCT.md). Current `main` (`34a9288`, the P-16 cloud transport in `7dc92cd`) was then merged in, in merge commit `c0ab37a`. A later docs-only `main` commit (`f14bf31`, P16 handoff wording) was merged the same way. So `git diff main` at push time shows only notes changes. Typecheck, the full suite (261 passed) and the build were rerun after each merge. Built by one Claude Code session (Agent B, implementer) on 2026-10-09, about 21:32–22:30 UTC+8. Under P-17 it merges only after independent review and a passing full suite by 05:00 UTC+8. Nothing here is on `main`.
 
 **Status:** built and agent-verified. The typecheck, the full suite (also run with networking denied) and the build pass. Human browser check: **not run**. Independent review: **not done**.
 
