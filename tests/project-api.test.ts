@@ -15,6 +15,7 @@ import { handleProjectApi } from '../src/server/project-api.js';
 import { InputError, LocalInputAdapter } from '../src/server/local-input.js';
 import { ProjectSession } from '../src/server/project-session.js';
 import { projectArgument } from '../src/server/launcher.js';
+import { FolderPickerError, type FolderPicker } from '../src/server/folder-picker.js';
 import { HttpProjectSource, ProjectConnection, takeCapability } from '../src/client/data/http-project-source';
 
 // In-process HTTP streams and a labeled service double; no sockets or model calls.
@@ -48,14 +49,14 @@ function cloudService(key = '') {
   const engine = createExplanationService(local, createOpenAIAdapter({ apiKey: key, fetch: cloudFetch }));
   return { engine, local, cloudFetch };
 }
-async function fixture(engine = service()) {
+async function fixture(engine = service(), picker?: FolderPicker, empty = false) {
   const root = await mkdtemp(join(await realpath(tmpdir()), 'boozer-api-'));
   roots.push(root);
   await writeFile(join(root, 'main.ts'), "import './dep';\n// inert target text\n");
   await writeFile(join(root, 'dep.ts'), 'export const value = 1;\n');
   await writeFile(join(root, 'credentials.ts'), 'DO NOT READ THIS FILE');
   const input = await LocalInputAdapter.select(root);
-  const session = new ProjectSession(input, 'Inert test project');
+  const session = new ProjectSession(empty ? null : input, 'Inert test project', undefined, picker);
   sessions.push(session);
   const capability = new URLSearchParams(new URL(session.launchUrl(false)).hash.slice(1)).get('cap')!;
   const id = input.projectId;
@@ -75,6 +76,94 @@ afterEach(async () => {
   sessions.splice(0).forEach((session) => session.close());
   vi.restoreAllMocks();
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
+
+describe('M2 native folder selection route', () => {
+  it('requires token, Origin, JSON and an empty POST before invoking the dialog', async () => {
+    const picker = vi.fn(async () => null);
+    const f = await fixture(service(), picker, true);
+    const path = '/api/session/pick';
+    expect((await f.call(path, 'POST', {}, { authorization: undefined })).statusCode).toBe(401);
+    expect((await f.call(path, 'POST', {}, { origin: 'https://foreign.example' })).statusCode).toBe(403);
+    expect((await f.call(path, 'POST', {}, { origin: undefined })).statusCode).toBe(403);
+    expect((await f.call(path, 'POST', {}, { 'content-type': 'text/plain' })).statusCode).toBe(415);
+    expect((await f.call(path, 'GET')).statusCode).toBe(405);
+    expect((await f.call(path + '?root=/etc', 'POST', {})).statusCode).toBe(400);
+    for (const payload of [{ root: f.root }, { path: '/etc' }, { command: 'inert' }, '{']) {
+      expect((await f.call(path, 'POST', payload)).statusCode).toBe(400);
+    }
+    expect((await f.call(path, 'POST', { ignored: 'x'.repeat(9000) })).statusCode).toBe(413);
+    expect(picker).not.toHaveBeenCalled();
+    expect((await f.call(path, 'POST', {})).json).toEqual({ status: 'cancelled' });
+    expect(picker).toHaveBeenCalledOnce();
+  });
+  it('selects only the dialog result and waits for confirmation before reading source', async () => {
+    const picker = vi.fn(async (): Promise<string | null> => null);
+    const f = await fixture(service(), picker, true);
+    picker.mockResolvedValue(f.root);
+    const snapshots = vi.spyOn(LocalInputAdapter.prototype, 'snapshot');
+    const result = await f.call('/api/session/pick', 'POST', {});
+    expect(result.statusCode).toBe(200);
+    expect(result.json).toMatchObject({ status: 'selected', project: { state: 'selected' } });
+    expect(result.text).not.toContain(f.root);
+    expect(result.text).not.toContain(f.capability);
+    expect(snapshots).not.toHaveBeenCalled();
+    const base = `/api/projects/${result.json.project.id}`;
+    expect((await f.call(base + '/graph')).statusCode).toBe(409);
+    expect((await f.call(base + '/confirm', 'POST', {})).json.graph.files.map((file: { path: string }) => file.path)).toEqual(['dep.ts', 'main.ts']);
+    expect(snapshots).toHaveBeenCalledOnce();
+    expect((await f.call('/api/session')).json.project.state).toBe('ready');
+  });
+  it('closes the old input, snapshot, notes and streams when choosing another folder', async () => {
+    const picker = vi.fn(async (): Promise<string | null> => null);
+    const f = await fixture(service(), picker);
+    const old = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const stream = f.session.beginChat(f.id, old.graph.snapshotId, new AbortController().signal);
+    const oldNotes = f.session.notes(f.id);
+    const close = vi.spyOn(f.input, 'close');
+    picker.mockResolvedValue(f.root);
+    const chosen = (await f.call('/api/session/pick', 'POST', {})).json;
+    expect(stream.signal.aborted).toBe(true);
+    expect(close).toHaveBeenCalledOnce();
+    expect((await f.call('graph')).statusCode).toBe(404);
+    expect((await f.call('notes?snapshotId=' + old.graph.snapshotId)).statusCode).toBe(404);
+    expect(chosen.project.id).not.toBe(f.id);
+    const base = `/api/projects/${chosen.project.id}`;
+    const next = (await f.call(base + '/confirm', 'POST', {})).json as GraphResponse;
+    expect(f.session.notes(next.projectId)).not.toBe(oldNotes);
+    expect(next.files.map((file) => file.id)).not.toEqual(old.files.map((file) => file.id));
+    await f.call(base + '/close', 'POST', {});
+    expect((await f.call('/api/session/pick', 'POST', {})).statusCode).toBe(401);
+    expect(picker).toHaveBeenCalledOnce();
+  });
+  it('serializes dialog requests and discards late selections on disconnect or shutdown', async () => {
+    for (const end of ['disconnect', 'shutdown']) {
+      let finish!: (folder: string) => void;
+      const picker = vi.fn((_signal: AbortSignal) => new Promise<string>((resolve) => { finish = resolve; }));
+      const f = await fixture(service(), picker, true);
+      const pending = f.request('/api/session/pick', 'POST', {});
+      await vi.waitFor(() => expect(picker).toHaveBeenCalledOnce());
+      expect((await f.call('/api/session/pick', 'POST', {})).json).toEqual({ error: { code: 'picker-busy' } });
+      if (end === 'disconnect') pending.res.emit('close'); else f.session.close();
+      expect(picker.mock.calls[0]![0].aborted).toBe(true);
+      finish(f.root); await pending.done;
+      expect(f.session.descriptor()).toBeNull();
+    }
+  });
+  it('returns sanitized picker failures and allows a new attempt after cancellation', async () => {
+    const picker = vi.fn(async (): Promise<string | null> => null);
+    const f = await fixture(service(), picker, true);
+    for (const code of ['picker-unavailable', 'picker-timeout'] as const) {
+      picker.mockRejectedValueOnce(new FolderPickerError(code));
+      expect((await f.call('/api/session/pick', 'POST', {})).json).toEqual({ error: { code } });
+    }
+    picker.mockRejectedValueOnce(new Error('/private/failure'));
+    expect((await f.call('/api/session/pick', 'POST', {})).json).toEqual({ error: { code: 'picker-failed' } });
+    expect((await f.call('/api/session/pick', 'POST', {})).json).toEqual({ status: 'cancelled' });
+    expect(f.session.descriptor()).toBeNull();
+    picker.mockResolvedValueOnce(f.root);
+    expect((await f.call('/api/session/pick', 'POST', {})).json.status).toBe('selected');
+  });
 });
 
 describe('M2 launch and project authority', () => {

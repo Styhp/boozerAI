@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-09T22:06:21.564Z",
+  "records": [
+    {
+      "check": "No-project launch shows Choose folder",
+      "passed": true
+    },
+    {
+      "check": "Choosing state appears immediately",
+      "passed": true
+    },
+    {
+      "check": "Native cancel returns to start",
+      "passed": true
+    },
+    {
+      "check": "Native selection requires confirmation",
+      "passed": true
+    },
+    {
+      "check": "Confirmed folder opens real workspace",
+      "passed": true
+    },
+    {
+      "check": "Reload restores selected project",
+      "passed": true
+    },
+    {
+      "check": "Open another folder closes old project on cancel",
+      "passed": true
+    },
+    {
+      "check": "Previous project is no longer readable",
+      "passed": true
+    },
+    {
+      "check": "Folder can be selected again without server restart",
+      "passed": true
+    },
+    {
+      "check": "New selection has a fresh project ID",
+      "passed": true
+    }
+  ]
+}

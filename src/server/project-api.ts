@@ -74,6 +74,12 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
     if (method === 'GET' && pathname === '/api/session' && query === undefined) {
       json(response, 200, { project: session.descriptor(), cloud: service.cloudStatus() }); return;
     }
+    if (pathname === '/api/session/pick') {
+      if (method !== 'POST') throw new ApiError(405, 'method-not-allowed');
+      if (query !== undefined) throw new ApiError(400, 'invalid-query');
+      fields(await body(request), []);
+      json(response, 200, await session.chooseFolder(controller.signal)); return;
+    }
     // --- Project notes hook (phase 1): its own route table behind the same auth, Origin,
     // JSON and body-cap checks; errors become the same sanitized { error: { code } }.
     const notesRoute = /^\/api\/projects\/([0-9a-f-]{36})\/notes((?:\/[0-9a-z-]+){0,2})$/.exec(pathname ?? '');

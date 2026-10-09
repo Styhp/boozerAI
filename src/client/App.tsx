@@ -14,10 +14,11 @@ type GraphState =
   | { status: 'loaded'; graph: DependencyGraph; readAt: Date }
   | { status: 'failed'; message: string };
 
-export function App({ project, onRefresh, onClose }: {
+export function App({ project, onRefresh, onClose, onOpenAnother }: {
   project: ProjectSource | null;
   onRefresh?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
+  onOpenAnother?: (() => void) | undefined;
 }) {
   const [graphState, setGraphState] = useState<GraphState>({ status: 'loading' });
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -97,7 +98,7 @@ export function App({ project, onRefresh, onClose }: {
   return (
     <Workspace graph={graphState.graph} label={project.label} isPreview={project.isPreview} readAt={graphState.readAt}
       selection={selection} onSelection={setSelection} source={source} notes={project.notes} cloudSends={cloudSends}
-      onRefresh={onRefresh} onClose={onClose} chat={chat}
+      onRefresh={onRefresh} onClose={onClose} onOpenAnother={onOpenAnother} chat={chat}
       explanation={selection?.kind === 'file' ? {
         state: explanations.get(selection.path) ?? { status: 'idle' },
         onExplain: () => { void explain(selection.path); },

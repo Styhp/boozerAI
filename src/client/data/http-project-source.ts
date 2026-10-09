@@ -1,7 +1,7 @@
 import type { DependencyGraph } from '../../shared/contracts';
 import type { CloudPreview, CloudStatus, ExplanationEvent, ExplainRequestBody } from '../../shared/explanation';
 import type { NoteCreateBody, NoteEditBody, NotesResponse } from '../../shared/notes';
-import type { FileResponse, GraphResponse, SessionResponse } from '../../shared/project-api';
+import type { FileResponse, FolderSelectionResponse, GraphResponse, SessionResponse } from '../../shared/project-api';
 import { readExplanationEvents } from './explanation-stream';
 import { sha256Hex, type NotesSource, type ProjectSource } from './project-source';
 import { isRepoChatRequest, type RepoChatRequest } from '../../shared/repo-chat';
@@ -94,6 +94,12 @@ export class ProjectConnection {
     return { ...session, response };
   }
   async confirm(id: string): Promise<GraphResponse> { return (await this.request(`/api/projects/${id}/confirm`, 'POST', {})).json() as Promise<GraphResponse>; }
+  async chooseFolder(signal: AbortSignal): Promise<FolderSelectionResponse> {
+    const result = await (await this.request('/api/session/pick', 'POST', {}, signal)).json() as FolderSelectionResponse;
+    if (this.#revoked) throw new ProjectApiError(401, 'revoked');
+    if (signal.aborted) throw new ProjectApiError(409, 'cancelled');
+    return result;
+  }
   async refresh(id: string, snapshotId: string): Promise<GraphResponse> { return (await this.request(`/api/projects/${id}/refresh`, 'POST', { snapshotId })).json() as Promise<GraphResponse>; }
   async close(id: string): Promise<void> {
     try { await this.request(`/api/projects/${id}/close`, 'POST', {}); }

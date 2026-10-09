@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-09T22:07:52.594697+00:00",
+  "pid": 122137,
+  "command": [
+    "Node 24.16.0",
+    "dist/server/index.js"
+  ],
+  "processExitCode": null,
+  "curlExitCode": 0,
+  "httpStatus": "200",
+  "log": "Boozer AI: http://127.0.0.1:4173\n"
+}

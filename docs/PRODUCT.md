@@ -16,7 +16,7 @@ Primary users are developers joining unfamiliar codebases and developers reviewi
 
 ## Core journey (planned)
 
-1. Select a local project explicitly at launch; later, import a public GitHub archive.
+1. Start Boozer, click **Choose folder**, then confirm the chosen local project before it is read. **Open another folder** switches projects without a server restart. CLI preselection remains available; later, import a public GitHub archive.
 2. Open the dashboard and inspect indexing status, file counts, and limitations.
 3. Navigate the canvas or accessible list; select a file or dependency to open its source in the detail pane.
 4. Request a local explanation with visible snippets and clickable references.

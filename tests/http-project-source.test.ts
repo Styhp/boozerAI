@@ -25,6 +25,30 @@ const preview: CloudPreview = {
 };
 
 describe('M2 browser capability and HTTP ProjectSource', () => {
+  it('opens the native picker with an authenticated empty body and no browser path', async () => {
+    const result = { status: 'selected', project: { id, label: 'Chosen folder', state: 'selected' } };
+    const transport = vi.fn(async (_url: string, _init: RequestInit) => json(result));
+    const signal = new AbortController().signal;
+    expect(await new ProjectConnection('c'.repeat(64), transport).chooseFolder(signal)).toEqual(result);
+    expect(transport).toHaveBeenCalledWith('/api/session/pick', expect.objectContaining({
+      method: 'POST', body: '{}', signal, headers: { Authorization: `Bearer ${'c'.repeat(64)}`, 'Content-Type': 'application/json' },
+    }));
+  });
+  it('discards picker results after cancellation or launch revocation, including delayed JSON', async () => {
+    for (const action of ['abort', 'close']) {
+      let finish!: (value: unknown) => void;
+      const transport = vi.fn(async (url: string) => url === '/api/session/pick'
+        ? { ok: true, json: () => new Promise((resolve) => { finish = resolve; }) } as Response
+        : json({ closed: true }));
+      const connection = new ProjectConnection('c'.repeat(64), transport);
+      const controller = new AbortController();
+      const pending = connection.chooseFolder(controller.signal);
+      await vi.waitFor(() => expect(finish).toBeDefined());
+      if (action === 'abort') controller.abort(); else await connection.close(id);
+      finish({ status: 'selected', project: { id, label: 'Late', state: 'selected' } });
+      await expect(pending).rejects.toMatchObject({ code: action === 'abort' ? 'cancelled' : 'revoked' });
+    }
+  });
   it('sends bounded questions/history through authenticated chat without source or cloud fields', async () => {
     const event = { type: 'error', code: 'no-excerpt', message: 'Labeled chat double.' };
     const transport = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify(event) + '\n', { headers: { 'Content-Type': 'application/x-ndjson' } }));

@@ -22,7 +22,7 @@ const AUTO_COLLAPSE_BELOW = 1360;
 // summary (Overview) or DetailPane until S3. Above the 300-node cap the graph area keeps C4's
 // list-first MapCanvas with its folder filter (SPEC §5.9).
 export function Workspace({ graph, label, isPreview, readAt, selection, onSelection, source, explanation, notes, chat,
-  cloudSends, onRefresh, onClose }: {
+  cloudSends, onRefresh, onClose, onOpenAnother }: {
   graph: DependencyGraph;
   label: string;
   isPreview: boolean;
@@ -36,6 +36,7 @@ export function Workspace({ graph, label, isPreview, readAt, selection, onSelect
   cloudSends: number;
   onRefresh?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
+  onOpenAnother?: (() => void) | undefined;
 }) {
   const [sideOpen, setSideOpen] = useState(true);
   const [side, setSide] = useState<SideMode>('files');
@@ -97,6 +98,7 @@ export function Workspace({ graph, label, isPreview, readAt, selection, onSelect
         <button type="button" className="ws-icon-btn" title="Toggle file tree" aria-label="Toggle file tree"
           onClick={() => setSideOpen((was) => !was)}><Icon name="files" /></button>
         <div className="ws-viewhead-title"><b>{label}</b> · read {formatReadTime(readAt)}</div>
+        {onOpenAnother && <button type="button" className="bz-btn" onClick={onOpenAnother}>Open another folder</button>}
       </div>
       {layout === null
         ? <GraphView graph={graph} selectedPath={current} externalHoverId={hoverId} filters={filters} onFiltersChange={setFilters}

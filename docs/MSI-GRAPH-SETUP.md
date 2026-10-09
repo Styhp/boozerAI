@@ -33,14 +33,14 @@ Run these commands only in the trusted Boozer app checkout, never in a repositor
 npm ci --ignore-scripts
 npm test
 npm run build
-npm start -- --project .
+npm start
 ```
 
-`npm ci` installs the existing locked app dependencies, including Linux-specific build packages; no dependency was added for chat. The default tests run offline without a model. Build includes both typechecks. The launcher opens the local browser; confirm the selected folder if prompted. When asked to inspect a different repository, supply that folder to `--project` instead of `.`.
+`npm ci` installs the existing locked app dependencies, including Linux-specific build packages; no dependency was added for chat. The default tests run offline without a model. Build includes both typechecks. The launcher opens the local browser at **Choose folder**. Select Boozer's repo (or another local project) in the system dialog, then click **Read this folder**. The existing `npm start -- --project .` shortcut still works. Linux uses the already-installed zenity; no new download is required on this MSI.
 
 Check these behaviors in the new launch tab:
 
-1. The graph opens and **Details / Chat Boozer** appear above the right pane.
+1. **Choose folder** opens the system dialog; Cancel returns to the start screen. Choose a folder and confirm: the graph opens and **Details / Chat Boozer** appear above the right pane. **Open another folder** in the graph header returns to folder selection without relaunching.
 2. Select a file, open Chat Boozer and ask about a named function. **Thinking…** appears before answer text, then **Replying…** while text streams. Local replies can be slow; Cancel remains available.
 3. **Code the AI was shown** starts closed. Expand it to check the actual excerpts, open a source link, and return to the retained conversation. Checked links do not prove answer correctness.
 4. Reload the browser: the analyzed project reconnects while the server stays running. Chat history resets on reload. Restarting the server requires its fresh launch tab.
@@ -48,3 +48,5 @@ Check these behaviors in the new launch tab:
 Local chat needs no API key. The Mac's private `.env` is excluded from Git. Optional OpenAI comparison is available only if separately configured on MSI and explicitly previewed/sent; no cloud request is needed for this setup.
 
 Independent review and MSI browser/offline/recording checks remain separate from the Mac test/build evidence. Keep the known model-grounding and injection limitations in the existing handoffs visible.
+
+M2-PICK MSI author verification: 375 offline tests and build pass; installed Chromium plus the actual zenity dialog passed selection, cancel, confirmation, graph load, reload and switching. See [folder-picker handoff](M2-PICK-HANDOFF.md). Independent review and human acceptance remain open.

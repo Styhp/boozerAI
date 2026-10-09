@@ -11,6 +11,9 @@ export interface SessionResponse {
   readonly project: ProjectStatus | null;
   readonly cloud: CloudStatus;
 }
+export type FolderSelectionResponse =
+  | { readonly status: 'selected'; readonly project: ProjectStatus }
+  | { readonly status: 'cancelled' };
 export interface GraphResponse {
   readonly projectId: string;
   readonly label: string;

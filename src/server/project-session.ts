@@ -1,10 +1,12 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { basename } from 'node:path';
 import type { WorkspaceSnapshot } from '../shared/contracts.js';
-import type { FileResponse, GraphResponse, ProjectStatus } from '../shared/project-api.js';
+import type { FileResponse, FolderSelectionResponse, GraphResponse, ProjectStatus } from '../shared/project-api.js';
 import { ANALYSIS_KEY, extractDependencies } from '../shared/extractor.js';
 import { InputError, LocalInputAdapter } from './local-input.js';
 import { defaultLocalStore, type LocalStore } from './local-store.js';
 import { ProjectNotes } from './project-notes.js';
+import { FolderPickerError, pickFolder, type FolderPicker } from './folder-picker.js';
 
 export class ApiError extends Error {
   constructor(readonly status: number, readonly code: string) { super(code); }
@@ -16,11 +18,14 @@ interface Indexed {
   readonly files: ReadonlyMap<string, FileResponse>;
 }
 
-/** One launch owns one root, one capability and one current snapshot. */
+/** One launch owns one capability and at most one selected root/current snapshot. */
 export class ProjectSession {
   readonly #capability = randomBytes(32).toString('hex');
-  readonly #input: LocalInputAdapter | null;
-  readonly #label: string;
+  #input: LocalInputAdapter | null;
+  #label: string;
+  #picking: AbortController | null = null;
+  readonly #picker: FolderPicker;
+  readonly #notesStore: LocalStore | null;
   #revoked = false;
   #state: ProjectStatus['state'] = 'selected';
   #current: Indexed | null = null;
@@ -30,11 +35,13 @@ export class ProjectSession {
   // --- Project notes hook (phase 1) ---
   // Notes stay off until a notes route enables them; constructing the store touches no disk.
   // Tests pass their own LocalStore (or null); production uses the platform data directory.
-  readonly #notes: ProjectNotes | null;
+  #notes: ProjectNotes | null;
 
-  constructor(input: LocalInputAdapter | null, label: string, notesStore: LocalStore | null = defaultLocalStore()) {
+  constructor(input: LocalInputAdapter | null, label: string, notesStore: LocalStore | null = defaultLocalStore(), picker: FolderPicker = pickFolder) {
     this.#input = input;
     this.#label = label;
+    this.#notesStore = notesStore;
+    this.#picker = picker;
     this.#notes = input === null || notesStore === null ? null : new ProjectNotes(notesStore, input.storageIdentity());
   }
 
@@ -60,6 +67,35 @@ export class ProjectSession {
 
   descriptor(): ProjectStatus | null {
     return this.#input === null ? null : { id: this.#input.projectId, label: this.#label, state: this.#state };
+  }
+
+  async chooseFolder(signal: AbortSignal): Promise<FolderSelectionResponse> {
+    if (this.#revoked) throw new ApiError(401, 'revoked');
+    if (signal.aborted) throw new ApiError(409, 'cancelled');
+    if (this.#picking !== null || this.#indexing !== null) throw new ApiError(409, 'picker-busy');
+    const controller = new AbortController();
+    this.#picking = controller;
+    const combined = AbortSignal.any([signal, controller.signal]);
+    // Retire all authority over the previous root before the host asks for a new one.
+    this.#clearProject();
+    try {
+      const folder = await this.#picker(combined);
+      if (combined.aborted || this.#revoked) throw new ApiError(409, 'cancelled');
+      if (folder === null) return { status: 'cancelled' };
+      const input = await LocalInputAdapter.select(folder);
+      if (combined.aborted || this.#revoked) { input.close(); throw new ApiError(409, 'cancelled'); }
+      this.#input = input;
+      this.#label = basename(folder) || 'Selected folder';
+      this.#notes = this.#notesStore === null ? null : new ProjectNotes(this.#notesStore, input.storageIdentity());
+      return { status: 'selected', project: this.descriptor()! };
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      if (error instanceof FolderPickerError) {
+        throw new ApiError(error.code === 'picker-busy' ? 409 : error.code === 'picker-unavailable' ? 503 : 400, error.code);
+      }
+      if (error instanceof InputError) throw new ApiError(422, error.code);
+      throw new ApiError(500, 'picker-failed');
+    } finally { this.#picking = null; }
   }
 
   #project(id: string): LocalInputAdapter {
@@ -136,11 +172,19 @@ export class ProjectSession {
   }
 
   #cancelStreams(): void { for (const stream of this.#streams) stream.abort(); this.#streams.clear(); }
-  close(): void {
-    this.#revoked = true;
+  #clearProject(): void {
     this.#indexing?.abort();
     this.#cancelStreams();
     this.#current = null;
     this.#input?.close();
+    this.#input = null;
+    this.#notes = null;
+    this.#label = '';
+    this.#state = 'selected';
+  }
+  close(): void {
+    this.#revoked = true;
+    this.#picking?.abort();
+    this.#clearProject();
   }
 }
