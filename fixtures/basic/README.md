@@ -50,7 +50,7 @@ Totals: 14 entries found, 12 parsed, 2 skipped. 22 import candidates: 16 resolve
 These follow ARCHITECTURE.md "Data interfaces — C1 v1" and the extraction rules. They're recorded here so the reviewer can check them:
 
 1. **Evidence range** is the enclosing statement, from its first to its last token, excluding leading comments. For `require()` and `import()` calls, it's the innermost enclosing statement. Every call candidate here sits on a single line, so the call and its statement give the same lines.
-2. **Excluded:** a relative specifier is `excluded` only when no supported candidate matches under the resolution order and the exact specifier path is a skipped inventory entry. The target carries that entry's path and skip reason.
+2. **Excluded (amended by reviewed C8, 2026-10-09):** inspect exact, extension, `.js`→`.ts`/`.tsx`, and directory-index candidates in the documented order. The first candidate present in either source entries or skip inventory produces `file` or `excluded`; an exclusion carries that actual candidate's path and skip reason. A later supported file does not hide an earlier known exclusion. This replaces the original exact-specifier-only interpretation; no source or hand-written oracle field changed.
 3. **Parse error:** a file with any TypeScript syntax diagnostic. The graph keeps its node and records the skip, but it contributes no import candidates.
 4. **Built-ins** here use the unambiguous `node:` prefix only.
 5. **Shadowed `require`:** a call whose callee resolves to a local binding (parameter, variable or function named `require`) is still a recognized candidate. It gets an edge with `ambiguous-require` and never a file target.

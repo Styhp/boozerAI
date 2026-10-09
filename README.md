@@ -4,9 +4,9 @@ Boozer AI is a codebase intelligence project for developers who need to understa
 
 ## Status
 
-**Scaffold approved; M2's server-only local snapshot foundation is ready for independent review.** The static React shell, loopback Node server, shared contracts and offline tests run locally. The input adapter selects/confirms a folder and builds a bounded immutable snapshot; launcher/UI/API integration is pending. The hand-written fixture/oracle is approved for 1.4. Parser, map, impact and explanation features remain pending. Proposal review 0.2 approved scaffolding; the human lead authorized 1.1 and this M2 foundation on 2026-10-09.
+**Parser and local snapshot foundation independently approved; application project wiring is pending.** The input adapter builds bounded immutable snapshots, and the pure parser/resolver produces the reviewed graph contract. C5, C7 and C8 are independently resolved. Agent B's dev map/impact screen uses a labeled fixture preview; production has no project connected. Launcher, authenticated APIs and real-project UI integration are pending, as are application explanations and browser/MSI verification. Status and evidence are in [TASKS.md](docs/TASKS.md).
 
-The product capabilities below describe planned behavior; the Development section describes the scaffold.
+The product capabilities below are delivery targets; Development describes the current code and its pending integration.
 
 ## What it is meant to do
 
@@ -21,7 +21,7 @@ Input: local-folder snapshot code exists server-side; the application input flow
 
 ## Full roadmap and delivery
 
-The roadmap retains a dashboard, parser, graph canvas, detail pane, graph calculations, navigation rail and insights, ingestion pipeline, framework adapters, CommonJS and Express support, explanations with caching and tracing, evaluations, a read-only agent, landing page, and local folder and GitHub input. [PRODUCT.md](docs/PRODUCT.md) separates delivery phases from permanent safety exclusions. These user-facing features remain pending.
+The roadmap retains a dashboard, parser, graph canvas, detail pane, graph calculations, navigation rail and insights, ingestion pipeline, framework adapters, CommonJS and Express support, explanations with caching and tracing, evaluations, a read-only agent, landing page, and local folder and GitHub input. [PRODUCT.md](docs/PRODUCT.md) separates phases from safety exclusions. Snapshots/parser and the fixture-preview map/impact code exist; project wiring and later features remain pending.
 
 The proposed first delivery is a small offline vertical slice: fixture and selected local folder → parsed map → inspection → local explanation → potential impact. JEV and OpenAI remain optional secondary cloud integrations. LangSmith is optional and off by default; local evaluation needs no cloud account. The full roadmap is not a promise to finish the tutorial before the deadline.
 
@@ -31,7 +31,7 @@ Agent A (Codex) proposes TypeScript on Node.js 24 LTS, a loopback web server, Re
 
 Claude Code approved the scaffold in 1.2; fixture and UI work may proceed under their recorded ownership and input-review gates. C1 coverage/impact shapes live in `src/shared/contracts.ts`; C4 specifies original layered layout and list-first navigation above 300 nodes in ARCHITECTURE.md. Dependencies are pinned and disclosed in SUBMISSION.md. Runtime/model setup is recorded separately; no inference is performed by this scaffold.
 
-Development targets the Intel Mac: macOS 15.7.7, i5-8500B, 32 GB RAM. The possible MSI demo machine is Ryzen 5, 16 GB RAM, RX 5500, ParrotOS. MSI testing is required before relying on it for **either recorded or live demos**. GPU acceleration and local-model performance remain unverified.
+Development targets the Intel Mac: macOS 15.7.7, i5-8500B, 32 GB RAM. The possible MSI demo machine is Ryzen 5, 16 GB RAM, RX 5500, ParrotOS. MSI testing is required before relying on it for **either recorded or live demos**. GPU acceleration/MSI performance remain unverified. Agent B's Mac model measurements and disclosed injection failure are in [BENCHMARKS.md](docs/BENCHMARKS.md), awaiting independent review.
 
 ## Development
 
@@ -45,15 +45,15 @@ npm run build
 npm start
 ```
 
-Open `http://127.0.0.1:4173`. The only current screen says project analysis is not available yet. Stop with Ctrl-C. The production static server accepts only Host `127.0.0.1:4173` and Origin `http://127.0.0.1:4173` (or no Origin), and has no APIs. Full token/project authorization is M2 work; this shell is not permission to expose target source.
+Open `http://127.0.0.1:4173`. Production currently shows "No project connected". Stop with Ctrl-C. The static server accepts only Host `127.0.0.1:4173` and Origin `http://127.0.0.1:4173` (or no Origin), and has no project APIs. Full token/project authorization is still M2 work.
 
 For development, run `npm run dev` and open `http://127.0.0.1:5173`. It performs the initial build, starts Vite plus the loopback Node host at 4173, and watches server code. Ports are fixed and an occupied port fails visibly. Vite uses local assets and loopback HMR. Its watched Node child, `scripts/dev-host.mjs`, explicitly permits the additional exact Origin `http://127.0.0.1:5173`; the Host check stays `127.0.0.1:4173`. The production entry never reads an environment variable or CLI flag to enable this Origin. This is a development server; future project APIs still require M2 authorization.
 
 `npm test` is the model-free default suite; its setup rejects socket/fetch calls. `npm run test:model` is the separate real-model suite in `tests/model/`. It needs the local Ollama server on `127.0.0.1:11434` with `qwen3:4b-instruct` installed, and fails loudly without them. It never downloads anything or substitutes a fake answer. It currently **fails** its injection check: the model echoes the fixture's canary token (see [docs/BENCHMARKS.md](docs/BENCHMARKS.md)). `BOOZER_BENCHMARK=1 npm run test:model` also runs the multi-minute 1.6 benchmark.
 
-Shared types live in [src/shared/contracts.ts](src/shared/contracts.ts); server/client entry points are `src/server/index.ts` and `src/client/main.tsx`. Source fixtures and a hand-written oracle belong at `fixtures/basic/` in 1.3 after review 1.2. Do not execute fixtures. There are no parser/model/storage stubs or cloud SDKs. See [dependency inventory](docs/DEPENDENCIES.json) for locked package versions/licenses, including platform-optional packages.
+Shared types live in [src/shared/contracts.ts](src/shared/contracts.ts); server/client entry points are `src/server/index.ts` and `src/client/main.tsx`. The approved hand-written fixture/oracle is at `fixtures/basic/`; do not execute it. The pure [extractor](src/shared/extractor.ts) and [resolver](src/shared/resolver.ts) consume only supplied snapshots. There are no parser/model/storage stubs or cloud SDKs. See [dependency inventory](docs/DEPENDENCIES.json) for locked package versions/licenses, including platform-optional packages.
 
-M2's [LocalInputAdapter](src/server/local-input.ts) is callable from server code or a plain script: `select(folder)`, `confirm(projectId)`, then `snapshot(projectId, { analysisKey })`; `close()` revokes further operations. `analysisKey` must identify the caller's parser/resolver version and configuration. The default limits are 2,000 supported source candidates, 1 MiB per file and 20 MiB read total, with metadata bounds of 20,000 entries and 64 directory levels. Callers may lower the source limits. Caps/cancellation fail with sanitized codes and return no partial snapshot. Source is retained only in memory, never executed or written into the selected root. This module is awaiting independent review and is not wired to the launcher or browser; parser integration waits for reviewed 1.4.
+M2's [LocalInputAdapter](src/server/local-input.ts) is callable from server code or a plain script: `select(folder)`, `confirm(projectId)`, then `snapshot(projectId, { analysisKey: ANALYSIS_KEY })`; pass the result directly to `extractDependencies`. `ANALYSIS_KEY` and `extractDependencies` are exported by the [extractor module](src/shared/extractor.ts). `close()` revokes further operations. Defaults: 2,000 supported source candidates, 1 MiB per file, 20 MiB read total, 20,000 metadata entries and 64 directory levels; callers may lower the source limits. Known oversize files and every case-colliding sibling become counted skips before reads/traversal. Whole-run file-count/total-byte/entry/depth caps, cancellation and detected mid-read growth abort with sanitized codes and no partial result. Source stays in memory, is never executed or written, and graph evidence shares its snapshot ID. Both modules and C7/C8 corrections are independently approved; launcher/browser integration remains pending.
 
 ## Documentation
 

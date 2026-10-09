@@ -32,7 +32,7 @@ Future owners below are proposed assignments, not evidence that work has started
 | 0.2 | Independent proposal review | Claude Code (Agent B) | 0.1 | Proposed S-choices, roadmap, safety contracts, schedule | Done: Approved for 1.1 with conditions C1–C4 (2026-10-09) |
 | 0.3 | Agent working rules and project skills | Claude Code | Human lead request, 2026-10-09 | AGENTS.md, CLAUDE.md, `.agents/skills/`, `.claude/skills/` | Done: Approved by Codex; C6 skill correction rechecked at `0b41795` |
 | 0.3-R | Independent review of Claude-authored 0.3 | Codex (this session) | 0.3 handoff; human request | Review skill, rules, P-12/P-13 and reserved ScoreProvider | Done: Approved after C6 recheck |
-| 1.1 | Scaffold/configuration | Codex (Agent A, this session) | 0.2 Approved + human start approval | Shared types, server/client/test entry points | Done: Approved in 1.2 at `4718e27`; condition C5 open for M2/M3 |
+| 1.1 | Scaffold/configuration | Codex (Agent A, this session) | 0.2 Approved + human start approval | Shared types, server/client/test entry points | Done: Approved in 1.2 at `4718e27`; C5 independently resolved |
 | 1.2 | Independent scaffold review | Claude Code (review chat) | 1.1 | Rerun scaffold gates; record accepted stack | Done: Approved with condition C5 (2026-10-09); 1.3, 1.5 and 1.6 may start |
 | 1.1-C5 | Dev-proxy Origin correction | Codex (this session) | 1.2 condition C5; human request | Dev launcher → Node Origin policy; production remains strict | Done: rechecked and Approved by Claude Code (review chat), 2026-10-09; see docs/reviews/2026-10-09-c5-and-m2-foundation.md |
 | 1.3 | Original fixture and hand-written graph | Claude Code (Agent B chat) | 1.2 Approved | Snapshot/graph schemas; Codex reviews oracle | Done: independently Approved by Codex at pinned review artifact `af671e8` |
@@ -300,18 +300,20 @@ Snapshot root `fixtures/basic/src/` (14 entries); answer key `fixtures/basic/exp
 
 ### 1.4 Verified dependency extraction
 
-Claimed by Codex (Agent A, this session) on 2026-10-09 after independently approving 1.3. Scope: pure snapshot-only parser/resolver and their tests, with matching contract/status documentation. This turn stops at the claim requested by the human lead: no parser code, target execution or extractor output was created. The reviewed hand-written oracle remains unchanged.
+Claimed by Codex (Agent A, this session) on 2026-10-09 after independently approving 1.3; the original claim stopped before implementation. The human lead subsequently requested completion before C7. Implemented at `576a605` and independently reviewed by Claude at `9576e50`; S-4 Accepted. C8 was fixed at `c3fbbfb` and independently rechecked Approved. Scope: pure snapshot-only parser/resolver, offline tests and matching contracts/status docs. Full author evidence: [1.4 handoff](1.4-HANDOFF.md). No target execution; hand-written oracle unchanged.
+
+Correction scope: Codex completed C7 after 1.4, then fixed the newly received C8 review at the same pre-wiring gate. Shared docs were kept separate during Agent B's 1.6/1.5/M4 edits and updated once those handoffs were committed. Scope addendum before editing 1.3's area: update **only interpretation 2** in `fixtures/basic/README.md` by hand for the reviewed C8 rule; source and oracle bytes remain unchanged. Current reports: [C7](C7-HANDOFF.md), [C8](C8-HANDOFF.md); Claude's independent rechecks are recorded in the review log below.
 
 Acceptance:
 
-- [ ] The extractor's output for the fixture equals the expected graph. The test fails on any missing or extra edge.
-- [ ] Every edge's evidence line contains its specifier text (automated check).
-- [ ] Unresolved, excluded and non-literal imports appear with C1 reason codes and matching coverage issue records. File/import counting invariants, parse-error/skip outcomes and zero-denominator presentation are verified. None are dropped or guessed.
-- [ ] Imports inside comments and strings produce no edges.
-- [ ] The extractor reads target files as text only, and the tripwire never fires. Code review confirms there is no `require`, `import`, or `eval` of target files.
-- [ ] The output is deterministic: two runs over identical input/configuration produce identical graph JSON, including stable snapshot identity; timestamps remain outside the deterministic graph.
-- [ ] It runs on Boozer AI's own source without crashing, with file count, edge count, and time recorded.
-- [ ] The expected graph was not regenerated from extractor output to make the test pass.
+- [x] The extractor's output for the fixture equals the expected graph. The test fails on any missing or extra edge. (`tests/extractor.test.ts`: full deep equality after identity/determinism guards; 13 nodes / 22 edges; Claude independently reran.)
+- [x] Every edge's evidence line contains its specifier text (automated check). (Source path/hash/range checks and multiline `report.ts#1` lines 1–4.)
+- [x] Unresolved, excluded and non-literal imports appear with C1 reason codes and matching coverage issue records. File/import counting invariants, parse-error/skip outcomes and zero-denominator presentation are verified. None are dropped or guessed. (Fixture and hand-written cases; `coverageRates` returns null at zero. C8 candidate exclusions fixed and independently rechecked Approved.)
+- [x] Imports inside comments and strings produce no edges. (Fixture text/comment cases and read-only tripwire test.)
+- [x] The extractor reads target files as text only, and the tripwire never fires. Code review confirms there is no `require`, `import`, or `eval` of target files. (Pure supplied-text AST; Claude boundary review Pass; no compiler host or target loading.)
+- [x] The output is deterministic: two runs over identical input/configuration produce identical graph JSON, including stable snapshot identity; timestamps remain outside the deterministic graph. (Repeated extraction, permutation/timestamp mutation, snapshot/evidence guards and frozen copies.)
+- [x] It runs on Boozer AI's own source without crashing, with file count, edge count, and time recorded. (Author smoke: 34 nodes / 81 edges, snapshot 91 ms / extraction 93 ms; machine/version/date/limitations in 1.4-HANDOFF.md. Claude independently confirmed 34/81 and later 49/144 with intervening UI/M4 additions.)
+- [x] The expected graph was not regenerated from extractor output to make the test pass. (Source/oracle byte-for-byte against `58bb47e`; oracle SHA-256 remains `c0260fe70a4c127452098542b7326193681327e26a8a32cfb6313fa21f15c554`.)
 
 ### 1.5 Clickable graph and file inspector
 
@@ -371,7 +373,7 @@ Acceptance:
 
 **Dependency change and scope claim (human lead, 2026-10-09):** local-folder input and snapshot production may start against `src/shared/contracts.ts` without waiting for 1.4 or 1.5. Codex (this session) owns server-only selection/confirmation and read-only snapshot code, offline tests, and matching README.md/ARCHITECTURE.md/TASKS.md status and contract documentation. Integrate with the independently reviewed parser when 1.4 lands, and with 1.5's UI afterward. Authenticated browser routes still wait for C5's independent recheck. No parser, UI, model, persistence or package changes are part of this first slice. Scope addendum: update PRODUCT.md's opening status only, which still incorrectly says the scaffold awaits 1.2; product decisions are unchanged.
 
-Foundation status: **In review**, with 21 input cases and read-only fixture/own-repo smoke evidence in the handoff below. Original end-to-end checks remain separate; source hashes alone do not prove browser stale-reference handling.
+Foundation status: **Approved**, with C5/C7/C8 independently resolved. C7 is implemented at `22ba446` and C8 at `c3fbbfb`; both were rechecked by Claude. Source/graph integration is verified through native tests/plain scripts. Launcher, authenticated/token-protected APIs and UI wiring are pending. Current author reports: [C7](C7-HANDOFF.md), [C8](C8-HANDOFF.md); the initial handoff below is historical. Original end-to-end checks remain separate; hashes alone do not prove browser stale-reference handling.
 
 - [ ] A user explicitly selects a permitted local root through the launcher, confirms it in the UI, and indexes within documented caps; the app never writes into it.
 - [ ] Browser APIs expose opaque project/file IDs only; other roots, unselected IDs and revoked sessions are rejected.
@@ -382,7 +384,7 @@ Foundation status: **In review**, with 21 input cases and read-only fixture/own-
 - [x] `node_modules`, `.git`, and build output are ignored by default. Size and file-count caps are documented and enforced. (M2 foundation native exclusion/source-cap tests plus own-repo snapshot; metadata flood is a labeled enumeration simulation. See handoff.)
 - [ ] Symlinks, nested symlinks, absolute/`..` escapes and case collisions are rejected (tests); config and tripwire files are never executed.
 - [ ] **[Hardening]** Detected file-replacement races are rejected (tests).
-- [x] Secret-file exclusions, binary/oversize handling and cancellation are verified without logging sensitive content. (M2 foundation tests use inert temporary targets; unreadable secret filenames are excluded before opening, NUL/invalid UTF-8 are skipped, caps/cancellation return sanitized errors and no partial result.)
+- [x] Secret-file exclusions, binary/oversize handling and cancellation are verified without logging sensitive content. (C7/C8 tests: secret and known-oversize paths are not opened; binary/oversize/case-collision skips are counted and resolve to excluded candidates. Exact 1 MiB is accepted; mid-read growth/cancellation and whole-run caps abort without partial results. Supersedes the original oversize-abort evidence flagged by C7; corrections independently Approved.)
 - [ ] **[Hardening]** Known-secret snippet rejection/redaction based on file content.
 - [ ] Boozer AI's own repo opens and renders, with the time recorded.
 
@@ -690,6 +692,16 @@ Commands and results:
 - Network-denied `vite build` to the scratchpad: exit 0.
 
 Not verified: clicks in a real browser (human check above), and impact on Boozer's own repo through the real parser, which waits on Codex's M2 API wiring.
+
+### 1.4 / C7 / C8 final author handoff — Codex (Agent A, this session), 2026-10-09
+
+**Status: 1.4 Done; M2 snapshot foundation Approved; application integration remains In progress.** Implemented 1.4 first (`576a605`), then C7 (`22ba446`) and the newly reviewed C8 (`c3fbbfb`). Claude independently accepted 1.4/S-4 and rechecked both corrections Approved (`849367a`); the review log below records those verdicts. No self-review or human acceptance check was added.
+
+Changed implementation: pure extractor/resolver, bounded input exclusions and offline tests; final docs align README.md, PRODUCT.md's opening status, ARCHITECTURE.md, this task file, the three reports and only interpretation 2 in the fixture README. Fixture source/oracle bytes remain unchanged. Details and earlier failures: [1.4 handoff](1.4-HANDOFF.md), [C7 handoff](C7-HANDOFF.md), [C8 handoff](C8-HANDOFF.md).
+
+Verification: clean `c3fbbfb` checkout **6 files / 96 offline tests** and full build pass; native standalone probe **4 found / 1 source / 3 skips**, **3 excluded / 0 failed**. Final shared workspace **9 files / 124 offline tests**, both typechecks and full build pass (180 client modules; existing React Flow directive warning), including another session's concurrent M3 work, which is not reviewed here. The earlier test-helper typing/build failure and concurrent M4 UI import failure are preserved in the reports with successful reruns. Fixture comparison, final 18-file/68-link Markdown check and `git diff --check` pass.
+
+Pending: launcher, capability-token/project APIs, real-project UI and stale-reference handling, human browser/MSI checks, native case-collision proof and the disclosed non-blocking review notes. Other contributors' model/UI/M4/M3 work was preserved; no model inference, cloud call, new dependency, publication or push by this session.
 
 ## Review log
 
