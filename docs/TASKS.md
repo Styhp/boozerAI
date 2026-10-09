@@ -8,7 +8,7 @@ Codex is Agent A (scaffold/parser/ingestion/integration); Claude Code is Agent B
 
 | Task | Owner | Status |
 |---|---|---|
-| DOCS-PUBLIC: streamline GitHub documentation | Codex (public-docs session, 2026-10-10) | In progress: cleanup verified; incoming MSI-only evidence preserved; commit/push verification remains |
+| DOCS-PUBLIC: streamline GitHub documentation | Codex (public-docs session, 2026-10-10) | Done: essential docs published to `origin/feat/graph-workspace` at `0d6b602`; tests/build pass, archives preserved and app reviews unchanged |
 | Parser/resolver, local input/authenticated APIs, baseline explanation engine and impact | Original Codex/Claude owners, individually recorded in the historical register | Independently reviewed baseline; model injection failures remain disclosed |
 | UX-P18: plain-language explanation/UI pass | Claude Code | Pending Codex review; MSI needs current-prompt rerun |
 | UX-G1: graph tokens and workspace shell | Claude Code | Implemented at `1885ed0`; human browser acceptance pending |
@@ -35,7 +35,7 @@ Scope: README, core public documentation, current-phase orientation in AGENTS.md
 - [x] Agent: verify the local archive against its SHA-256 manifest and the original Git tree.
 - [x] Agent: validate links against the staged tree, fences, dependency inventory and whitespace; verify archived runtime-independent documentation is absent from the latest tree.
 - [x] Agent: run the complete offline suite and build from an exported staged source tree, without private `.env` or local archives.
-- [ ] Agent: commit the explicit owned paths and push to the existing remote graph branch; verify its exact SHA.
+- [x] Agent: commit the explicit owned paths and push to the existing remote graph branch; verify its exact SHA.
 - [ ] Human: verify the current graph/chat revision on MSI using MSI-GRAPH-SETUP.md; Mac checks do not satisfy this requirement.
 
 ## DOCS-PUBLIC author handoff
@@ -46,4 +46,4 @@ Verification: exported the staged tree without `.env`, local archives or removed
 
 The remote advanced with a documentation-only MSI continuation during cleanup. Fast-forwarded to `e12a04a`, preserved its raw records/history and summarized its measured terminal/launch evidence. Source equality against the tested export confirms no app change; no redundant model or app test rerun is claimed. Preparatory checks hit unmatched shell globs, a mistaken archive-count assertion and a JSON list/mapping mismatch; targeted/list-aware reads corrected them. The assertion stopped before mutation. No test/build failure occurred.
 
-Commit and authorized push are the remaining publication step. No repository visibility change, history rewrite, model/runtime install, cloud send or external post. Independent app review, claim correctness, MSI browser/chat/model acceptance, offline/recorder rehearsal and submission receipt remain open.
+Cleanup commit **`0d6b602ea0a003023d8eefecafc9a50845ceaa6b`**, parent **`e12a04aca9e39a38d65c0cf60939ae90b9076aea`**, was pushed to the existing `origin/feat/graph-workspace` branch; `git ls-remote` verified the exact SHA. This following commit records completion in TASKS.md only. The working tree was clean after the cleanup commit. No repository visibility change, history rewrite, model/runtime install, cloud send or external post. Independent app review, claim correctness, MSI browser/chat/model acceptance, offline/recorder rehearsal and submission receipt remain open.
