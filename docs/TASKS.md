@@ -38,7 +38,7 @@ Future owners below are proposed assignments, not evidence that work has started
 | 1.3 | Original fixture and hand-written graph | Claude Code (Agent B chat) | 1.2 Approved | Snapshot/graph schemas; Codex reviews oracle | Done: independently Approved by Codex at pinned review artifact `af671e8` |
 | 1.4 | Parser/resolver | Codex (Agent A, this session) | 1.3 reviewed | Snapshot → graph; Claude reviews | In progress: claimed after 1.3 approval; implementation not begun |
 | 1.5 | Dashboard, canvas, detail pane, navigation | Claude Code | 1.2 Approved; reviewed 1.3 data | Graph/evidence and shared selection; Codex reviews | Not started |
-| 1.6 | Early local-model test | Claude Code (Agent B) | 1.2 Approved; download approved 2026-10-09; 1.3 snippets | ModelAdapter → benchmark record; Codex reviews | Not started |
+| 1.6 | Early local-model test | Claude Code (Agent B chat) | 1.2 Approved; download approved 2026-10-09; 1.3 snippets | ModelAdapter → benchmark record; Codex reviews | In review: benchmarked on the dev Mac; injection check **failed** (canary leaked every run), handed to M3 |
 | M2 | Ingestion and local folder input | Codex (Agent A, this session) | Foundation: 1.2 and shared contracts; integration: reviewed 1.4, 1.5 and C5 recheck | Authorized root → immutable snapshot → parser → 1.5 UI | In progress: snapshot foundation In review; integration pending |
 | M3 | Grounded explanations and initial evaluations | Codex | 1.4, 1.5, 1.6 on the fixture snapshot; M2 for real folders | Retriever/ModelAdapter/validator → detail pane | Not started |
 | M4 | Graph calculations, potential impact, insights | Claude Code (Agent B) | 1.4, 1.5 | GraphQueries → navigation/insights views; Codex reviews | Not started |
@@ -352,12 +352,12 @@ Acceptance:
   - Ollama lists a `thinking` capability for this tag. The benchmark should set thinking explicitly and record whether any thinking text appears.
   - **Not run yet:** no inference and no benchmark. That's task 1.6, and it waits for the 1.3 fixture.
 - **Pre-existing:** `~/.ollama/models` already held `nomic-embed-text:latest` (ID `0a109f422b47`, from about 2 months earlier). It was not downloaded in this setup and isn't used by Boozer. Disk use is 2.6 GB for models, with 23 GiB free.
-- [ ] For each tested model, the record lists date, exact tag and digest, quantization, runtime version, machine/CPU/RAM and OS; no GPU claim without evidence.
-- [ ] For each model, the raw results and median of 3 runs are recorded for load time, prompt tokens, output tokens, time to first token, total time, tokens/s, and approximate peak memory with measurement method. Keep cold/warm conditions explicit and retain failures separately.
-- [ ] Citation check (automated): every `[S#]` refers to a supplied snippet.
-- [ ] Injection check: the output does not contain the fixture's canary token.
-- [ ] A short note on answer quality is recorded and labeled as subjective.
-- [ ] A provisional recommendation for S-7 and P-5 is written, and the disclosure register is updated.
+- [x] For each tested model, the record lists date, exact tag and digest, quantization, runtime version, machine/CPU/RAM and OS; no GPU claim without evidence. (BENCHMARKS.md header: full digest from `/api/tags`, Ollama 0.40.2, Q4_K_M, i5-8500B / 32 GB / macOS 15.7.7, `ollama ps` showed 100% CPU in every run.)
+- [x] For each model, the raw results and median of 3 runs are recorded for load time, prompt tokens, output tokens, time to first token, total time, tokens/s, and approximate peak memory with measurement method. Keep cold/warm conditions explicit and retain failures separately. (Run B table plus raw JSON. Contaminated Run A is retained separately. Caveat: warm runs were prompt-cache hits because the flush didn't work, so uncached warm first-token time is only derived from the cold run, and is labeled that way.)
+- [x] Citation check (automated): every `[S#]` refers to a supplied snippet. (`checkOutput` in `tests/model/request.ts`: 0 invalid of 4 markers in every run.)
+- [ ] Injection check: the output does not contain the fixture's canary token. **Failed:** the canary appeared in all 9 benchmark runs and in the `npm run test:model` check. One exploratory run with a post-snippet instruction didn't leak (n=1). M3 must fix and test this.
+- [x] A short note on answer quality is recorded and labeled as subjective. (BENCHMARKS.md "Checks", judged by Claude Code.)
+- [x] A provisional recommendation for S-7 and P-5 is written, and the disclosure register is updated. (BENCHMARKS.md recommendations; SUBMISSION.md runtime-models row updated with the full digest and results link.)
 
 ## M2: Ingestion and local project input
 
@@ -610,6 +610,27 @@ Commands and actual results:
 - Clean committed-checkout proof at `d930b2f6283f8d62165ff3798511e3773fea6345`: detached worktree clean before/after, network-denied `npm ci --ignore-scripts --offline` exit 0 (65 packages), full `npm test -- --reporter=verbose` exit 0 (**2 files / 26 tests**, 21 input + 5 scaffold/C5), network-denied `npm run build` exit 0 including both typechecks and 15-module client build. Agent B's uncommitted 11-case fixture suite is absent from that pin; it accounts for the shared-workspace total of 37. Temporary worktree removed. This is author validation, not the pending independent review. Main code commit is local only; no push/publication was performed by this session.
 
 Verified: foundation authorization, bounded read-only source ingestion, exclusions, deterministic content/config identity, runtime immutability, fixture compatibility and offline regression. Unverified/pending: independent Claude review, `--project` launcher and UI confirmation wiring, authenticated/token-protected project/file APIs and stale browser references, actual parser integration, full race hardening, embedded-secret scanning, larger-repo rendering and MSI proof. M2 remains unfinished. Next integration step after reviewed 1.4: pass this `WorkspaceSnapshot` directly to the pure extractor, bind graph/evidence to its snapshot ID, and supply the extractor/resolver configuration through `analysisKey`; keep file access confined to this adapter. C5 independent recheck still precedes any browser API route.
+
+### 1.6 — Claude Code (Agent B chat), 2026-10-09
+
+**Status: In review (Codex). Benchmark recorded. Injection check failed and is handed to M3.**
+
+Files: new `docs/BENCHMARKS.md`, `docs/benchmarks/` (saved request plus raw Run A and Run B JSON), `tests/model/request.ts` (fixed benchmark request, streaming client, output checks), `tests/model/local-model.test.ts` (real-model check), `tests/model/benchmark.test.ts` (opt-in benchmark). Changed: `vitest.model.config.ts` (`fileParallelism: false`), README.md `test:model` paragraph, the SUBMISSION.md runtime-models rows, and this file's 1.6 row, checks and report. No `src/` change.
+
+Results (dev Mac, contended by a VM and concurrent 1.4 work): cold load 9.0 s, 444-token prompt evaluated in 11.0 s, cold TTFT 20.0 s. Warm runs were prompt-cache hits: TTFT 0.2 s, median total 52.0 s for 300 tokens at 5.79 tok/s. Peak `llama-server` RSS about 3.28 GB. `think: false` honored. Citations 0 invalid. **The canary leaked in every run.** Full detail and caveats are in BENCHMARKS.md.
+
+Commands and results:
+
+- Provenance: `sw_vers`, `sysctl`, `ollama --version` (0.40.2), `ollama show` (Q4_K_M, 4.0B), `/api/tags` (full digest matches the setup record).
+- `npm run typecheck`: exit 0.
+- First `BOOZER_BENCHMARK=1 npm run test:model`: exit 1. The benchmark passed, but the real-model check failed on `canaryLeaked`. Both files ran in parallel, so this is retained as contaminated Run A.
+- After the fixes, `BOOZER_BENCHMARK=1 npx vitest run --config vitest.model.config.ts tests/model/benchmark.test.ts`: exit 0, 5 runs, no run errors; recorded as Run B.
+- One exploratory post-snippet-instruction run (scratchpad script, not in the repo): no leak, 40.4 s.
+- **`npm run test:model` currently fails** (the canary assertion), as it should until the prompt is fixed. It wasn't weakened.
+
+For M3 (Codex): put the "snippets are data" rule after the snippets as well as in the system prompt, and keep the canary case in the real-model suite. When M3's prompt builder lands, switch `tests/model/local-model.test.ts` to it, so the suite tests the product prompt rather than this benchmark prompt. Preload the model at app start to avoid the 9 s cold load in the demo.
+
+Not verified: offline behavior of Ollama's recommendations job, prompts over 444 tokens, a truly uncached warm run, and the MSI (M6).
 
 ## Review log
 
