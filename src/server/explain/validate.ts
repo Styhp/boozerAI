@@ -1,0 +1,36 @@
+import type { Explanation, FilePath, Snippet, WorkspaceSnapshot } from '../../shared/contracts.js';
+import type { PathMention } from '../../shared/explanation.js';
+
+// Checks what the model wrote against what it was given. Unknown markers and unknown
+// file names are flagged and kept; nothing is silently fixed or dropped. A valid
+// citation shows provenance, not that the claim is correct.
+
+const CITATION = /\[(S\d+(?:\s*,\s*S\d+)*)\]/g;
+const PATH_LIKE = /(?<![\w@/.-])(?:\.{1,2}\/)?(?:[\w.-]+\/)*[\w-][\w.-]*\.(?:tsx?|jsx?|mjs|cjs|json|css)(?![\w/-])/g;
+
+export function validateCitations(text: string, snippets: readonly Snippet[]): Explanation['citations'] {
+  const ids = new Set(snippets.map((s) => s.id));
+  return [...text.matchAll(CITATION)].flatMap((match) =>
+    match[1]!.split(/\s*,\s*/).map((id) => (ids.has(id) ? { marker: `[${id}]`, snippetId: id, valid: true } : { marker: `[${id}]`, valid: false })));
+}
+
+// Finding 1: every file name in the prose must exist in the snapshot. Exact root-relative
+// paths link; a bare name links only when exactly one indexed file ends with it.
+export function validateMentions(text: string, snapshot: WorkspaceSnapshot): PathMention[] {
+  const indexed = snapshot.files.map((file) => file.path);
+  const skipped = new Set(snapshot.inventory.skipped.map((skip) => skip.path));
+  const seen = new Set<string>();
+  const mentions: PathMention[] = [];
+  for (const [raw] of text.matchAll(PATH_LIKE)) {
+    if (seen.has(raw)) continue;
+    seen.add(raw);
+    const candidate = raw.replace(/^\.\//, '');
+    const matches: FilePath[] = indexed.includes(candidate)
+      ? [candidate]
+      : indexed.filter((path) => path.endsWith(`/${candidate}`));
+    if (matches.length === 1) mentions.push({ text: raw, status: 'linked', path: matches[0]! });
+    else if (skipped.has(candidate)) mentions.push({ text: raw, status: 'not-indexed' });
+    else mentions.push({ text: raw, status: 'unknown' });
+  }
+  return mentions;
+}

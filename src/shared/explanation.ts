@@ -1,0 +1,51 @@
+import type { Explanation, FilePath, Snippet } from './contracts.js';
+
+// M3 explanation wire types (P-15). Types only, so the browser can import them without
+// any server code. The route streams ExplanationEvent values as NDJSON: one JSON object
+// per line, Content-Type `application/x-ndjson`.
+
+export const PROMPT_VERSION = 'explain-v1';
+
+export type ExplanationErrorCode =
+  | 'invalid-selection'    // selected path is not a source file in this snapshot
+  | 'stale-snapshot'       // request/graph snapshot differs from the current snapshot
+  | 'runtime-unavailable'  // nothing answering on 127.0.0.1:11434
+  | 'model-missing'        // the approved tag is not installed
+  | 'model-mismatch'       // the tag is installed with a different digest
+  | 'timeout'
+  | 'cancelled'
+  | 'runtime-error';
+
+// How a file path written in the model's prose relates to the snapshot (finding 1).
+export interface PathMention {
+  readonly text: string;
+  readonly status: 'linked' | 'not-indexed' | 'unknown';
+  readonly path?: FilePath;   // set only when status is 'linked'
+}
+
+export interface ExplanationDetails {
+  readonly promptVersion: string;
+  readonly modelDigest: string;
+  readonly runtimeVersion: string;
+  readonly promptTokens: number | null;
+  readonly outputTokens: number | null;
+  readonly truncated: boolean;       // output hit the token cap
+  readonly thinkingSeen: boolean;    // thinking text appeared despite think: false
+  readonly mentions: readonly PathMention[];
+}
+
+export type ExplanationEvent =
+  | { readonly type: 'snippets'; readonly snippets: readonly Snippet[] }
+  | { readonly type: 'token'; readonly text: string }
+  | { readonly type: 'done'; readonly explanation: Explanation; readonly details: ExplanationDetails }
+  | { readonly type: 'error'; readonly code: ExplanationErrorCode; readonly message: string };
+
+// Body of POST /api/projects/:id/explanations.
+export interface ExplainRequestBody {
+  readonly snapshotId: string;
+  readonly path: FilePath;
+}
+
+export type RuntimeStatus =
+  | { readonly state: 'ready'; readonly runtimeVersion: string; readonly model: string; readonly digest: string }
+  | { readonly state: 'runtime-unavailable' | 'model-missing' | 'model-mismatch'; readonly message: string };
