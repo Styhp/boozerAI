@@ -3,7 +3,7 @@ import type { ExplainRequest, ExplanationService } from './index.js';
 import { ModelError, createOllamaAdapter, type ModelAdapter } from './model-adapter.js';
 import { buildPrompt } from './prompt.js';
 import { retrieveSnippets } from './retriever.js';
-import { validateCitations, validateMentions } from './validate.js';
+import { findInstructionLikeText, validateCitations, validateMentions } from './validate.js';
 
 // No cache in the demo tier (S-11/M8), so every answer is generated fresh.
 export function createExplanationService(adapter: ModelAdapter = createOllamaAdapter()): ExplanationService {
@@ -56,6 +56,7 @@ export function createExplanationService(adapter: ModelAdapter = createOllamaAda
                 truncated: chunk.truncated,
                 thinkingSeen,
                 mentions: validateMentions(text, snapshot),
+                suspectedInjections: findInstructionLikeText(snippets),
               },
             };
             return;

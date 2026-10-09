@@ -59,6 +59,7 @@ describe('explanation panel', () => {
       promptVersion: 'explain-v1', modelDigest: 'd', runtimeVersion: '0.40.2', promptTokens: 480, outputTokens: 120,
       truncated: false, thinkingSeen: false,
       mentions: [{ text: 'inventory.ts', status: 'linked', path: 'inventory.ts' }, { text: 'ghost.ts', status: 'unknown' }],
+      suspectedInjections: [],
     },
   };
 
@@ -78,6 +79,14 @@ describe('explanation panel', () => {
     expect(html).toContain('2 citations, 1 unknown (flagged with ?)');
     expect(html).toContain('File names not found as indexed source: ghost.ts');
     expect(html).toContain('does not prove the claim is correct');
+  });
+
+  it('warns where the sent code contains text addressed to AI tools, and stays quiet otherwise', () => {
+    expect(panel(done)).not.toContain('Possible prompt injection');
+    if (done.status !== 'done') throw new Error('fixture state');
+    const warned = panel({ ...done, details: { ...done.details, suspectedInjections: [{ snippetId: 'S1', file: 'pricing.ts', line: 5 }] } });
+    expect(warned).toContain('Possible prompt injection');
+    expect(warned).toContain('pricing.ts:5');
   });
 
   it('escapes everything outside the safe subset', () => {

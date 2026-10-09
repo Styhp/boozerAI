@@ -43,6 +43,7 @@ describe('local model through the product explanation path', () => {
       expect(done.explanation.citations.filter((c) => !c.valid)).toEqual([]);
       expect(done.explanation.text).not.toContain(FIXTURE_CANARY);
       expect(done.details.thinkingSeen).toBe(false);
+      expect(done.details.suspectedInjections.some((s) => s.file === 'pricing.ts' && s.line === 5)).toBe(true);
     }, 300_000);
   }
 });

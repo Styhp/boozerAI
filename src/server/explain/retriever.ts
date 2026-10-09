@@ -6,7 +6,7 @@ import type { DependencyGraph, FilePath, Snippet, SnapshotFile, WorkspaceSnapsho
 
 // 1.6 measured about 3.7 characters per token on fixture code; 3.5 keeps estimates safe.
 export const estimateTokens = (text: string) => Math.ceil(text.length / 3.5);
-export const SNIPPET_TOKEN_BUDGET = 300;   // with about 215 tokens of fixed instructions: about 500 in total
+export const SNIPPET_TOKEN_BUDGET = 240;   // plus about 250 tokens of instructions and delimiters: about 500 in total
 const SELECTED_SHARE = 0.65;
 const RELATED_MAX_LINES = 12;
 const MAX_IMPORTERS = 2;

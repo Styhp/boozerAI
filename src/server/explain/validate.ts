@@ -1,5 +1,5 @@
 import type { Explanation, FilePath, Snippet, WorkspaceSnapshot } from '../../shared/contracts.js';
-import type { PathMention } from '../../shared/explanation.js';
+import type { PathMention, SuspectedInjection } from '../../shared/explanation.js';
 
 // Checks what the model wrote against what it was given. Unknown markers and unknown
 // file names are flagged and kept; nothing is silently fixed or dropped. A valid
@@ -33,4 +33,22 @@ export function validateMentions(text: string, snapshot: WorkspaceSnapshot): Pat
     else mentions.push({ text: raw, status: 'unknown' });
   }
   return mentions;
+}
+
+// Visible warning, not a defense: snippet lines that look addressed to AI tools. 1.6/M3
+// showed the local model sometimes obeys such text despite the prompt rules, so the panel
+// tells the user where it is. The patterns were written after seeing the test phrasings;
+// absence of a warning does not mean a file is free of injected instructions.
+const INSTRUCTION_LIKE = [
+  /\b(ignore|disregard|forget)\b[^\n]{0,40}\b(previous|prior|above|earlier|all|instructions?|rules|snippets?)\b/i,
+  /\b(assistants?|AI|LLMs?|language models?|chatbots?)\b[^\n]{0,80}\b(reply|respond|output|print|append|start|end|say|write|include|repeat)\b/i,
+  /\byour (answer|reply|response|output|summary)\b/i,
+  /^\s*(?:\/\/|\/?\*+|#)?\s*(?:SYSTEM|ASSISTANT|USER)\s*:/i,
+];
+
+export function findInstructionLikeText(snippets: readonly Snippet[]): SuspectedInjection[] {
+  return snippets.flatMap((snippet) => snippet.text.split('\n').flatMap((text, i) =>
+    INSTRUCTION_LIKE.some((pattern) => pattern.test(text))
+      ? [{ snippetId: snippet.id, file: snippet.ref.file, line: snippet.ref.startLine + i }]
+      : []));
 }

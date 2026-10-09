@@ -119,6 +119,23 @@ export function ExplanationPanel({ path, state, onExplain, onCancel, onSelect }:
         </div>
       )}
 
+      {state.status === 'done' && state.details.suspectedInjections.length > 0 && (
+        <div className="notice warning" role="status">
+          <strong>Possible prompt injection.</strong> The code sent to the model contains text that looks addressed to AI
+          tools, and the model may have followed it. Check the answer against the source:{' '}
+          {state.details.suspectedInjections.map((s, i) => {
+            const snippet = snippets.find((candidate) => candidate.id === s.snippetId);
+            return (
+              <span key={`${s.snippetId}:${s.line}`}>
+                {i > 0 && ', '}
+                {snippet
+                  ? <button type="button" className="link" onClick={() => onSelect({ kind: 'range', ref: { ...snippet.ref, startLine: s.line, endLine: s.line }, returnTo: path })}>{s.file}:{s.line}</button>
+                  : `${s.file}:${s.line}`}
+              </span>
+            );
+          })}
+        </div>
+      )}
       {state.status === 'done' && (() => {
         const invalid = state.explanation.citations.filter((c) => !c.valid).length;
         const unknown = state.details.mentions.filter((m) => m.status !== 'linked');

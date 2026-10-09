@@ -5,7 +5,9 @@ import type { Explanation, FilePath, Snippet } from './contracts.js';
 // per line, Content-Type `application/x-ndjson`.
 
 // v1 (docs/benchmarks/m3-explain-v1-dev-mac.jsonl) had no word limit and hit the 300-token cap.
-export const PROMPT_VERSION = 'explain-v2';
+// v2 named "code words" in its post-snippet rule and missed a differently phrased injection
+// (docs/benchmarks/m3-injection-variants-v2-dev-mac.jsonl); v3 states the rule generically.
+export const PROMPT_VERSION = 'explain-v3';
 
 export type ExplanationErrorCode =
   | 'invalid-selection'    // selected path is not a source file in this snapshot
@@ -24,6 +26,13 @@ export interface PathMention {
   readonly path?: FilePath;   // set only when status is 'linked'
 }
 
+// A snippet line that looks addressed to AI tools (a warning, not proof of an attack).
+export interface SuspectedInjection {
+  readonly snippetId: string;
+  readonly file: FilePath;
+  readonly line: number;
+}
+
 export interface ExplanationDetails {
   readonly promptVersion: string;
   readonly modelDigest: string;
@@ -33,6 +42,7 @@ export interface ExplanationDetails {
   readonly truncated: boolean;       // output hit the token cap
   readonly thinkingSeen: boolean;    // thinking text appeared despite think: false
   readonly mentions: readonly PathMention[];
+  readonly suspectedInjections: readonly SuspectedInjection[];
 }
 
 export type ExplanationEvent =
