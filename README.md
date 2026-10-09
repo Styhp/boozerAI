@@ -1,12 +1,12 @@
 # Boozer AI
 
-Boozer AI is a planned codebase intelligence app for developers who need to understand unfamiliar or AI-generated JavaScript/TypeScript code. The design combines a parser-built dependency map with source inspection and on-device explanations that cite their input snippets.
+Boozer AI is a codebase intelligence project for developers who need to understand unfamiliar or AI-generated JavaScript/TypeScript code. The design combines a parser-built dependency map with source inspection and on-device explanations that cite their input snippets.
 
 ## Status
 
-**Documentation only.** There is no application code yet, nothing to install, and nothing to run. Install and run commands will be added here when the scaffold lands (task 1.1 in [docs/TASKS.md](docs/TASKS.md)).
+**Scaffold only, awaiting independent review 1.2.** The static React shell, loopback Node server, shared contracts and offline test entry run locally. No project ingestion, parser, map, impact or explanation feature is implemented. Proposal review 0.2 approved scaffolding; the human lead authorized 1.1 on 2026-10-09.
 
-Everything below describes planned behavior.
+The product capabilities below describe planned behavior; the Development section describes the scaffold.
 
 ## What it is meant to do
 
@@ -25,13 +25,33 @@ The roadmap retains a dashboard, parser, graph canvas, detail pane, graph calcul
 
 The proposed first delivery is a small offline vertical slice: fixture and selected local folder → parsed map → inspection → local explanation → potential impact. JEV and OpenAI remain optional secondary cloud integrations. LangSmith is optional and off by default; local evaluation needs no cloud account. The full roadmap is not a promise to finish the tutorial before the deadline.
 
-## Proposal awaiting review
+## Scaffold awaiting review
 
-Agent A (Codex) proposes TypeScript on Node.js 24 LTS, a loopback web server, React/Vite, React Flow, the TypeScript compiler parser, bounded local JSON storage, and Ollama over loopback. All stack choices remain **Proposed** in [ARCHITECTURE.md](docs/ARCHITECTURE.md). A project is explicitly selected at local launch; the browser receives a project ID, not unrestricted filesystem access.
+Agent A (Codex) proposes TypeScript on Node.js 24 LTS, a loopback web server, React/Vite, React Flow, the TypeScript compiler parser, bounded local JSON storage, and Ollama over loopback. All stack choices remain **Proposed** in [ARCHITECTURE.md](docs/ARCHITECTURE.md). The planned input contract selects a project explicitly at local launch; the browser will receive a project ID. The scaffold does not yet accept a project or expose file-reading APIs.
 
-Claude Code must independently review the documentation proposal (0.2) before the human lead authorizes scaffolding (1.1). Scaffold review (1.2) then gates feature work. Nothing has been installed or downloaded for this task.
+Claude Code independently reviews this scaffold in 1.2 before fixture or UI implementation starts. C1 coverage/impact shapes live in `src/shared/contracts.ts`; C4 specifies original layered layout and list-first navigation above 300 nodes in ARCHITECTURE.md. Dependencies are pinned and disclosed in SUBMISSION.md. Runtime/model setup is recorded separately; no inference is performed by this scaffold.
 
 Development targets the Intel Mac: macOS 15.7.7, i5-8500B, 32 GB RAM. The possible MSI demo machine is Ryzen 5, 16 GB RAM, RX 5500, ParrotOS. MSI testing is required before relying on it for **either recorded or live demos**. GPU acceleration and local-model performance remain unverified.
+
+## Development
+
+Use Node.js 24 LTS and npm 11 (verified here: Node 24.16.0, npm 11.13.0). Install dependencies in the **Boozer AI checkout only**, never in a project selected for analysis. Installation may download packages; application startup and default tests need no internet or model.
+
+```sh
+npm ci --ignore-scripts
+npm run typecheck
+npm test
+npm run build
+npm start
+```
+
+Open `http://127.0.0.1:4173`. The only current screen says project analysis is not available yet. Stop with Ctrl-C. The static server rejects other Host/Origin values and has no APIs. Full token/project authorization is M2 work; this shell is not permission to expose target source.
+
+For development, run `npm run dev` and open `http://127.0.0.1:5173`. It performs the initial build, starts Vite plus the loopback Node host at 4173, and watches server code. Ports are fixed and an occupied port fails visibly. Vite uses local assets and loopback HMR; it is a development server, not the future authorized project server.
+
+`npm test` is the model-free default suite; its setup rejects socket/fetch calls. `npm run test:model` is a separate entry for `tests/model/**/*.test.ts`, owned by 1.6; it currently exits nonzero because no real-model cases exist. It performs no inference or download. Never treat that absence as a successful benchmark.
+
+Shared types live in [src/shared/contracts.ts](src/shared/contracts.ts); server/client entry points are `src/server/index.ts` and `src/client/main.tsx`. Source fixtures and a hand-written oracle belong at `fixtures/basic/` in 1.3 after review 1.2. Do not execute fixtures. There are no parser/model/storage stubs or cloud SDKs. See [dependency inventory](docs/DEPENDENCIES.json) for locked package versions/licenses, including platform-optional packages.
 
 ## Documentation
 

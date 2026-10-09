@@ -1,6 +1,6 @@
 # Architecture (proposed)
 
-**Status:** proposal only; nothing here is implemented. All S-choices are **Proposed** for Claude Code review in task 0.2 before scaffolding. Human authorization then gates 1.1; independent scaffold review 1.2 must confirm the choices and implementation before feature work. See [TASKS.md](TASKS.md).
+**Status:** scaffold in progress under human-authorized 1.1. Proposal review 0.2 approved scaffolding with conditions; C1/C4 are specified below and in the shared types for review 1.2. All S-choices remain **Proposed** until their independent gates. Only the package, static server/client shell and contracts exist; analysis features remain planned. See [TASKS.md](TASKS.md).
 
 ## Principles
 
@@ -50,72 +50,31 @@ DependencyGraph (read-only once built)
 | Read-only agent (later) | Orchestrate bounded snapshot lookup, text search and graph queries | Separate allowlisted tool interface; no shell, writes, external network or edge mutation |
 | Landing page (later) | Explain actual capabilities and link to app entry | Original local assets; no analytics; publishing separately approved |
 
-## Data interfaces (sketch)
+## Data interfaces — C1 v1
 
-```ts
-// Provisional. Paths are POSIX, relative to the target root. Lines are 1-based and inclusive.
-type FilePath = string;
+The canonical, serializable TypeScript shapes are in [src/shared/contracts.ts](../src/shared/contracts.ts). Producers and consumers import these types rather than defining substitutes. This is the first concrete version; no fixture or parser output existed before it. Agent B writes `fixtures/basic/expected-graph.json` by hand against `DependencyGraph`, including coverage, after 1.2 approval. The fixture snapshot harness belongs to 1.3; no fixture directory is populated by 1.1.
 
-interface EvidenceRef {
-  snapshotId: string;
-  file: FilePath;
-  startLine: number;
-  endLine: number;
-  contentHash: string;          // hash of the file content when the ref was made
-}
+| Shape | Contract |
+|---|---|
+| `WorkspaceSnapshot` | Server-only source text plus hashes, languages, byte sizes, limits, inventory and creation time. `inventory.found = files.length + inventory.skipped.length`. No `parse-error` skips until extraction. |
+| `FileNode` | A snapshot source entry with `parse.status` `ok` or `error`. A parse-error node remains inspectable, emits no edges, and is counted as skipped. Unread/excluded entries are coverage records rather than pretend source nodes. |
+| `DependencyEdge` | Stable `id`, importer `from`, source `specifier`, kind, target and statement evidence. Target is exactly one of `file`, `package`, `excluded`, `unresolved`. Built-ins are external package targets with `builtin: true`. |
+| `AnalysisCoverage` | File denominator and per-file skips; import denominator and per-edge issue reasons; evidence-backed unsupported-pattern diagnostics. Embedded in the graph and graph-walk results. |
+| `GraphWalkQuery` / `GraphWalkResult` | Direction `importers` or `dependencies`; `maxDepth` positive integer or `null` for explicitly requested full reachability; snapshot and `bfs-v1` algorithm identity; bounded reachability and chains. |
+| `ImpactResult` | Importers-only projection of the same walk, renaming `reachable` to `potentiallyAffected`. It carries the query, coverage, depth-limit status and incompleteness status. No second traversal algorithm. |
 
-interface FileNode {
-  path: FilePath;
-  language: "js" | "jsx" | "ts" | "tsx" | "mjs" | "cjs";
-  sizeBytes: number;
-  contentHash: string;
-  parse: { status: "ok" } | { status: "error" | "skipped"; reason: string };
-}
+Paths are POSIX relative to the selected root, never absolute or escaping. Lines are 1-based inclusive. Hashes are lowercase SHA-256 of UTF-8 source bytes; counts are non-negative integers. Evidence matches a source node's snapshot/hash and valid line range. Types describe wire shapes; runtime validation and immutability enforcement belong to producers at 1.3/1.4/M2, not this scaffold.
 
-type EdgeKind = "import" | "type-import" | "re-export" | "require" | "dynamic-import";
+Coverage invariants for the oracle and subsequent producer tests:
 
-type EdgeTarget =
-  | { type: "file"; path: FilePath }
-  | { type: "package"; name: string }          // bare specifier; node_modules is never read
-  | { type: "unresolved"; reason: string };    // e.g. "file not found", "non-literal specifier"
+- `files.found = files.parsed + files.skipped`, and `files.skipped = files.skips.length`. Every discovered file has exactly one outcome. Every non-parse-error skip comes from snapshot inventory; every parse-error source adds one skip. `graph.files.length = files.parsed + number of parse-error skips`.
+- The denominator covers individual file entries examined in the bounded traversal, including unsupported/secret-name/symlink entries; ignored directories are pruned without enumerating their contents. Report `prunedDirectories` separately with `ignored` reasons; do not invent file counts inside them. Caps/cancellation abort the snapshot with an explicit error, producing no purported complete graph.
+- `imports.seen = resolved + external + excluded + failed = graph.edges.length`. A recognized import/re-export/require/dynamic-import candidate has one edge, including unsupported or ambiguous candidates. Comments and ordinary strings do not count. Parse-error files contribute no import candidates because their syntax cannot be trusted.
+- Each `file` target counts as resolved; each `package` target as external; an exact candidate excluded by the snapshot rules counts as excluded; an unresolved candidate counts as failed. A missing path is `not-found`, never guessed excluded. Every excluded/failed edge has exactly one issue with its edge ID and the same reason; the edge holds the source example/evidence. Unsupported patterns carry evidence and reasons; counts do not assert knowledge of unrecognized runtime behavior.
+- Display counts and reason breakdowns first. Any derived parsed-file rate is `parsed / found`; local import resolution rate is `resolved / seen`, labeled exactly that. A zero denominator is `null` / “No files examined” or “No recognized imports”, never 100%. External classification is not local resolution.
+- `possiblyIncomplete` is true if any skipped file, excluded/failed import, pruned directory or unsupported diagnostic exists. Type-only relationships are included and labeled. Static reachability is always potential; even a clean count does not prove runtime completeness.
 
-interface DependencyEdge {
-  from: FilePath;
-  specifier: string;            // exactly as written in the source
-  kind: EdgeKind;
-  target: EdgeTarget;
-  evidence: EvidenceRef;        // the statement that created this edge
-}
-
-interface DependencyGraph {
-  schemaVersion: 1;
-  snapshotId: string;
-  files: FileNode[];
-  edges: DependencyEdge[];      // produced only by the extractor and resolver
-  extractor: { name: string; version: string };
-}
-
-interface ImpactResult {
-  selected: FilePath;
-  potentiallyAffected: { path: FilePath; depth: number; chain: DependencyEdge[] }[];
-  possiblyIncomplete: boolean;  // unresolved imports, parse failures, skipped files or unsupported semantics
-}
-
-interface Snippet {
-  id: string;                   // "S1", "S2", … unique within one request
-  ref: EvidenceRef;
-  text: string;                 // the exact source lines
-  reason: string;               // why it was retrieved, e.g. "selected file"
-}
-
-interface Explanation {
-  text: string;                 // model output containing [S#] markers
-  snippets: Snippet[];          // exactly what was sent to the model
-  citations: { marker: string; snippetId?: string; valid: boolean }[];
-  model: { runtime: string; name: string; location: "local" | "cloud" };
-  durationMs: number;
-}
-```
+Deterministic ordering: files/skips/pruned directories by bytewise POSIX path; edges by importer path then numeric source-order ordinal; issues in edge order; unsupported diagnostics by file and line. `edge.id` is `<from>#<ordinal>` with a 1-based ordinal among recognized statements in that file (not among resolved edges). For non-literal imports, `specifier` is the exact argument-expression text; literal specifiers are literal content without quote delimiters. Repeated specifiers remain separate statement edges. No timestamps occur in graph/walk outputs.
 
 ## Evidence references
 
@@ -150,12 +109,25 @@ Use TypeScript `createSourceFile` and AST traversal over supplied text, not a co
 5. The validator maps markers to snippets and flags unknown markers.
 6. The UI renders the answer as text with clickable references and labels it with the model, runtime, location (local or cloud), and duration.
 
-## Impact semantics
+## Impact semantics — C1 v1
 
-- The impact of file F is the set of files that reach F through import edges. Results show each file's depth and one shortest chain as evidence.
-- Type-only edges are included but labeled, because they affect type-checking rather than runtime.
-- If the snapshot has unresolved/non-literal imports, parse errors, skipped/capped files, or unsupported framework semantics, the result is marked as possibly incomplete.
-- Results use the wording "potentially affected". The UI never says "will break", "safe to change", or "no impact". An empty result reads "No importers found by static analysis."
+- One iterative breadth-first walk handles both directions. `importers` follows file edges in reverse; `dependencies` follows file edges forward. Package, excluded and unresolved targets are reported in coverage but never traversed as local files. The selected file must exist in the graph; invalid selection/depth is an error.
+- Default request: `maxDepth: 1`. Expansion to another positive integer or `null` is explicit. Exclude the selected file from results even in cycles, mark it visited initially, and return each reachable file once at its shortest depth. Iterative cycle handling must not depend on the language call stack.
+- Tie-break equal-length paths by bytewise edge-ID order at each breadth-first frontier; output rows sort by depth then bytewise path. `depth` equals `chain.length`. For importers, chains stay in original import direction, from the affected file to the selection. For dependencies, chains run from selection to the dependency. Every chain edge is an unchanged member of the same graph snapshot. `includesTypeOnly` is true if the chosen chain contains a `type-import`.
+- `depthLimited` is true only when the chosen finite boundary hides at least one reachable unvisited file beyond it. A cycle back to a visited file does not make it true. This is separate from `possiblyIncomplete`, which reflects the graph's coverage limitations, and avoids presenting a depth-1 result as all transitive importers.
+- Impact rows use “potentially affected”. A zero result reads “No importers found by static analysis.” At finite depth, append “within depth N”; show an expansion action when depth-limited. Dependency rows are labeled dependencies, never potentially affected.
+
+## Map layout — C4, implementation owned by 1.5
+
+React Flow provides rendering/interactions rather than automatic layout ([official layout guide](https://reactflow.dev/learn/layouting/layouting)). Use an original, deterministic layered layout, without another package. The layout takes the graph and a display filter and returns positions only; it never alters graph edges.
+
+1. On the displayed file-to-file graph, compute strongly connected components with iterative Kosaraju passes. Condense cycles into an acyclic layout graph internally; no synthetic dependency edges are emitted or displayed. Keep cycle members as individual adjacent file nodes with their original cycle edges.
+2. Place importer-to-dependency edges left to right. Assign each component the longest-predecessor rank in topological order (sources at rank 0). Order ties by the component's smallest bytewise path, then member path. At each rank assign sequential rows. Initial file boxes are 240 × 72 px, with 320 px column and 112 px row pitch. This guarantees separated initial boxes; it does not promise minimal edge crossings.
+3. Use file node IDs `file:<path>`, package IDs `package:<specifier>`, and per-edge non-file IDs `excluded:<edge.id>` / `unresolved:<edge.id>`. Place non-file terminal nodes one rank after their deepest displayed importer, ordered by ID after file components. Deduplicate package nodes by complete specifier; retain distinct failed statements and evidence. UI edges use parser edge IDs and keep import arrows, including cycles. Truncate long labels visually with the complete path available in accessible text.
+4. Count all rendered nodes, including terminals, against the **300-node cap**. At 300 or below show canvas plus the complete file/edge list. Above 300 default to **list-first**, with no automatic arbitrary subset canvas. All indexed files/edges remain available in the list. An explicit folder/path filter may open a canvas only if its full node set fits the cap; otherwise ask for a narrower filter and retain the list.
+5. A filtered canvas shows only original edges whose endpoints are displayed. Display indexed versus displayed node/edge counts, the active filter and omitted relationship counts. Hidden nodes are never treated as absent or excluded from parser coverage/impact. Layout/display selection has no effect on calculations over the full graph.
+
+Agent B's 1.5 checks: repeatable positions under input permutation, no overlapping initial boxes, empty/disconnected/cyclic graphs, type/package/excluded/unresolved targets, 300 versus 301 total nodes, and selection/evidence from the full list while a canvas filter is active. A larger already-local repository and its real measured counts are exercised in M2; this scaffold makes no scale/performance claim.
 
 ## Cross-component contracts (proposal)
 
@@ -166,7 +138,7 @@ These are implementation boundaries, not existing modules. Use one repository an
 | `InputAdapter.snapshot(selection, limits)` | Approved root or app-owned archive → `WorkspaceSnapshot` | Schema version, opaque project ID, immutable snapshot ID, hashes, relative paths, diagnostics; roots remain server-only |
 | `Extractor.extract(snapshot)` + `Resolver.resolve(...)` | Snapshot text → `DependencyGraph` | Deterministic edges/evidence; resolver reads snapshot index only; UI, calculations, retriever consume it |
 | `FrameworkAdapter.analyze(snapshot, graph)` | Read-only inputs → evidence-backed annotations + diagnostics | Adapter ID/version; never mutates dependency graph; new edge kinds require parser contract review and hand-written tests |
-| `GraphQueries.calculate(graph, selection)` | Graph/file ID → impact, cycles, degree/count insights | Versioned deterministic output; graph remains immutable |
+| `GraphQueries.walk(graph, query)` | `GraphWalkQuery` → `GraphWalkResult`; importers projection → `ImpactResult` | Versioned deterministic output; graph remains immutable |
 | `Retriever.retrieve(snapshot, selection, budget)` | Selection → `Snippet[]` | Hash-bound source ranges, exclusions/redaction and token caps enforced before inference |
 | `ModelAdapter.stream(request, abortSignal)` | Prompt/snippets/settings → text chunks + final model/timing metadata | Provider location explicit; fixed local endpoint by default; timeout/cancellation; no cloud fallback |
 | `ExplanationService.explain(...)` | Snapshot/selection/provider settings → validated `Explanation` | Owns cache lookup, retrieval, inference and citation checks; invalid references visible |
@@ -176,7 +148,7 @@ These are implementation boundaries, not existing modules. Use one repository an
 | `AgentTools` (later) | Validated bounded requests → snapshot evidence | `readSnippet`, `searchSnapshot`, `queryGraph` only; step/token/time budgets and cancellation; never takes a host filesystem path |
 | `ScoreProvider.score(facts, snippets)` (reserved for M12; not built before the hackathon) | Parser facts from `GraphQueries` plus validated snippets → labeled, cited score records | JEV is the first provider once P-11 and P-13 are settled. Scores are stored apart from `DependencyGraph` and `ImpactResult` and never feed back into them. The local build never requires a provider (P-12) |
 
-`WorkspaceSnapshot` contains `{ schemaVersion, projectId, snapshotId, files, diagnostics, limits, createdAt }`; source bytes are retained server-side in a bounded immutable snapshot. `DependencyGraph`, snippets, cache entries and UI selection must share that snapshot ID. Derive snapshot identity from sorted file paths/content hashes and parser/resolver configuration, not timestamps; keep timestamps outside deterministic graph output. A changed refresh creates a new snapshot and invalidates old selection/citations; the UI must never quietly attach old lines to changed source.
+`WorkspaceSnapshot` contains `{ schemaVersion, projectId, snapshotId, files, inventory, limits, createdAt }`; source bytes are retained server-side in a bounded immutable snapshot. `DependencyGraph`, snippets, cache entries and UI selection must share that snapshot ID. Derive snapshot identity from sorted file paths/content hashes, skipped/pruned inventory, limits/ignore rules and parser/resolver configuration, not timestamps; keep timestamps outside deterministic graph output. A changed refresh creates a new snapshot and invalidates old selection/citations; the UI must never quietly attach old lines to changed source.
 
 Proposed HTTP routes: authenticated `GET /api/projects/:id/graph`, `GET /api/projects/:id/files/:fileId`, `POST /api/projects/:id/explanations` with streamed response, and `POST /api/projects/:id/refresh`. Each checks the session's authorized project and snapshot; file IDs map to snapshot entries rather than browser-supplied filesystem paths. Closing the project revokes access. Later archive import, cache clearing and agent routes reuse the same authorization and contracts. Errors are structured (invalid selection, excluded file, stale snapshot, limit exceeded, parse error, runtime unavailable, cancelled) without source or absolute paths in logs.
 
@@ -190,7 +162,7 @@ The browser never calls Ollama directly. The server adapter uses fixed `http://1
 
 ## Local storage and cache
 
-Start with memory for source snapshots and versioned JSON files for graph metadata/preferences under an OS-appropriate app-owned user-data directory, outside the selected project. Reject a selection that contains or overlaps the app data directory before any storage write; this prevents selecting a home directory from turning app persistence into a target write. No database server, native database module, vector store or cloud account is required. Server-side `LocalStore` permits a later SQLite implementation if measured scale requires it; that would be a new reviewed choice.
+The demo tier uses memory only for source snapshots, graphs and results. Versioned JSON persistence behind `LocalStore` is deferred to M8 hardening; nothing is written to disk by the demo app. Future app data lives under an OS-appropriate app-owned user-data directory, outside the selected project. Reject a selection that contains or overlaps the app data directory before any storage write; this prevents selecting a home directory from turning app persistence into a target write. No database server, native database module, vector store or cloud account is required. Server-side `LocalStore` permits a later SQLite implementation if measured scale requires it; that would be a new reviewed choice.
 
 Use opaque names, owner-only permissions, atomic replacement, a single writer and bounded retention; never derive storage paths from a target specifier. Proposed limits: 2,000 source files, 1 MiB per file, 20 MiB source total; render at most 300 nodes at once with visible filtering and access to all indexed files via the list. Refuse an over-limit snapshot visibly instead of silently presenting a complete graph. Proposed disk budget: 100 MiB, with oldest cache/trace eviction and a clear-local-data action. These are unmeasured defaults to validate in M2.
 
@@ -223,7 +195,7 @@ The local path must be tested with no cloud keys, no cloud services, tracing dis
 
 ## Stack choices for independent review
 
-All rows are **Proposed**, not installed or accepted. Review 0.2 assesses this proposal; 1.2 confirms the actual scaffold. Pin exact compatible versions and record licenses at authorized installation, not by guessing a lockfile now.
+All rows remain **Proposed**, not independently accepted. Direct package pins are recorded in package.json and SUBMISSION.md when installed for 1.1. Review 0.2 assesses this proposal; 1.2 confirms the actual scaffold. Pin exact compatible versions and record licenses at authorized installation, not by guessing a lockfile now.
 
 | ID | Choice | Proposal and rationale | Validation gate |
 |---|---|---|---|
@@ -231,13 +203,13 @@ All rows are **Proposed**, not installed or accepted. Review 0.2 assesses this p
 | S-2 | App shape/server | Local web app using Node HTTP and built-in fetch; one local process serves built assets/API; no desktop shell or hosted backend | 0.2/1.2; security M2 |
 | S-3 | Parser | TypeScript compiler API, pin a compatible release below 7; AST over supplied JS/TS/JSX text gives source positions without executing it | 0.2/1.2, fixture 1.4 |
 | S-4 | Resolution | Small deterministic snapshot-only resolver with the explicit rules above; extension points for later adapters | 1.4, M9 |
-| S-5 | Canvas | React Flow (`@xyflow/react`); controlled nodes/edges, built-in navigation interactions; simple deterministic initial layout with cycles supported | 0.2/1.2, 1.5; benchmark larger graphs later |
+| S-5 | Canvas | React Flow (`@xyflow/react`); original iterative SCC/layer layout specified in C4; list-first above 300 total rendered nodes; no layout dependency | 0.2/1.2, 1.5; benchmark larger graphs later |
 | S-6 | UI/build | React + Vite, locally bundled CSS/assets; shared selection state, no extra state library initially | 0.2/1.2, 1.5 |
 | S-7 | Local inference | Ollama loopback HTTP; first candidate `qwen3:4b-instruct`, Q4_K_M, registry size 2.5 GB; optional smaller `qwen2.5-coder:1.5b` only after separate approval | Human download approval, 1.6, M6 |
 | S-8 | Packages/tests | npm with lockfile, Vitest for offline TS contract tests, TypeScript typecheck; real-model evaluations separate | 0.2/1.2 |
 | S-9 | GitHub import | Bounded public archive download, no git execution; archive library chosen/disclosed only when M5 is claimed | M5 |
 | S-10 | Optional cloud | OpenAI model adapter and optional JEV integration; no cloud SDK in scaffold; no silent fallback | P-11, M12 |
-| S-11 | Storage | Versioned local JSON behind `LocalStore`, atomic writes and caps; memory-only source by default | M2/M8 |
+| S-11 | Storage | Memory-only demo; versioned local JSON behind `LocalStore` with atomic writes/caps deferred to M8 | M2 memory; M8 persistence |
 | S-12 | Tracing/evaluation | Local records and offline evaluation runner; optional explicit LangSmith export later; no required orchestration SDK | M3/M8; optional export M12 |
 
 Official references checked 2026-10-09: [Node release schedule](https://nodejs.org/en/about/previous-releases), [TypeScript compiler API](https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API) (documents the pre-7 API boundary), [React Flow](https://reactflow.dev/learn), [Vite](https://vite.dev/guide/), [Ollama macOS requirements](https://docs.ollama.com/macos), and [candidate model listing](https://ollama.com/library/qwen3:4b-instruct). These are proposal references, not copied implementation code or proof of local compatibility. The registry tag may move: record the actual digest, quantization, size and runtime version when authorized to download/test.
@@ -251,4 +223,4 @@ Official references checked 2026-10-09: [Node release schedule](https://nodejs.o
 
 Plan for CPU inference on both machines. Ollama's macOS documentation lists x86 as CPU-only; the stated macOS 15.7.7 exceeds its macOS 14 minimum. This establishes a plausible first test, not measured performance. GPU acceleration on the RX 5500 under ParrotOS is unverified and must not be claimed without measured evidence.
 
-M6 is mandatory before relying on the MSI for **either recorded or live demos**. Test the actual OS/runtime/model, offline app flow and memory headroom with the screen recorder for recording, or actual display/presentation setup for live use. If it fails or is not run, the MSI is not a demo dependency; use the Mac only after a successful rehearsal there, or let the human lead revise the submission plan. No runtime/model is downloaded, installed, benchmarked or approved by this proposal.
+M6 is mandatory before relying on the MSI for **either recorded or live demos**. Test the actual OS/runtime/model, offline app flow and memory headroom with the screen recorder for recording, or actual display/presentation setup for live use. If it fails or is not run, the MSI is not a demo dependency; use the Mac only after a successful rehearsal there, or let the human lead revise the submission plan. Runtime/model setup was separately approved and performed by Claude Code as recorded in TASKS.md; no inference or hardware benchmark is implied by this architecture or the scaffold.

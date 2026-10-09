@@ -28,10 +28,10 @@ Future owners below are proposed assignments, not evidence that work has started
 | ID | Milestone / task | Owner | Depends on | Integration point | Status |
 |---|---|---|---|---|---|
 | M0 | Documentation baseline | Claude Code | None | Shared project docs | Historical draft; reconciled in 0.1 |
-| 0.1 | Reconcile docs and propose architecture | Codex (Agent A) | All project docs read | README.md, AGENTS.md, PRODUCT.md, ARCHITECTURE.md, TASKS.md, SUBMISSION.md | Approved for 1.1 in 0.2; conditions C1–C4 open |
+| 0.1 | Reconcile docs and propose architecture | Codex (Agent A) | All project docs read | README.md, AGENTS.md, PRODUCT.md, ARCHITECTURE.md, TASKS.md, SUBMISSION.md | Approved for 1.1 in 0.2; C2/C3 resolved; C1/C4 specified in 1.1 for 1.2 review |
 | 0.2 | Independent proposal review | Claude Code (Agent B) | 0.1 | Proposed S-choices, roadmap, safety contracts, schedule | Done: Approved for 1.1 with conditions C1–C4 (2026-10-09) |
 | 0.3 | Agent working rules and project skills | Claude Code | Human lead request, 2026-10-09 | AGENTS.md, CLAUDE.md, `.agents/skills/`, `.claude/skills/` | In review; Codex reviews. Does not change product, architecture or S-choices, so it does not block 0.2 |
-| 1.1 | Scaffold/configuration | Codex (Agent A, this session) | 0.2 Approved + human start approval | Shared types, server/client/test entry points | In progress; human start authorization renewed 2026-10-09 in this Codex session |
+| 1.1 | Scaffold/configuration | Codex (Agent A, this session) | 0.2 Approved + human start approval | Shared types, server/client/test entry points | In progress: implementation and local gates complete; clean-checkout evidence being recorded |
 | 1.2 | Independent scaffold review | Claude Code | 1.1 | Rerun scaffold gates; record accepted stack | Not started |
 | 1.3 | Original fixture and hand-written graph | Claude Code | 1.2 Approved | Snapshot/graph schemas; Codex reviews oracle | Not started |
 | 1.4 | Parser/resolver | Codex | 1.3 reviewed | Snapshot → graph; Claude reviews | Not started |
@@ -177,11 +177,13 @@ Work:
 Acceptance:
 
 - [ ] From a clean checkout on the dev Mac, the documented install, typecheck, and test commands succeed, with output recorded in the report.
-- [ ] The test suite runs with no network access.
-- [ ] Starting the app makes no outbound network requests.
-- [ ] The scaffold contains no feature code and no copied tutorial code or assets.
-- [ ] The disclosure register is updated.
-- [ ] Shared contract locations, model-free default tests and a separate real-model test entry are documented; no cloud SDKs or target-repository execution.
+- [x] The test suite runs with no network access. (Codex: `sandbox-exec -p '(version 1)(allow default)(deny network*)' npm test`; 1 file / 3 tests passed.)
+- [x] Starting the app makes no outbound network requests. (Codex: production/dev startup with external outbound denied by macOS; HTTP 200 on loopback, no external resources/calls in scaffold source. Separate external probe returned EPERM.)
+- [x] The scaffold contains no feature code and no copied tutorial code or assets. (Codex source inventory: static shell/host/configuration/types only; all authored in this session.)
+- [x] The disclosure register is updated. (Codex: 9 pinned direct packages; lockfile plus 89-entry license metadata inventory; no unknown license fields.)
+- [x] Shared contract locations, model-free default tests and a separate real-model test entry are documented; no cloud SDKs or target-repository execution. (Codex: README/contracts/config review; `test:model` exits 1, explicitly no cases yet and no inference.)
+
+C1/C4 disposition (Codex, this session, 2026-10-09): canonical coverage/snapshot/graph/walk/impact types now live in `src/shared/contracts.ts`. Exact counting, ordering and chain semantics, and the original SCC/layer layout with list-first behavior above 300 total nodes, are specified in ARCHITECTURE.md. No oracle or layout implementation was produced. Agent B verifies these resolutions in 1.2 before claiming 1.3/1.5. C2/C3 remain resolved under the earlier human authorization; no new owner/order change.
 
 ### 1.2 Review gate (Agent B)
 
@@ -421,6 +423,27 @@ Unverified: skill auto-discovery by Codex. Claude Code listed both skills in the
 Follow-up the same day: the human lead decided severity and scores come from JEV (P-12). Cartograph's `docs/project-doc.md` excludes scores on purpose, so this is a deliberate difference. The guardrails in PRODUCT.md are Claude Code's proposal for Codex to review. Claude Code will raise three ideas from that project-doc as 0.2 review findings for Codex to decide on, rather than editing 0.1 directly.
 
 Later the same day: the human lead deferred JEV until after the hackathon, with space reserved. That space is the reserved `ScoreProvider` contract row in ARCHITECTURE.md and a note in PRODUCT.md; no code or UI placeholder. Claude Code then read all of Cartograph's `docs/` and queued eight findings under 0.2 above. It also added a parser-boundary search to the `boozer-review` skill.
+
+### 1.1 — Codex (Agent A, this session), 2026-10-09
+
+**Status: Scaffold implemented; clean-checkout verification in progress. C1/C4 specified; independent 1.2 review still required.**
+
+Files changed: `.gitignore` and local Git history; package manifest/lock and `.npmrc`; TypeScript/Vite/Vitest configuration and `index.html`; `src/shared/contracts.ts`; static server/client entries and CSS; `scripts/dev.mjs`; offline/scaffold tests; README.md, AGENTS.md current-phase paragraph, PRODUCT.md status, ARCHITECTURE.md, TASKS.md, SUBMISSION.md and `docs/DEPENDENCIES.json`. Existing skill files, symlinks and CLAUDE.md were preserved. No fixture, parser, graph calculation, map, ingestion, storage or model implementation.
+
+Commands and actual results:
+
+- `rg`, `cat`, `sed` and workspace inventory: read project rules/docs, latest review and handoff. Memory keyword lookup found no Boozer entry; no prior memory facts used. Initial `git status`/`git log` failed: not a Git repository. `git init -b main` and local baseline commit succeeded. Toolchain: Node 24.16.0, npm 11.13.0, Git 2.39.5 (Apple Git-154).
+- Registry `npm view` plus official Vite/Vitest/React Flow documentation: verified versions, license metadata and compatibility. The latest TypeScript was 7.0.2; pinned 6.0.3 to satisfy the pre-7 compiler-API contract. No outside-stack package, cloud SDK, model call or target execution.
+- `npm install --ignore-scripts`: exit 0, 65 packages added. `npm ls --depth=0`: exit 0, 9 exact direct pins. Python lockfile inventory: 89 locked records, zero missing license fields, including optional other-platform packages.
+- First `npm run typecheck` and `npm run build`: exit 2, TS2882 on the CSS side-effect import. Fixed by adding `vite/client` declaration types. First `npm test`: exit 0, 1 file / 3 tests passed. Subsequent typecheck and build: exit 0; 15 client modules transformed; server and client outputs produced. No check weakened.
+- `sandbox-exec -p '(version 1)(allow default)(deny network*)' npm test`: exit 0, 1 file / 3 tests passed with all networking denied. Default test setup separately rejects socket/fetch attempts.
+- Startup harness first failed before launching the app: macOS sandbox rejected numeric IP syntax in its allow rule (exit 65). Corrected to `localhost:*`; a separate external-IP socket probe returned EPERM. `npm start` and `npm run dev` under denied external outbound returned loopback HTTP 200 at 4173 and 5173 respectively. Production hostile Host and Origin each returned 403; absent API and path escape each returned 404. Processes were stopped; no retained app listener. This is scaffold startup evidence, not M2 source authorization or offline browser acceptance.
+- `npm run test:model`: exit 1, “No test files found”. Expected, explicitly documented unavailable entry until 1.6 adds real-model cases; no inference/download and no benchmark claim.
+- Python Markdown check: 9 Markdown files, 34 local links, zero broken links/fence errors. `git diff --check`: exit 0. Clean-checkout commands/results will be added after the pinned candidate rerun.
+
+Verified: original static shell/host, strict compilation, model-free offline test isolation, pinned package compatibility, C1 wire shapes and written C4 algorithm/display policy. Unverified: all future features, runtime contract validation, actual layout correctness/scale, browser experience, local inference, MSI, and submission rules. C1/C4 implementation proofs belong to their later producer/UI tasks.
+
+Handoff to Agent B: review 1.2 from a clean checkout, rerun README commands, inspect contracts and C4, and record your independent verdict/S-choice disposition. Only after Approved may you claim 1.3 and write the original fixture/oracle, then 1.5 on reviewed fixture data. The oracle must include coverage and statement IDs; do not generate it from parser output. C4 adds no package. 0.3 remains a separate pending Codex review; it was not folded into 1.1 or self-approved. No human decision is needed to complete this scaffold; deadline cutoffs/team/license and later gates remain as recorded.
 
 ## Review log
 

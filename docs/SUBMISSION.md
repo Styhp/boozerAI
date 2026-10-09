@@ -26,7 +26,7 @@
 | Project name | Done | Boozer AI |
 | Project description | Draft | See draft answers below |
 | Team | Missing | See P-6 |
-| Public GitHub repository | Not created | The workspace isn't a git repository yet. Making it public needs human approval |
+| Public GitHub repository | Not created | Local Git initialized in 1.1. No remote/public repository; publication still needs human approval |
 | Demo video | Not recorded | The recording/live-demo machine depends on P-2; MSI reliance requires M6 for either use |
 | X or LinkedIn post with the video (URL) | Not posted | |
 | What runs locally | Draft | See below; must match the final build |
@@ -58,12 +58,29 @@ Record actual contributions as they occur. Development assistants are separate f
 
 | Item | Category | Version / source | Actual contribution | License / terms record | Added (date, by) |
 |---|---|---|---|---|---|
-| Claude Code | AI development tool | Claude Code 2.1.226 running Claude Opus 5.5 (`claude-opus-5-5`), self-reported 2026-10-09 | Initial README, AGENTS.md, CLAUDE.md and project documentation baseline (M0); agent working rules and project skills (0.3). Independent proposal/scaffold reviews are planned, not completed | Tool/provider terms | 2026-10-09, Codex reconciliation; version and 0.3 added by Claude Code |
+| Claude Code | AI development tool | Claude Code 2.1.226 running Claude Opus 5.5 (`claude-opus-5-5`), self-reported 2026-10-09 | Initial README, AGENTS.md, CLAUDE.md and project documentation baseline (M0); agent working rules and project skills (0.3). Independent proposal review 0.2 completed; scaffold review 1.2 remains pending | Tool/provider terms | 2026-10-09, Codex reconciliation; version and 0.3 added by Claude Code |
 | ChatGPT / boozer | AI planning assistance | As identified by human lead; exact model/version and transcript not supplied | Product/planning assistance reported by human lead; no runtime integration implied | Tool/provider terms; model identity unverified | 2026-10-09, Codex at human request |
 | Ollama | Local model runtime | v0.40.2, official GitHub release `ollama-darwin.tgz`, checksum verified; installed in `~/.local/opt/ollama-v0.40.2` on the dev Mac | Installed and server verified on loopback, for task 1.6. No Boozer code uses it yet | MIT (Homebrew formula metadata; confirm in the release's LICENSE) | 2026-10-09, Claude Code after human approval |
-| Codex (Agent A) | AI development tool | Current Codex session; exact underlying model version not independently recorded | Read project docs; reconciled roadmap, proposed stack/interfaces/security/storage, delivery gates, hardware plan and disclosure register; checked public technical documentation and local document consistency. No application code, runtime testing or independent review performed | Tool/provider terms; contribution limited to this documentation task | 2026-10-09, Codex |
+| Codex (Agent A) | AI development tool | Current Codex session; exact underlying model version not independently recorded | Read project docs; reconciled roadmap, proposed stack/interfaces/security/storage, delivery gates, hardware plan and disclosure register; checked public technical documentation and local document consistency. Task 1.1 adds original static server/client scaffold, pinned configuration, offline tests, C1 contracts and C4 layout specification. No analysis feature or model inference; independent review remains separate | Tool/provider terms | 2026-10-09, Codex |
 
-No application framework/library, cloud API service, or runtime model has been used by this task. Reading public documentation is research, not an application cloud integration. Add exact package/runtime versions, sources and licenses when actually installed or used. Dependency disclosure includes direct dependencies and a lockfile/license inventory for transitives at scaffolding; a proposed package is not an installed package.
+Task 1.1 installs the direct packages below for the scaffold. No application cloud service or model inference is used. Reading public documentation is research, not an application cloud integration. Add exact package/runtime versions, sources and licenses when actually installed or used. The checked-in package-lock.json pins direct/transitive artifacts with integrity hashes; [DEPENDENCIES.json](DEPENDENCIES.json) records all 89 locked package/license entries, including optional binaries for other platforms. 65 packages were added on the Intel Mac; uninstalled optional records do not claim local execution. Installation uses --ignore-scripts. All 89 records have license metadata; this is metadata inventory, not a legal assessment.
+
+## Scaffold dependencies and tools actually used (1.1, Codex, 2026-10-09)
+
+| Item | Exact version | Contribution / source | License metadata |
+|---|---|---|---|
+| Node.js | 24.16.0, pre-existing | Runtime, HTTP server, file/child-process primitives; nodejs.org | MIT plus bundled third-party notices |
+| npm | 11.13.0, pre-existing | Package install and lockfile; npmjs.com | Artistic-2.0 |
+| Git | 2.39.5 (Apple Git-154), pre-existing | Local history only; git-scm.com | GPL-2.0 |
+| TypeScript | 6.0.3 | Strict typecheck/server compilation; parser API reserved for 1.4; npm registry `typescript` | Apache-2.0 |
+| React / React DOM | 19.3.0 / 19.3.0 | Original static client shell; npm registry `react`, `react-dom` | MIT |
+| React Flow | @xyflow/react 12.12.0 | Installed S-5 canvas dependency; no map implemented yet; npm registry | MIT |
+| Vite | 8.3.4 | Local UI build/dev server; npm registry | MIT |
+| Vitest | 5.0.3 | Offline scaffold tests and separate model entry; npm registry | MIT |
+| @types/node | 24.19.1 | Node declarations; npm registry | MIT |
+| @types/react / @types/react-dom | 19.3.0 / 19.3.0 | Client declarations; npm registry | MIT |
+
+No external snippet, tutorial implementation, design or asset was copied. The C4 layout is an original specification; no layout library was added. Package licenses/versions come from registry and lock metadata. Official Vite/Vitest compatibility and React Flow layout documentation were consulted; local command evidence is in TASKS.md.
 
 ## Runtime models: proposed versus actually used
 
@@ -75,9 +92,9 @@ No application framework/library, cloud API service, or runtime model has been u
 
 Official references checked 2026-10-09: [Ollama macOS requirements](https://docs.ollama.com/macos) lists x86 CPU-only support on macOS 14+; [Qwen candidate listing](https://ollama.com/library/qwen3:4b-instruct) supplies tag/size/quantization and an Apache-2.0 license label. Verify the actual downloaded artifact/license at authorized setup. Size is not a RAM estimate or a speed claim.
 
-## Proposed dependencies and integrations (not used yet)
+## Stack and later integrations
 
-- Local core: Node.js 24 LTS, TypeScript compiler API below 7, React, Vite, React Flow, npm and Vitest; local JSON storage; Ollama accessed through local HTTP. Exact versions/licenses will be recorded when used.
+- Local scaffold packages are recorded above. The parser and Ollama integration remain planned. The demo uses memory only; local JSON persistence is later M8 hardening.
 - Secondary cloud: OpenAI and JEV, both off by default and subject to explicit cloud approval. JEV service identity/API/data terms remain unresolved (P-11).
 - Optional tracing: LangSmith, off by default. Traces can expose prompts/snippets, outputs, tool inputs/results, identifiers, timing, model settings/token usage, errors and metadata. Only an explicit previewed/redacted export may transmit data. See [ARCHITECTURE.md](ARCHITECTURE.md) for the proposed payload controls. Local traces and evaluations do not require LangSmith.
 

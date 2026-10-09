@@ -32,7 +32,7 @@ Skills follow this file. If a skill and AGENTS.md conflict, AGENTS.md wins; fix 
 
 ## Current phase
 
-The project has documentation only. Codex (Agent A) owns the documentation proposal and later scaffolding/integration; Claude Code (Agent B) independently reviews it. Before scaffolding, record proposal review 0.2 as Approved, claim 1.1, and obtain the human lead's explicit approval to start 1.1. Scaffold review 1.2 remains a separate gate before parallel implementation. Runtime installation and model downloads also need specific human approval; a recommendation is not approval. No implementation, installation, or download is authorized by the current documentation task.
+The project has a human-authorized scaffold in task 1.1. Proposal review 0.2 is Approved for 1.1 with conditions; C2/C3 are resolved and C1/C4 are specified by Codex for scaffold review. Codex (Agent A) owns scaffolding/integration; Claude Code (Agent B) independently reviews it. Scaffold review 1.2 remains a separate gate before fixture or parallel implementation. Runtime installation and model downloads need specific human approval; separately approved Mac setup is recorded in TASKS.md. This scaffold authorization does not authorize later feature work or additional runtime/model downloads.
 
 ## Task ownership
 
