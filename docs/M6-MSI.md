@@ -6,7 +6,7 @@ Session: Codex MSI continuation, taking over the previous MSI session's evidence
 
 ## Provenance and machine
 
-Current tested commit: `715841c3fef1a9470e7a355ebadf47cc5cf886a4`. Initial `git pull --ff-only`: exit 0, already up to date. HEAD was already ahead of the previous session's tested `accb5d62adb09f537a32679bb2cdc01f9485c867`; current app gates were rerun. M2 has landed and its latest review says Approved, superseding the handoff's “M2 not landed” note. Some README/DEMO/TASKS paragraphs still describe older review states; this verification is not an independent M3 approval or a shared-doc reconciliation.
+Initial continuation tested commit: `715841c3fef1a9470e7a355ebadf47cc5cf886a4`; the later post-sync record below supersedes its app-check count. Initial `git pull --ff-only`: exit 0, already up to date. HEAD was already ahead of the previous session's tested `accb5d62adb09f537a32679bb2cdc01f9485c867`; current app gates were rerun. M2 has landed and its latest review says Approved, superseding the handoff's “M2 not landed” note. Some README/DEMO/TASKS paragraphs still describe older review states; this verification is not an independent M3 approval or a shared-doc reconciliation.
 
 All displayed times below use UTC+8; raw ISO timestamps retain UTC or the recorded system UTC−4 offset. Earlier benchmark completion: Vulkan 18:22:13, CPU 18:25:10; earlier C9 about 18:26; original no-recorder baseline 18:29. Continuation began about 21:26, before the 2026-10-10 00:00 setup cutoff.
 
@@ -130,8 +130,19 @@ Human follow-ups before clearing M6:
 2. Turn Wi-Fi off; show the failing curl, repeat app probes and local inference. Check recommendations logs without assuming a harmless failure.
 3. Rehearse current `docs/DEMO.md` shots 2–6 on **Boozer's own repository**, now that M2 has landed: explicit confirmation, real graph/source/import highlight, a fully read explanation, citation navigation, potential-impact chain, refresh/close and relaunch. Choose and record the shot-4 file and timings. Browser human checks remain unticked.
 4. Confirm the actual recording resolution/readability and, separately, actual live presentation/display workload. Neither use is cleared by a headless fixture run.
-5. Mac owner: fix the Linux benchmark harness; reconcile M6/TASKS/BENCHMARKS/disclosures, M2's stale status prose, and the DEMO checklist's own-repo versus outside-checkout wording. Finalize independent M3 correction review. Keep the two known injection failures visible.
+5. Mac owner: fix the Linux benchmark harness; reconcile M6/TASKS/BENCHMARKS/disclosures and the DEMO checklist's own-repo versus outside-checkout wording. The post-sync docs now record M2 Approved and local M3 Approved with C9; the earlier stale status observations above are historical. Keep the two known injection failures visible.
 6. Human lead decides whether to change GPU autosuspend policy. Current evidence measures default policy only. Rerun relevant checks on the frozen build before recording.
+
+## Post-sync verification — latest application revision
+
+The required post-commit `git pull --rebase` exited **0** and fetched through **`93d300dc334c6c2e6f730aa0a0a2cb0eac6f45aa`**, including new reading-insights/provider changes. The rebased MSI-report commit was **`ffbf315c6528c8e442266c4b8f1957e2e501487e`**; that exact checkout was tested. Application code at this pin equals `93d300d`; later commits for this report contain MSI evidence only. Earlier `current`-named raw records above remain tied to `715841c` and were not overwritten.
+
+- `npm run typecheck`, `npm test`, `npm run build`: all **exit 0**, **16 files / 194 tests**, **188 build modules**. Same non-fatal npm/Rolldown warnings. [Command outputs](benchmarks/m6-app-checks-post-sync-msi.json).
+- Actual `npm start` plus all five HTTP probes: **passed**, supervisor exit **0**, startup loopback binding confirmed; deliberately SIGTERM-stopped afterwards. [Post-sync probes](benchmarks/m6-app-probes-post-sync-msi.json).
+- `BOOZER_MODEL_REPEATS=1 BOOZER_MODEL_RECORD=docs/benchmarks/m6-product-post-sync-msi.jsonl npm run test:model`: **exit 1**, **6 passed / 2 failed / 1 benchmark skipped**, 25.36 s. Same ZEBRA/KOALA leaks. Both fixture explanations pass (pricing **3.416 s**, inventory **2.678 s**), no fixture canary/invalid citations/thinking. This is one repetition per file, not a new five-run C9 claim. [Suite output](benchmarks/m6-product-suite-post-sync-msi.json), [answers](benchmarks/m6-product-post-sync-msi.jsonl).
+- Re-read updated DEMO.md: local M3 now independently Approved with C9, M2 Approved. Offline/recorder/browser rehearsals remain pending. Optional cloud functionality was not invoked or measured by this session; all real inference remained local.
+
+This newest tested application revision still meets the midnight setup criterion. All recording/live restrictions below remain in force.
 
 ## Handoff and decision
 
