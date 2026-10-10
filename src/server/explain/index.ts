@@ -15,6 +15,7 @@ export interface ExplainRequest {
   // P-16: 'cloud' requires the previewHash returned by previewCloud for the same request.
   readonly provider?: 'local' | 'cloud';
   readonly previewHash?: string;
+  readonly model?: string;
 }
 
 export type CloudPreviewResult =
@@ -35,6 +36,7 @@ export interface ExplanationService {
 export interface CloudComparison {
   // Safe to show the browser: never contains the key.
   cloudStatus(): CloudStatus;
+  listCloudModels?(signal?: AbortSignal): Promise<readonly string[]>;
   // The exact payload a cloud request would send, for the user to confirm. Sends nothing.
   previewCloud(request: Omit<ExplainRequest, 'provider' | 'previewHash'>): CloudPreviewResult;
 }

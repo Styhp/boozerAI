@@ -1,8 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { constants, type BigIntStats, type Dirent } from 'node:fs';
 import { lstat, open, opendir, realpath } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import type { FileSkip, Language, SnapshotDocument, SnapshotFile, SnapshotLimits, WorkspaceSnapshot } from '../shared/contracts.js';
+import type { FileHistory } from '../shared/project-api.js';
+
+const runGit = promisify(execFile);
 
 export const DEFAULT_SNAPSHOT_LIMITS: SnapshotLimits = Object.freeze({
   maxFiles: 2_000, maxFileBytes: 1_048_576, maxTotalBytes: 20_971_520,
@@ -390,5 +395,89 @@ export class LocalInputAdapter {
       schemaVersion: 1, projectId: this.projectId, snapshotId: `sha256:${hash(identity)}`,
       files: Object.freeze(files), documents: Object.freeze(documents), inventory, limits, createdAt: new Date().toISOString(),
     });
+  }
+
+  // Called only for a file ID already authorized by ProjectSession. History is a
+  // separate local observation; neither timestamps nor Git create graph edges.
+  async fileHistory(projectId: string, path: string, signal: AbortSignal): Promise<Omit<FileHistory, 'snapshotId'>> {
+    this.#authorize(projectId);
+    const check = () => { this.#authorize(projectId); if (signal.aborted) throw new InputError('cancelled'); };
+    check();
+    let modifiedAt: string | null = null;
+    try {
+      const stat = await this.#checkPath(path);
+      if (stat.isFile()) modifiedAt = new Date(Number(stat.mtimeMs)).toISOString();
+    } catch { /* Missing/replaced/unreadable file: never invent an edit date. */ }
+    let git: FileHistory['git'] = { status: 'unavailable' };
+    try {
+      check();
+      let metadata: BigIntStats;
+      try { metadata = await this.#checkPath('.git'); }
+      catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') git = { status: 'not-repository' };
+        throw error;
+      }
+      // Worktree .git files and alternates can point outside the selected root.
+      if (!metadata.isDirectory()) throw new Error('Unsupported Git metadata');
+      const pending = ['.git'];
+      let entries = 0;
+      while (pending.length) {
+        check();
+        const directory = pending.pop()!;
+        if (directory.split('/').length > MAX_DEPTH) throw new Error('Git metadata depth limit');
+        const stat = await this.#checkPath(directory);
+        if (!stat.isDirectory()) throw new Error('Changed Git metadata');
+        const handle = await opendir(confinedPath(this.#root, directory));
+        for await (const entry of handle) {
+          check();
+          if (++entries > MAX_ENTRIES) throw new Error('Git metadata entry limit');
+          const child = `${directory}/${entry.name}`;
+          if (entry.isSymbolicLink() || (!entry.isFile() && !entry.isDirectory())) throw new Error('Unsafe Git metadata');
+          if (child === '.git/commondir' || child === '.git/objects/info/alternates' || child === '.git/objects/info/http-alternates' || child === '.git/config.worktree') throw new Error('External Git metadata');
+          if (entry.isDirectory()) pending.push(child);
+        }
+      }
+      // Git parses repository config as data. Reject includes before invoking it,
+      // and bound/read it through the same confined no-follow file boundary.
+      const configPath = '.git/config';
+      const before = await this.#checkPath(configPath);
+      if (!before.isFile() || before.size > 65_536n) throw new Error('Unsupported Git config');
+      const config = await open(confinedPath(this.#root, configPath), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+      try {
+        if (!unchangedFile(before, await config.stat({ bigint: true }))) throw new Error('Changed Git config');
+        const bytes = Buffer.alloc(65_537);
+        let bytesRead = 0;
+        while (bytesRead < bytes.length) {
+          check();
+          const part = await config.read(bytes, bytesRead, bytes.length - bytesRead, bytesRead);
+          if (part.bytesRead === 0) break;
+          bytesRead += part.bytesRead;
+        }
+        if (bytesRead !== Number(before.size) || bytesRead > 65_536 || !unchangedFile(before, await config.stat({ bigint: true }))
+          || !unchangedFile(before, await this.#checkPath(configPath)) || /include|worktree/i.test(bytes.subarray(0, bytesRead).toString('utf8'))) throw new Error('Unsupported Git config');
+      } finally { await config.close(); }
+      check();
+      const { stdout } = await runGit('git', [
+        '--no-pager', '--no-optional-locks', '--no-replace-objects', `--git-dir=${join(this.#root, '.git')}`,
+        '-c', 'core.fsmonitor=false', '-c', 'core.hooksPath=/dev/null', '-c', 'protocol.allow=never',
+        'log', '-1', '--no-show-signature', '--no-notes', '--no-ext-diff', '--no-textconv',
+        '--format=%H%x00%cI%x00%s', 'HEAD', '--', path,
+      ], {
+        cwd: this.#root, timeout: 5_000, maxBuffer: 65_536, signal,
+        env: { PATH: '/usr/bin:/bin', LANG: 'C', LC_ALL: 'C', GIT_CONFIG_NOSYSTEM: '1',
+          GIT_CONFIG_GLOBAL: '/dev/null', GIT_TERMINAL_PROMPT: '0', GIT_NO_LAZY_FETCH: '1',
+          GIT_OPTIONAL_LOCKS: '0', GIT_NO_REPLACE_OBJECTS: '1', GIT_LITERAL_PATHSPECS: '1' },
+      });
+      check();
+      await this.#checkRoot();
+      if (stdout.trim() === '') git = { status: 'no-history' };
+      else {
+        const [hash, committedAt, subject] = stdout.trimEnd().split('\0');
+        if (!hash || !/^[a-f0-9]{40,64}$/.test(hash) || !committedAt || !Number.isFinite(Date.parse(committedAt)) || subject === undefined) throw new Error('Invalid Git result');
+        git = { status: 'committed', hash, committedAt, subject: subject.slice(0, 500) };
+      }
+    } catch { /* Incomplete/unavailable Git history is not evidence of stale code. */ }
+    check();
+    return { path, checkedAt: new Date().toISOString(), modifiedAt, git };
   }
 }

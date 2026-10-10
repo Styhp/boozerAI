@@ -9,6 +9,7 @@ import { retrieveSnippets } from './retriever.js';
 import { findInstructionLikeText, validateCitations, validateMentions } from './validate.js';
 import { createRepoChatService } from './chat-service.js';
 import type { RepoChatService } from '../../shared/repo-chat.js';
+import { isCloudModelId } from '../../shared/cloud-chat.js';
 import { createCloudRepoChatService, type CloudRepoChatService } from './cloud-chat-service.js';
 
 // No cache in the demo tier (S-11/M8), so every answer is generated fresh. Local and
@@ -21,7 +22,10 @@ type Prepared =
   | { readonly ok: true; readonly snippets: Snippet[]; readonly messages: ChatMessage[] }
   | { readonly ok: false; readonly code: 'stale-snapshot' | 'invalid-selection' | 'no-excerpt'; readonly message: string };
 
-function prepare({ snapshot, graph, selected }: ExplainRequest): Prepared {
+function prepare({ snapshot, graph, selected, model }: ExplainRequest): Prepared {
+  if (model !== undefined && !isCloudModelId(model)) {
+    return { ok: false, code: 'invalid-selection', message: 'Choose a valid OpenAI model.' };
+  }
   if (graph.snapshotId !== snapshot.snapshotId) {
     return { ok: false, code: 'stale-snapshot', message: 'The graph was built from a different snapshot.' };
   }
@@ -49,17 +53,18 @@ export function createExplanationService(
     status: (signal) => adapter.status(signal),
     preload: (signal) => adapter.preload(signal),
     cloudStatus: () => cloud.status(),
+    listCloudModels: (signal) => cloud.listModels ? cloud.listModels(signal) : Promise.reject(new ModelError('cloud-unavailable', 'Model discovery is unavailable.')),
 
     previewCloud(request): CloudPreviewResult {
       const status = cloud.status();
       if (!status.available) return { type: 'error', code: 'cloud-unavailable', message: 'No cloud provider is configured for this launch.' };
       const prepared = prepare(request);
       if (!prepared.ok) return { type: 'error', code: prepared.code, message: prepared.message };
-      const payloadJson = cloud.payloadJson(prepared.messages);
+      const payloadJson = cloud.payloadJson(prepared.messages, request.model);
       const preview: CloudPreview = {
         provider: status.provider,
         endpoint: status.endpoint,
-        model: status.model,
+        model: request.model ?? status.model,
         payload: JSON.parse(payloadJson) as unknown,
         payloadJson,
         previewHash: sha256(payloadJson),
@@ -87,7 +92,7 @@ export function createExplanationService(
           yield { type: 'error', code: 'cloud-unavailable', message: 'No cloud provider is configured for this launch.' };
           return;
         }
-        payloadJson = cloud.payloadJson(messages);
+        payloadJson = cloud.payloadJson(messages, request.model);
         if (request.previewHash !== sha256(payloadJson)) {
           yield { type: 'error', code: 'preview-mismatch', message: 'The request differs from the preview you confirmed. Preview it again before sending.' };
           return;
@@ -101,7 +106,7 @@ export function createExplanationService(
           | { type: 'token'; text: string } | { type: 'thinking' }
           | { type: 'done'; promptTokens: number | null; outputTokens: number | null; truncated: boolean; model?: string | null }>;
         if (provider === 'cloud') {
-          label = { runtime: 'OpenAI API', name: cloudStatus.available ? cloudStatus.model : '', location: 'cloud', digest: null, runtimeVersion: 'OpenAI Chat Completions' };
+          label = { runtime: 'OpenAI API', name: request.model ?? (cloudStatus.available ? cloudStatus.model : ''), location: 'cloud', digest: null, runtimeVersion: 'OpenAI Chat Completions' };
           chunks = cloud.stream(payloadJson, signal);
         } else {
           const runtime = await adapter.status(signal);

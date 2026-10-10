@@ -17,10 +17,12 @@ export function useRepoChat(project: ProjectSource | null, snapshotId: string | 
   return project?.chat === undefined || snapshotId === null ? undefined : {
     state, onAsk: (question: string, contextPath?: string) => { void controller.current?.ask(question, contextPath); },
     ...(project.cloud && project.previewCloudChat && project.cloudChat ? { cloud: {
-      preview: async (question: string, contextPath: string | undefined, searchDocs: boolean, signal: AbortSignal) => {
+      defaultModel: project.cloud.model,
+      ...(project.cloud.models ? { models: (signal: AbortSignal) => project.cloud!.models!(signal) } : {}),
+      preview: async (question: string, contextPath: string | undefined, searchDocs: boolean, signal: AbortSignal, model?: string) => {
         const current = controller.current;
         if (!current) throw new Error('Open the current project again.');
-        const request = { ...current.request(question, contextPath), searchDocs };
+        const request = { ...current.request(question, contextPath), searchDocs, ...(model === undefined ? {} : { model }) };
         const preview = await project.previewCloudChat!(request, signal);
         if (current !== controller.current || signal.aborted) throw new Error('The project changed. Preview again.');
         return { request, preview };

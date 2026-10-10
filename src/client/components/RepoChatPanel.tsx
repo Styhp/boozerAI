@@ -5,6 +5,7 @@ import type { ChatState } from '../data/repo-chat-controller';
 import type { Selection } from '../map/model';
 import { ExplanationResult } from './ExplanationPanel';
 import { CloudChatPreview, type CloudChatControls } from './CloudChatPreview';
+import { CloudModelPicker } from './CloudModelPicker';
 
 export interface RepoChatControls {
   readonly state: ChatState;
@@ -21,6 +22,7 @@ export function RepoChatPanel({ graph, chat, contextPath, onSelect }: {
   const [includeFile, setIncludeFile] = useState(true);
   const [provider, setProvider] = useState<'local' | 'cloud'>('local');
   const [searchDocs, setSearchDocs] = useState(true);
+  const [model, setModel] = useState('');
   const cloud = provider === 'cloud' && chat.cloud !== undefined;
   const { turns, running } = chat.state;
   const ask = () => {
@@ -57,6 +59,7 @@ export function RepoChatPanel({ graph, chat, contextPath, onSelect }: {
         <option value="local">Local Ollama</option><option value="cloud">OpenAI (preview and send)</option>
       </select></label>}
       {cloud && <label><input type="checkbox" checked={searchDocs} disabled={running} onChange={(event) => setSearchDocs(event.target.checked)} /> Look up current official OpenAI documentation</label>}
+      {cloud && <CloudModelPicker model={model} defaultModel={chat.cloud!.defaultModel} onChange={setModel} loadModels={chat.cloud!.models} disabled={running} />}
       {contextPath !== null && <label className="ws-chat-context"><input type="checkbox" checked={includeFile}
         onChange={(event) => setIncludeFile(event.target.checked)} /> Include selected file: <code>{contextPath}</code></label>}
       <label htmlFor="repo-question">Your question</label>
@@ -66,8 +69,8 @@ export function RepoChatPanel({ graph, chat, contextPath, onSelect }: {
       <div className="ws-chat-actions"><span className="muted">{question.length}/{CHAT_QUESTION_LIMIT} · Ctrl/⌘ + Enter</span>
         {running ? <button type="button" onClick={chat.onCancel}>Cancel answer</button>
           : !cloud && <button type="submit" disabled={question.trim() === ''}>Chat Boozer</button>}</div>
-      {cloud && !running && <CloudChatPreview key={JSON.stringify([graph.snapshotId, question, includeFile, contextPath, searchDocs, turns.at(-1)?.id])}
-        controls={chat.cloud!} question={question} contextPath={includeFile ? contextPath ?? undefined : undefined} searchDocs={searchDocs} onSent={() => setQuestion('')} />}
+      {cloud && !running && <CloudChatPreview key={JSON.stringify([graph.snapshotId, question, includeFile, contextPath, searchDocs, model, turns.at(-1)?.id])}
+        controls={chat.cloud!} question={question} contextPath={includeFile ? contextPath ?? undefined : undefined} searchDocs={searchDocs} model={model || undefined} onSent={() => setQuestion('')} />}
       {running && <p className="muted">{turns.at(-1)?.provider === 'cloud' ? 'OpenAI replies can take up to two minutes, including documentation search.' : 'Local replies can take up to six minutes.'} You can cancel.</p>}
       <p className="ws-chat-memory muted">Keeps the latest eight questions in this session. Clear or refresh to reset. Search can miss relevant code; try a file or symbol name.</p>
     </form>

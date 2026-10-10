@@ -303,3 +303,28 @@ describe('P-16 HTTP cloud methods', () => {
     expect(new HttpProjectSource(connection, envelope).cloud).toBeUndefined();
   });
 });
+
+describe('file age and selected cloud model transport', () => {
+  it('loads history for a snapshot file ID and rejects a mismatched or revoked result', async () => {
+    const history = { snapshotId, path: 'main.ts', checkedAt: '2026-10-09T00:00:00Z', modifiedAt: null, git: { status: 'no-history' } };
+    const transport = vi.fn(async () => json(history));
+    const source = new HttpProjectSource(new ProjectConnection('c'.repeat(64), transport), envelope);
+    expect(await source.fileHistory('main.ts', new AbortController().signal)).toEqual(history);
+    expect(transport.mock.calls[0]).toEqual([`/api/projects/${id}/files/${fileId}/history`, expect.objectContaining({ method: 'POST', body: JSON.stringify({ snapshotId }) })]);
+    await expect(source.fileHistory('.env', new AbortController().signal)).rejects.toHaveProperty('code', 'invalid-file');
+    const wrong = new HttpProjectSource(new ProjectConnection('c'.repeat(64), async () => json({ ...history, path: 'other.ts' })), envelope);
+    await expect(wrong.fileHistory('main.ts', new AbortController().signal)).rejects.toHaveProperty('code', 'stale-snapshot');
+    source.revoke(); await expect(source.fileHistory('main.ts', new AbortController().signal)).rejects.toHaveProperty('code', 'stale-snapshot');
+  });
+  it('lists models only on explicit request and sends the selected model through local preview transport', async () => {
+    const transport = vi.fn(async (url: string, _init: RequestInit) => json(url === '/api/session' ? { project: null, cloud: cloudStatus }
+      : url === '/api/cloud/models' ? { models: ['model-a', 'model-b'] } : preview));
+    const connection = new ProjectConnection('c'.repeat(64), transport); await connection.session();
+    const source = new HttpProjectSource(connection, envelope);
+    expect(transport).toHaveBeenCalledTimes(1); expect(source.cloud?.model).toBe(cloudStatus.model);
+    expect(await source.cloud!.models!(new AbortController().signal)).toEqual(['model-a', 'model-b']);
+    expect(transport.mock.calls[1]).toEqual(['/api/cloud/models', expect.objectContaining({ method: 'POST', body: '{}' })]);
+    await source.cloud!.preview({ snapshotId, path: 'main.ts', model: 'model-b' });
+    expect(JSON.parse(transport.mock.calls[2]![1].body as string)).toEqual({ snapshotId, path: 'main.ts', model: 'model-b' });
+  });
+});

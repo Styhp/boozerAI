@@ -4,6 +4,8 @@
 
 Human-requested extension, M3-CLOUD-CHAT (2026-10-09 America/New_York): Chat Boozer offers explicit OpenAI inspection/advice for questions about adding capabilities and prerequisites. A larger snapshot evidence preview and optional current official OpenAI documentation lookup precede every send. Existing repository facts, external guidance and proposed changes are distinguished; no target writes or coding-agent execution. Local chat stays the default. Implementation passes offline checks; source-free live comparison and official-docs advice pass with the MSI-configured `gpt-5.6-luna`. Repository answer quality and independent review remain open.
 
+Human-requested file-age/model extension (2026-10-09 America/New_York): “staleness” means time since filesystem modification and the latest Git commit affecting the file, displayed separately on explicit check. Do not infer code quality, disuse or need for replacement from age. Cloud chat and file comparison allow temporary per-request model selection; an explicit metadata request lists models, without sending project content. Changes to model selection invalidate request consent. Implementation and independent review are tracked in M3-FRESHNESS-MODELS.
+
 ## Users and problem
 
 Primary users are developers joining unfamiliar codebases and developers reviewing AI-generated code. Per P-18, the interface and explanations are written so that people who build with AI tools but read little code ("vibe coders") can follow them too. Privacy-constrained teams are secondary users. Reading structure across many files is slow; unsupported AI claims make that harder. Users need checkable source evidence without requiring a cloud AI service.

@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { basename } from 'node:path';
 import type { WorkspaceSnapshot } from '../shared/contracts.js';
-import type { FileResponse, FolderSelectionResponse, GraphResponse, ProjectStatus } from '../shared/project-api.js';
+import type { FileHistory, FileResponse, FolderSelectionResponse, GraphResponse, ProjectStatus } from '../shared/project-api.js';
 import { ANALYSIS_KEY, extractDependencies } from '../shared/extractor.js';
 import { InputError, LocalInputAdapter } from './local-input.js';
 import { defaultLocalStore, type LocalStore } from './local-store.js';
@@ -115,6 +115,14 @@ export class ProjectSession {
     const source = this.current(id, snapshotId).files.get(fileId);
     if (source === undefined) throw new ApiError(404, 'invalid-file');
     return source;
+  }
+
+  async fileHistory(id: string, fileId: string, snapshotId: string, signal: AbortSignal): Promise<FileHistory> {
+    const current = this.current(id, snapshotId);
+    const file = this.file(id, fileId, snapshotId);
+    const history = await this.#project(id).fileHistory(id, file.path, signal);
+    if (this.current(id, snapshotId) !== current || signal.aborted) throw new ApiError(409, 'stale-snapshot');
+    return { ...history, snapshotId };
   }
 
   async index(id: string, signal: AbortSignal, previousSnapshot?: string): Promise<GraphResponse> {

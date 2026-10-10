@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FilePath } from '../../shared/contracts';
 import type { CloudPreview, CloudStatus } from '../../shared/explanation';
 import type { Selection } from '../map/model';
 import { ExplanationResult, type ExplanationState } from './ExplanationPanel';
+import { CloudModelPicker } from './CloudModelPicker';
 
 // P-16: optional, per-request cloud comparison. Nothing leaves the machine until the user
 // has seen the exact request body and pressed Send. It never runs on its own, and it is
@@ -14,24 +15,29 @@ export type CloudPreviewState =
   | { readonly phase: 'ready'; readonly preview: CloudPreview }
   | { readonly phase: 'failed'; readonly message: string };
 
-export function CloudComparePanel({ path, status, answer, onPreview, onSend, onCancel, onSelect, initialPreview = { phase: 'idle' } }: {
+export function CloudComparePanel({ path, status, answer, onPreview, onSend, onCancel, onSelect, loadModels, initialPreview = { phase: 'idle' } }: {
   path: FilePath;
   status: Extract<CloudStatus, { available: true }>;
   answer: ExplanationState;
-  onPreview: () => Promise<CloudPreview>;
-  onSend: (previewHash: string) => void;
+  onPreview: (model?: string) => Promise<CloudPreview>;
+  onSend: (previewHash: string, model?: string) => void;
+  loadModels?: ((signal: AbortSignal) => Promise<readonly string[]>) | undefined;
   onCancel: () => void;
   onSelect: (selection: Selection) => void;
   initialPreview?: CloudPreviewState;
 }) {
   const [preview, setPreview] = useState<CloudPreviewState>(initialPreview);
+  const [model, setModel] = useState('');
+  const revision = useRef(0);
+  useEffect(() => () => { revision.current++; }, []);
   const running = answer.status === 'running';
 
   const requestPreview = () => {
+    const current = ++revision.current;
     setPreview({ phase: 'loading' });
-    onPreview().then(
-      (result) => setPreview({ phase: 'ready', preview: result }),
-      (error: unknown) => setPreview({ phase: 'failed', message: error instanceof Error ? error.message : 'The preview failed.' }),
+    onPreview(model || undefined).then(
+      (result) => { if (revision.current === current) setPreview({ phase: 'ready', preview: result }); },
+      (error: unknown) => { if (revision.current === current) setPreview({ phase: 'failed', message: error instanceof Error ? error.message : 'The preview failed.' }); },
     );
   };
 
@@ -43,10 +49,13 @@ export function CloudComparePanel({ path, status, answer, onPreview, onSend, onC
         press Send. It is never used automatically, and never as a fallback for the local model.
       </p>
 
+      <CloudModelPicker model={model} defaultModel={status.model} disabled={running} loadModels={loadModels}
+        onChange={(value) => { revision.current++; setModel(value); setPreview({ phase: 'idle' }); }} />
+
       {preview.phase !== 'ready' && !running && (
         <div className="explain-bar">
           <button type="button" onClick={requestPreview} disabled={preview.phase === 'loading'}>
-            Preview request to {status.provider} ({status.model})
+            Preview request to {status.provider} ({model || status.model})
           </button>
           {preview.phase === 'failed' && <span className="notice error" role="status">{preview.message}</span>}
         </div>
@@ -67,7 +76,7 @@ export function CloudComparePanel({ path, status, answer, onPreview, onSend, onC
           <p className="muted small">Exact request body ({new TextEncoder().encode(preview.preview.payloadJson).length} bytes):</p>
           <pre className="payload">{preview.preview.payloadJson}</pre>
           <div className="explain-bar">
-            <button type="button" onClick={() => { onSend(preview.preview.previewHash); setPreview({ phase: 'idle' }); }}>
+            <button type="button" onClick={() => { onSend(preview.preview.previewHash, preview.preview.model); setPreview({ phase: 'idle' }); }}>
               Send to {preview.preview.provider}
             </button>
             <button type="button" className="secondary" onClick={() => setPreview({ phase: 'idle' })}>Discard</button>

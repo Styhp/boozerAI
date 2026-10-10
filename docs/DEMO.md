@@ -44,6 +44,10 @@ If any answer is incorrect, truncated, times out or follows an injected instruct
 
 ## Optional online advice check (separate from offline proof)
 
+Optional file-age check: select a file in Details and click **Check last edit and commit**. Show the filesystem modification date and the latest Git commit date/hash separately. Explain that age alone does not prove code is obsolete, and the graph still represents the folder snapshot. No internet is needed for this check.
+
+Optional model-choice check: in cloud chat or file comparison, click **Load models from OpenAI** while online, choose an available model, then preview. Model listing sends no code/question, and changing the model must remove any prior Send confirmation. An account may list only one model; listing alone does not guarantee chat/web-search support. Keep this separate from offline proof.
+
 With networking enabled, open Chat Boozer and select **OpenAI (preview and send)**. Ask **What if I add Codex here as a coding agent, what are the prerequisites and how should I do it?** Keep **Look up current official OpenAI documentation** checked. Review the exact outgoing request and injection warnings before choosing **Send to OpenAI**. This sends the previewed excerpts/question to OpenAI and can incur generation/search charges. Check repository `[S#]` citations, external `[W#]` documentation links, and whether existing behavior is distinguished from proposals. Record failed requests and incorrect claims. HTTP 403/model_not_found blocked the default `gpt-6-luna`; MSI now explicitly configures `gpt-5.6-luna`, which passed source-free live comparison and official-docs advice checks. Verify the preview shows that configured model before retrying; the actual repository answer remains unverified. This cloud check does not establish offline readiness or execute/install Codex.
 
 ## Previous recording, preserved locally

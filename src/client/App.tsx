@@ -57,7 +57,7 @@ export function App({ project, onRefresh, onClose, onOpenAnother }: {
   }, [project, path]);
 
   // Local answers are keyed by path; cloud answers by `cloud:` + path, so both can be compared.
-  const explain = useCallback(async (path: string, cloud?: { previewHash: string }) => {
+  const explain = useCallback(async (path: string, cloud?: { previewHash: string; model?: string }) => {
     if (project === null || graph === null) return;
     const key = cloud ? `cloud:${path}` : path;
     running.current.get(key)?.abort();
@@ -70,7 +70,7 @@ export function App({ project, onRefresh, onClose, onOpenAnother }: {
     if (cloud) setCloudSends((n) => n + 1);
     try {
       const body = cloud
-        ? { snapshotId: graph.snapshotId, path, provider: 'cloud' as const, previewHash: cloud.previewHash }
+        ? { snapshotId: graph.snapshotId, path, provider: 'cloud' as const, previewHash: cloud.previewHash, ...(cloud.model === undefined ? {} : { model: cloud.model }) }
         : { snapshotId: graph.snapshotId, path };
       for await (const event of project.explain(body, controller.signal)) {
         if (event.type === 'snippets') snippets = [...event.snippets];
@@ -98,6 +98,7 @@ export function App({ project, onRefresh, onClose, onOpenAnother }: {
   return (
     <Workspace graph={graphState.graph} label={project.label} isPreview={project.isPreview} readAt={graphState.readAt}
       selection={selection} onSelection={setSelection} source={source} notes={project.notes} cloudSends={cloudSends}
+      fileHistory={project.fileHistory ? (path, signal) => project.fileHistory!(path, signal) : undefined}
       onRefresh={onRefresh} onClose={onClose} onOpenAnother={onOpenAnother} chat={chat}
       explanation={selection?.kind === 'file' ? {
         state: explanations.get(selection.path) ?? { status: 'idle' },
@@ -106,8 +107,9 @@ export function App({ project, onRefresh, onClose, onOpenAnother }: {
         cloud: cloudStatus.available && project.cloud && graph ? {
           status: cloudStatus,
           answer: explanations.get(`cloud:${selection.path}`) ?? { status: 'idle' },
-          onPreview: () => project.cloud!.preview({ snapshotId: graph.snapshotId, path: selection.path }),
-          onSend: (previewHash: string) => { void explain(selection.path, { previewHash }); },
+          loadModels: project.cloud.models,
+          onPreview: (model?: string) => project.cloud!.preview({ snapshotId: graph.snapshotId, path: selection.path, ...(model === undefined ? {} : { model }) }),
+          onSend: (previewHash: string, model?: string) => { void explain(selection.path, { previewHash, ...(model === undefined ? {} : { model }) }); },
           onCancel: () => running.current.get(`cloud:${selection.path}`)?.abort(),
         } : undefined,
       } : undefined} />

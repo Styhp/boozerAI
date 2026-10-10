@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { DependencyEdge, DependencyGraph } from '../../shared/contracts';
 import type { CloudPreview, CloudStatus } from '../../shared/explanation';
+import { FileHistoryPanel } from './FileHistoryPanel';
+import type { FileHistory } from '../../shared/project-api';
 import { CloudComparePanel } from './CloudComparePanel';
 import { ExplanationPanel, type ExplanationState } from './ExplanationPanel';
 import { ImpactPanel } from './ImpactPanel';
@@ -63,13 +65,14 @@ export interface ExplanationControls {
   readonly cloud?: {
     readonly status: Extract<CloudStatus, { available: true }>;
     readonly answer: ExplanationState;
-    readonly onPreview: () => Promise<CloudPreview>;
-    readonly onSend: (previewHash: string) => void;
+    readonly onPreview: (model?: string) => Promise<CloudPreview>;
+    readonly loadModels?: ((signal: AbortSignal) => Promise<readonly string[]>) | undefined;
+    readonly onSend: (previewHash: string, model?: string) => void;
     readonly onCancel: () => void;
   } | undefined;
 }
 
-export function DetailPane({ graph, selection, source, onSelect, explanation, notes }: {
+export function DetailPane({ graph, selection, source, onSelect, explanation, notes, fileHistory }: {
   graph: DependencyGraph;
   selection: Selection | null;
   source: SourceState;
@@ -77,6 +80,7 @@ export function DetailPane({ graph, selection, source, onSelect, explanation, no
   explanation?: ExplanationControls | undefined;
   // Project notes (phase 1); absent for the fixture preview.
   notes?: NotesSource | undefined;
+  fileHistory?: ((path: string, signal: AbortSignal) => Promise<FileHistory>) | undefined;
 }) {
   if (selection === null) {
     return <aside className="detail" data-state="empty"><StartHere /></aside>;
@@ -112,6 +116,7 @@ export function DetailPane({ graph, selection, source, onSelect, explanation, no
   const header = (
     <header>
       <h2>{file.path}</h2>
+      {fileHistory && <FileHistoryPanel key={`${graph.snapshotId}:${file.path}`} path={file.path} load={fileHistory} />}
       {edge && (
         <p className="relationship">
           <span className={`badge kind-${edge.target.type}`}>{edge.kind}</span>{' '}
@@ -140,7 +145,7 @@ export function DetailPane({ graph, selection, source, onSelect, explanation, no
       {/* Each per-file panel keys on its own prefix: siblings sharing a key made React keep old copies on screen. */}
       {isCode && selection.kind === 'file' && explanation?.cloud !== undefined && (
         <CloudComparePanel key={`cloud:${file.path}`} path={file.path} status={explanation.cloud.status} answer={explanation.cloud.answer}
-          onPreview={explanation.cloud.onPreview} onSend={explanation.cloud.onSend} onCancel={explanation.cloud.onCancel} onSelect={onSelect} />
+          loadModels={explanation.cloud.loadModels} onPreview={explanation.cloud.onPreview} onSend={explanation.cloud.onSend} onCancel={explanation.cloud.onCancel} onSelect={onSelect} />
       )}
       {isCode && selection.kind === 'file' && <ImpactPanel key={`impact:${file.path}`} graph={graph} path={file.path} onSelect={onSelect} />}
       {isCode && selection.kind === 'file' && notes !== undefined && <NotesPanel key={`notes:${file.path}`} notes={notes} graph={graph} path={file.path} onSelect={onSelect} />}

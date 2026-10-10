@@ -1,16 +1,17 @@
 import type { CloudStatus } from '../../shared/explanation.js';
 import { ModelError, type ChatMessage } from './model-adapter.js';
-import { isOfficialDocsUrl, OPENAI_DOC_DOMAINS, type WebCitation } from '../../shared/cloud-chat.js';
+import { isCloudModelId, isOfficialDocsUrl, OPENAI_DOC_DOMAINS, type WebCitation } from '../../shared/cloud-chat.js';
 
 // Optional cloud comparison (P-16). The only code that talks to a cloud model. Off unless
 // OPENAI_API_KEY is set at launch, and used only for a request the user confirmed after
-// seeing its exact payload. Never a fallback for local failures. No SDK; two fixed HTTPS
-// endpoints, no redirects. Advice can explicitly enable official-docs web search.
+// seeing its exact payload. Never a fallback for local failures. No SDK; fixed HTTPS
+// generation endpoints and explicit model-list metadata, no redirects. Advice can explicitly enable official-docs web search.
 // The key never leaves this module: it is not logged,
 // not echoed in errors and not sent to the browser.
 
 export const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 export const OPENAI_RESPONSES_ENDPOINT = 'https://api.openai.com/v1/responses';
+export const OPENAI_MODELS_ENDPOINT = 'https://api.openai.com/v1/models';
 // Verified 2026-10-09 at developers.openai.com/api/docs/models/gpt-6-luna: "our most
 // efficient model for focused, high-volume tasks", Chat Completions supported. The `model`
 // field of each response is recorded as the source of truth for what actually answered.
@@ -32,9 +33,10 @@ export type CloudChunk =
 export interface CloudAdapter {
   status(): CloudStatus;
   // The exact JSON body to send for these messages (also what the preview shows).
-  payloadJson(messages: readonly ChatMessage[]): string;
+  payloadJson(messages: readonly ChatMessage[], model?: string): string;
   stream(payloadJson: string, signal?: AbortSignal): AsyncIterable<CloudChunk>;
-  advicePayloadJson?(messages: readonly ChatMessage[], searchDocs: boolean): string;
+  advicePayloadJson?(messages: readonly ChatMessage[], searchDocs: boolean, model?: string): string;
+  listModels?(signal?: AbortSignal): Promise<readonly string[]>;
   streamAdvice?(payloadJson: string, signal?: AbortSignal): AsyncIterable<CloudChunk>;
 }
 
@@ -47,27 +49,60 @@ export function createOpenAIAdapter(options: { apiKey?: string | undefined; mode
   if (!/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/.test(modelName)) throw new Error('OPENAI_MODEL must be a valid model ID.');
   const fetchImpl: Fetch = options.fetch ?? ((input, init) => globalThis.fetch(input, init));
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const selectedModel = (model = modelName) => {
+    if (!isCloudModelId(model)) throw new ModelError('invalid-selection', 'Choose a valid OpenAI model.');
+    return model;
+  };
 
   return {
     status: () => (apiKey === ''
       ? { available: false }
       : { available: true, provider: 'OpenAI', model: modelName, endpoint: OPENAI_ENDPOINT }),
 
-    payloadJson: (messages) => JSON.stringify({
-      model: modelName,
+    payloadJson: (messages, model) => JSON.stringify({
+      model: selectedModel(model),
       messages,
       stream: true,
       stream_options: { include_usage: true },
-      reasoning_effort: 'none',        // fastest setting; comparable with local think: false
+      // Preserve the established low-latency setting only for the two verified
+      // Luna families. Other selected models use their own reasoning default.
+      ...(['gpt-6-luna', 'gpt-5.6-luna'].some((id) => selectedModel(model) === id || selectedModel(model).startsWith(`${id}-`))
+        ? { reasoning_effort: 'none' } : {}),
       max_completion_tokens: 300,      // same output cap as the local model
       store: false,
     }),
 
-    advicePayloadJson: (messages, searchDocs) => JSON.stringify({
-      model: modelName, input: messages, stream: true, store: false, max_output_tokens: 2_000,
+    advicePayloadJson: (messages, searchDocs, model) => JSON.stringify({
+      model: selectedModel(model), input: messages, stream: true, store: false, max_output_tokens: 2_000,
       ...(searchDocs ? { tools: [{ type: 'web_search', filters: { allowed_domains: OPENAI_DOC_DOMAINS }, search_context_size: 'low' }],
         tool_choice: 'required', max_tool_calls: 3 } : {}),
     }),
+
+    // Only an explicit UI metadata request calls this. Listing does not prove that a
+    // model supports a given endpoint or web search; generation errors stay visible.
+    async listModels(signal) {
+      if (apiKey === '') throw new ModelError('cloud-unavailable', 'No OpenAI key is configured for this launch.');
+      try {
+        const response = await fetchImpl(OPENAI_MODELS_ENDPOINT, {
+          method: 'GET', headers: { Authorization: `Bearer ${apiKey}` }, redirect: 'error',
+          signal: AbortSignal.any([AbortSignal.timeout(15_000), ...(signal ? [signal] : [])]),
+        });
+        checkResponse(response);
+        let text = '';
+        let size = 0;
+        const decoder = new TextDecoder();
+        for await (const bytes of response.body!) {
+          size += bytes.byteLength;
+          if (size > 1_048_576) throw new ModelError('cloud-error', 'OpenAI model list exceeded the response limit.');
+          text += decoder.decode(bytes, { stream: true });
+        }
+        const data = JSON.parse(text + decoder.decode()) as { data?: { id?: unknown }[] };
+        if (!Array.isArray(data.data)) throw new SyntaxError();
+        const models = [...new Set(data.data.map((item) => item?.id).filter(isCloudModelId))];
+        if (models.length > 2_000) throw new ModelError('cloud-error', 'OpenAI model list exceeded the model limit.');
+        return models.sort();
+      } catch (error) { throw cloudError(error, signal); }
+    },
 
     async *streamAdvice(payloadJson, signal) {
       if (apiKey === '') throw new ModelError('cloud-unavailable', 'No OpenAI key is configured for this launch.');

@@ -70,6 +70,7 @@ export interface ExplainRequestBody {
   readonly path: FilePath;
   readonly provider?: 'local' | 'cloud';
   readonly previewHash?: string;
+  readonly model?: string;
 }
 
 // What the browser may learn about the optional cloud provider: never the key.

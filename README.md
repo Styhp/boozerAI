@@ -6,6 +6,7 @@ Understand unfamiliar JavaScript and TypeScript repositories with a dependency g
 
 - Explore files and imports in the graph and file tree.
 - Inspect source, open cited lines, and ask for a local file explanation.
+- Check a file's filesystem modification age and latest Git commit affecting its current path. Dates are evidence of activity, not proof that code is obsolete.
 - Ask repository questions in **Chat Boozer**, beside **Details**. **Thinking…** appears while waiting, then **Replying…** as text streams. Expand **Evidence the AI was shown** to check its excerpts.
 - See potential change impact with the import chain as evidence.
 - Optionally save your own project notes outside the analyzed folder.
@@ -58,6 +59,10 @@ Package/runtime/model setup needs downloads. Optional **OpenAI file comparison**
 **OpenAI repository advice:** in Chat Boozer, choose **OpenAI (preview and send)** to ask about possible additions and prerequisites. Boozer prepares up to 12 larger excerpts from the confirmed snapshot plus bounded parsed relationships. Review **Preview OpenAI request**, then **Send to OpenAI**. Optional official OpenAI documentation search supports current Codex/API guidance; `[W#]` links open documentation sources and `[S#]` links open repository lines. The prompt distinguishes existing facts, external guidance and proposed changes. It cannot edit files, run a coding agent or inspect files beyond the preview.
 
 Cloud advice uses OpenAI Responses and requires an account-accessible model; documentation lookup also requires web-search support. Set `OPENAI_MODEL` in the ignored `.env` if needed, then restart. The default remains `gpt-6-luna`; the MSI key returned HTTP 403/model_not_found for it. MSI is now explicitly configured for `gpt-5.6-luna`: source-free live comparison and official-docs advice checks pass. Repository answer quality and independent review remain unverified. No model substitution or cloud fallback happens automatically.
+
+Both cloud panels have a **Cloud model** selector. **Load models from OpenAI** makes an explicit authenticated metadata request with no code or question; listing does not guarantee endpoint or web-search support. Choose a model and preview again before sending. Selection is temporary and does not rewrite `.env` or need a restart; the launch configuration remains the default.
+
+In a file's Details, **Check last edit and commit** reads its current filesystem timestamp and local Git history. Git dates use the latest commit on HEAD affecting that path, without following earlier names. Copied files, working-tree edits and shallow history can make these dates differ. Optional Git history requires an existing system Git; absent or unsupported metadata is labeled unavailable. Checking dates does not refresh the code snapshot.
 
 ## Limits
 

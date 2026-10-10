@@ -5,7 +5,7 @@ import type { CloudComparison, ExplanationService } from './explain/index.js';
 import { ApiError, ProjectSession } from './project-session.js';
 import { NotesError, routeNotes } from './project-notes.js';
 import { isRepoChatRequest, type RepoChatService } from '../shared/repo-chat.js';
-import { isCloudChatRequest, type CloudChatSend } from '../shared/cloud-chat.js';
+import { isCloudChatRequest, isCloudModelId, type CloudChatSend } from '../shared/cloud-chat.js';
 import type { CloudRepoChatService } from './explain/cloud-chat-service.js';
 
 const MAX_BODY = 8_192;
@@ -49,9 +49,10 @@ function explanationBody(input: Record<string, unknown>): ExplainRequestBody {
     return { snapshotId: input.snapshotId as string, path: input.path as string, provider };
   }
   if (provider === 'cloud') {
-    fields(input, ['snapshotId', 'path', 'provider', 'previewHash']);
+    fields(input, ['snapshotId', 'path', 'provider', 'previewHash', ...(Object.hasOwn(input, 'model') ? ['model'] : [])]);
+    if (Object.hasOwn(input, 'model') && !isCloudModelId(input.model)) throw new ApiError(400, 'invalid-body');
     if (!/^[0-9a-f]{64}$/.test(input.previewHash as string)) throw new ApiError(400, 'invalid-body');
-    return { snapshotId: input.snapshotId as string, path: input.path as string, provider, previewHash: input.previewHash as string };
+    return { snapshotId: input.snapshotId as string, path: input.path as string, provider, previewHash: input.previewHash as string, ...(typeof input.model === 'string' ? { model: input.model } : {}) };
   }
   throw new ApiError(400, 'invalid-body');
 }
@@ -76,6 +77,15 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
     if (method === 'GET' && pathname === '/api/session' && query === undefined) {
       json(response, 200, { project: session.descriptor(), cloud: service.cloudStatus() }); return;
     }
+    if (pathname === '/api/cloud/models') {
+      if (method !== 'POST') throw new ApiError(405, 'method-not-allowed');
+      if (query !== undefined) throw new ApiError(400, 'invalid-query');
+      fields(await body(request), []);
+      if (!service.listCloudModels) throw new ApiError(404, 'cloud-unavailable');
+      try { json(response, 200, { models: await service.listCloudModels(controller.signal) }); }
+      catch { throw new ApiError(502, 'cloud-models-unavailable'); }
+      return;
+    }
     if (pathname === '/api/session/pick') {
       if (method !== 'POST') throw new ApiError(405, 'method-not-allowed');
       if (query !== undefined) throw new ApiError(400, 'invalid-query');
@@ -96,7 +106,7 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
       return;
     }
     // --- end project notes hook ---
-    const route = /^\/api\/projects\/([0-9a-f-]{36})\/(confirm|graph|files\/([0-9a-f-]{36})|refresh|close|explanations|explanations\/preview|chat|chat\/cloud|chat\/cloud\/preview)$/.exec(pathname ?? '');
+    const route = /^\/api\/projects\/([0-9a-f-]{36})\/(confirm|graph|files\/([0-9a-f-]{36})(?:\/history)?|refresh|close|explanations|explanations\/preview|chat|chat\/cloud|chat\/cloud\/preview)$/.exec(pathname ?? '');
     if (route === null) throw new ApiError(404, 'not-found');
     const id = route[1]!;
     const action = route[2]!;
@@ -104,7 +114,7 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
     if (method === 'GET' && action === 'graph' && query === undefined) {
       json(response, 200, session.current(id).response); return;
     }
-    if (method === 'GET' && route[3] !== undefined) {
+    if (method === 'GET' && route[3] !== undefined && !action.endsWith('/history')) {
       const params = new URLSearchParams(query);
       const snapshotId = params.get('snapshotId');
       if (snapshotId === null || !/^sha256:[0-9a-f]{64}$/.test(snapshotId) || [...params.keys()].length !== 1) throw new ApiError(400, 'snapshot-required');
@@ -113,6 +123,10 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
     if (method !== 'POST') throw new ApiError(405, 'method-not-allowed');
     if (query !== undefined) throw new ApiError(400, 'invalid-query');
     const input = await body(request);
+    if (action.endsWith('/history') && route[3] !== undefined) {
+      fields(input, ['snapshotId']);
+      json(response, 200, await session.fileHistory(id, route[3], input.snapshotId as string, AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]))); return;
+    }
     if (action === 'confirm') {
       fields(input, []);
       json(response, 200, await session.index(id, controller.signal)); return;
@@ -128,10 +142,11 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
       session.close(); json(response, 200, { closed: true }); return;
     }
     if (action === 'explanations/preview') {
-      fields(input, ['snapshotId', 'path']);
+      fields(input, ['snapshotId', 'path', ...(Object.hasOwn(input, 'model') ? ['model'] : [])]);
+      if (Object.hasOwn(input, 'model') && !isCloudModelId(input.model)) throw new ApiError(400, 'invalid-body');
       const current = session.current(id, input.snapshotId as string);
       // Selection stays a snapshot key. Only the service builds the exact cloud payload.
-      const result = service.previewCloud({ snapshot: current.snapshot, graph: current.response.graph, selected: input.path as string, signal: controller.signal });
+      const result = service.previewCloud({ snapshot: current.snapshot, graph: current.response.graph, selected: input.path as string, ...(typeof input.model === 'string' ? { model: input.model } : {}), signal: controller.signal });
       if (result.type === 'error') {
         const status = result.code === 'cloud-unavailable' ? 404 : result.code === 'stale-snapshot' ? 409
           : result.code === 'invalid-selection' || result.code === 'no-excerpt' ? 400 : 500;
@@ -193,6 +208,7 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
         ...explanation,
         ...(selection.provider === undefined ? {} : { provider: selection.provider }),
         ...(selection.previewHash === undefined ? {} : { previewHash: selection.previewHash }),
+        ...(selection.model === undefined ? {} : { model: selection.model }),
       })) {
         if (explanation.signal.aborted) break;
         if (!response.write(`${JSON.stringify(event)}\n`)) await once(response, 'drain', { signal: explanation.signal });

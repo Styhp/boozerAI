@@ -4,6 +4,7 @@ import { DetailPane, type ExplanationControls } from '../components/DetailPane';
 import { DEFAULT_FILTERS, type GraphFilters } from '../graph/engine';
 import { GraphView } from '../graph/GraphView';
 import { SummaryPanel } from '../components/SummaryPanel';
+import type { FileHistory } from '../../shared/project-api';
 import type { NotesSource } from '../data/project-source';
 import { NODE_CAP } from '../map/layout';
 import { describeTarget, selectedPath, sourceLines, type Selection, type SourceState } from '../map/model';
@@ -21,7 +22,7 @@ const AUTO_COLLAPSE_BELOW = 1360;
 // summary (Overview) or DetailPane until S3. Above the 300-node cap keep C4's list-first
 // default; an explicit folder/search subset can open the animated view (SPEC §5.9).
 export function Workspace({ graph, label, isPreview, readAt, selection, onSelection, source, explanation, notes, chat,
-  cloudSends, onRefresh, onClose, onOpenAnother }: {
+  cloudSends, onRefresh, onClose, onOpenAnother, fileHistory }: {
   graph: DependencyGraph;
   label: string;
   isPreview: boolean;
@@ -33,6 +34,7 @@ export function Workspace({ graph, label, isPreview, readAt, selection, onSelect
   notes?: NotesSource | undefined;
   chat?: RepoChatControls | undefined;
   cloudSends: number;
+  fileHistory?: ((path: string, signal: AbortSignal) => Promise<FileHistory>) | undefined;
   onRefresh?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
   onOpenAnother?: (() => void) | undefined;
@@ -141,7 +143,7 @@ export function Workspace({ graph, label, isPreview, readAt, selection, onSelect
       </>}
       onClose={() => setPaneOpen(false)}>
       {showingChat ? <RepoChatPanel graph={graph} chat={chat} contextPath={selectedPath(graph, selection)} onSelect={open} /> : detail
-        ? <DetailPane graph={graph} selection={selection} source={source} onSelect={open} explanation={explanation} notes={notes} />
+        ? <DetailPane graph={graph} selection={selection} source={source} onSelect={open} explanation={explanation} notes={notes} fileHistory={fileHistory} />
         : <div className="ws-note"><SummaryPanel graph={graph} sourceLabel={label} isPreview={isPreview} onSelect={open} /></div>}
     </Pane>
   </>;

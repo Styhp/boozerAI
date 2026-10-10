@@ -102,9 +102,9 @@ export function createCloudRepoChatService(cloud: CloudAdapter): CloudRepoChatSe
     const status = cloud.status();
     if (!status.available || !cloud.advicePayloadJson || !cloud.streamAdvice) throw new ModelError('cloud-unavailable', 'OpenAI chat is not configured for this launch.');
     const snippets = inspectCloudContext(snapshot, graph, body);
-    const payloadJson = cloud.advicePayloadJson(buildCloudChatPrompt(body, graph, snippets), body.searchDocs);
+    const payloadJson = cloud.advicePayloadJson(buildCloudChatPrompt(body, graph, snippets), body.searchDocs, body.model);
     if (Buffer.byteLength(payloadJson, 'utf8') > 131_072) throw new ModelError('no-excerpt', 'The inspection exceeds the cloud request limit. Select a smaller project.');
-    return { snippets, payloadJson, status, previewHash: sha256(OPENAI_RESPONSES_ENDPOINT + '\n' + payloadJson) };
+    return { snippets, payloadJson, status, model: body.model ?? status.model, previewHash: sha256(OPENAI_RESPONSES_ENDPOINT + '\n' + payloadJson) };
   };
   const failure = (error: unknown) => ({ type: 'error' as const, code: error instanceof ModelError ? error.code : 'cloud-error' as const,
     message: error instanceof ModelError ? error.message : 'OpenAI chat did not finish.' });
@@ -112,7 +112,7 @@ export function createCloudRepoChatService(cloud: CloudAdapter): CloudRepoChatSe
     previewCloudChat(request) {
       try {
         const prepared = prepare(request);
-        return { type: 'preview', preview: { provider: 'OpenAI', model: prepared.status.model, endpoint: OPENAI_RESPONSES_ENDPOINT,
+        return { type: 'preview', preview: { provider: 'OpenAI', model: prepared.model, endpoint: OPENAI_RESPONSES_ENDPOINT,
           payload: JSON.parse(prepared.payloadJson) as unknown, payloadJson: prepared.payloadJson, previewHash: prepared.previewHash,
           suspectedInjections: findInstructionLikeText(prepared.snippets) } };
       } catch (error) { return failure(error); }
@@ -131,7 +131,7 @@ export function createCloudRepoChatService(cloud: CloudAdapter): CloudRepoChatSe
           else {
             text = chunk.text ?? text;
             yield { type: 'done', explanation: { text, snippets: prepared.snippets, citations: validateCitations(text, prepared.snippets),
-              model: { name: chunk.model ?? prepared.status.model, runtime: 'OpenAI API', location: 'cloud' }, durationMs: Math.round(performance.now() - started) },
+              model: { name: chunk.model ?? prepared.model, runtime: 'OpenAI API', location: 'cloud' }, durationMs: Math.round(performance.now() - started) },
               details: { promptVersion: CLOUD_CHAT_PROMPT_VERSION, modelDigest: null, runtimeVersion: 'OpenAI Responses',
                 promptTokens: chunk.promptTokens, outputTokens: chunk.outputTokens, truncated: chunk.truncated, thinkingSeen: false,
                 mentions: validateMentions(text, request.snapshot), suspectedInjections: findInstructionLikeText(prepared.snippets),

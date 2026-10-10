@@ -519,3 +519,9 @@
 @media (prefers-reduced-motion: reduce) {
   .ws-shell *, .ws-shell *::before, .ws-shell *::after { animation: none !important; transition: none !important; }
 }
+
+.file-history { margin: 12px 0; padding: 12px; border: 1px solid var(--border, #34414f); border-radius: 8px; }
+.file-history h3 { margin-top: 0; }
+.file-history p, .cloud-model-picker p { margin: 8px 0; }
+.cloud-model-picker { margin: 12px 0; }
+.cloud-model-picker select { max-width: 100%; }

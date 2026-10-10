@@ -3,14 +3,16 @@ import type { CloudChatRequest, CloudChatSend } from '../../shared/cloud-chat';
 import type { CloudPreview } from '../../shared/explanation';
 
 export interface CloudChatControls {
-  preview(question: string, contextPath: string | undefined, searchDocs: boolean, signal: AbortSignal): Promise<{ request: CloudChatRequest; preview: CloudPreview }>;
+  readonly defaultModel?: string | undefined;
+  models?(signal: AbortSignal): Promise<readonly string[]>;
+  preview(question: string, contextPath: string | undefined, searchDocs: boolean, signal: AbortSignal, model?: string): Promise<{ request: CloudChatRequest; preview: CloudPreview }>;
   send(request: CloudChatSend): void;
 }
 
 // The parent keys this component by every draft field and transcript revision. An
 // edited draft or switched project discards consent and ignores late previews.
-export function CloudChatPreview({ controls, question, contextPath, searchDocs, onSent }: {
-  controls: CloudChatControls; question: string; contextPath: string | undefined; searchDocs: boolean; onSent(): void;
+export function CloudChatPreview({ controls, question, contextPath, searchDocs, model, onSent }: {
+  controls: CloudChatControls; question: string; contextPath: string | undefined; searchDocs: boolean; model?: string | undefined; onSent(): void;
 }) {
   const [state, setState] = useState<{ phase: 'idle' | 'loading' | 'failed'; message?: string }
     | { phase: 'ready'; request: CloudChatRequest; preview: CloudPreview }>({ phase: 'idle' });
@@ -20,7 +22,7 @@ export function CloudChatPreview({ controls, question, contextPath, searchDocs, 
     active.current?.abort();
     const controller = new AbortController(); active.current = controller;
     setState({ phase: 'loading' });
-    controls.preview(question, contextPath, searchDocs, controller.signal).then(
+    controls.preview(question, contextPath, searchDocs, controller.signal, model).then(
       (ready) => { if (!controller.signal.aborted) setState({ phase: 'ready', ...ready }); },
       (error: unknown) => { if (!controller.signal.aborted) setState({ phase: 'failed', message: error instanceof Error ? error.message : 'Preview failed.' }); },
     );

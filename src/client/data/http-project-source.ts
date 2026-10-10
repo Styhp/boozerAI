@@ -1,11 +1,11 @@
 import type { DependencyGraph } from '../../shared/contracts';
 import type { CloudPreview, CloudStatus, ExplanationEvent, ExplainRequestBody } from '../../shared/explanation';
 import type { NoteCreateBody, NoteEditBody, NotesResponse } from '../../shared/notes';
-import type { FileResponse, FolderSelectionResponse, GraphResponse, SessionResponse } from '../../shared/project-api';
+import type { FileHistory, FileResponse, FolderSelectionResponse, GraphResponse, SessionResponse } from '../../shared/project-api';
 import { readExplanationEvents } from './explanation-stream';
 import { sha256Hex, type NotesSource, type ProjectSource } from './project-source';
 import { isRepoChatRequest, type RepoChatRequest } from '../../shared/repo-chat';
-import { isCloudChatRequest, type CloudChatRequest, type CloudChatSend } from '../../shared/cloud-chat';
+import { isCloudChatRequest, isCloudModelId, type CloudChatRequest, type CloudChatSend } from '../../shared/cloud-chat';
 
 export class ProjectApiError extends Error {
   constructor(readonly status: number, readonly code: string) { super(`Project request failed: ${code}`); }
@@ -133,6 +133,13 @@ export class HttpProjectSource implements ProjectSource {
     this.label = response.label;
     if (connection.cloudStatus.available) {
       this.cloud = {
+        model: connection.cloudStatus.model,
+        models: async (signal) => {
+          const response = await this.#connection.request('/api/cloud/models', 'POST', {}, AbortSignal.any([signal, this.#abort.signal]));
+          const result = await response.json() as { models?: unknown };
+          if (signal.aborted || this.#abort.signal.aborted || !Array.isArray(result.models) || !result.models.every(isCloudModelId)) throw new Error('Model list unavailable.');
+          return result.models as string[];
+        },
         status: async () => this.#abort.signal.aborted ? { available: false } : connection.cloudStatus,
         preview: (body) => this.#previewCloud(body),
       };
@@ -173,7 +180,7 @@ export class HttpProjectSource implements ProjectSource {
     }
     try {
       const response = await this.#connection.request(`/api/projects/${this.#id}/explanations/preview`, 'POST',
-        { snapshotId: body.snapshotId, path: body.path }, this.#abort.signal);
+        { snapshotId: body.snapshotId, path: body.path, ...(body.model === undefined ? {} : { model: body.model }) }, this.#abort.signal);
       const preview = await response.json() as CloudPreview;
       if (this.#abort.signal.aborted) throw new Error();
       if (!this.#connection.cloudStatus.available) throw new ProjectApiError(401, 'revoked');
@@ -199,6 +206,16 @@ export class HttpProjectSource implements ProjectSource {
     if (response.projectId !== this.#id || response.graph.snapshotId !== this.#initialSnapshot || this.#abort.signal.aborted) throw new ProjectApiError(409, 'stale-snapshot');
     this.#response = response;
     return response.graph;
+  }
+
+  async fileHistory(path: string, signal: AbortSignal): Promise<FileHistory> {
+    const file = this.#response.files.find((entry) => entry.path === path);
+    if (!file) throw new ProjectApiError(404, 'invalid-file');
+    const result = await this.#connection.request(`/api/projects/${this.#id}/files/${file.id}/history`, 'POST',
+      { snapshotId: this.#initialSnapshot }, AbortSignal.any([signal, this.#abort.signal]));
+    const history = await result.json() as FileHistory;
+    if (history.snapshotId !== this.#initialSnapshot || history.path !== path || signal.aborted || this.#abort.signal.aborted) throw new ProjectApiError(409, 'stale-snapshot');
+    return history;
   }
 
   async loadSource(path: string): Promise<FileResponse> {

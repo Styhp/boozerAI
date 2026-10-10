@@ -26,3 +26,12 @@ export interface FileResponse {
   readonly contentHash: string;
   readonly text: string;
 }
+
+export interface FileHistory {
+  readonly snapshotId: string;
+  readonly path: string;
+  readonly checkedAt: string;
+  readonly modifiedAt: string | null;
+  readonly git: { readonly status: 'committed'; readonly hash: string; readonly committedAt: string; readonly subject: string }
+    | { readonly status: 'not-repository' | 'unavailable' | 'no-history' };
+}

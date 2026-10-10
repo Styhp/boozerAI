@@ -731,3 +731,40 @@ describe('P-16 authenticated cloud preview transport', () => {
     expect(f.engine.previewCloud).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('file history and cloud model selection routes', () => {
+  it('only exposes history for confirmed file IDs behind auth, Origin and snapshot checks', async () => {
+    const f = await fixture(); const indexed = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const action = `files/${indexed.files[0]!.id}/history`; const body = { snapshotId: indexed.graph.snapshotId };
+    expect((await f.call(action, 'POST', body, { authorization: undefined })).statusCode).toBe(401);
+    expect((await f.call(action, 'POST', body, { origin: 'https://evil.example' })).statusCode).toBe(403);
+    expect((await f.call(action, 'POST', { snapshotId: 'old' })).statusCode).toBe(409);
+    expect((await f.call(action, 'POST', { ...body, path: '../outside' })).statusCode).toBe(400);
+    const result = await f.call(action, 'POST', body);
+    expect(result.statusCode).toBe(200); expect(result.json).toMatchObject({ snapshotId: body.snapshotId, path: indexed.files[0]!.path, git: { status: 'not-repository' } });
+    expect(result.text).not.toContain(f.root); expect(result.text).not.toContain('DO NOT READ');
+  });
+  it('model listing requires an explicit authenticated POST without project content', async () => {
+    const listCloudModels = vi.fn(async () => ['selected-model']); const f = await fixture({ ...service(), listCloudModels });
+    await f.call('/api/session'); expect(listCloudModels).not.toHaveBeenCalled();
+    expect((await f.call('/api/cloud/models', 'GET')).statusCode).toBe(405);
+    expect((await f.call('/api/cloud/models', 'POST', {}, { origin: undefined })).statusCode).toBe(403);
+    expect((await f.call('/api/cloud/models', 'POST', {}, { authorization: undefined })).statusCode).toBe(401);
+    expect((await f.call('/api/cloud/models', 'POST', { question: 'unwanted data' })).statusCode).toBe(400);
+    expect(listCloudModels).not.toHaveBeenCalled();
+    expect((await f.call('/api/cloud/models', 'POST', {})).json).toEqual({ models: ['selected-model'] });
+    expect(listCloudModels).toHaveBeenCalledTimes(1);
+  });
+  it('carries the selected comparison model end to end and invalidates a mismatching send', async () => {
+    const { engine, cloudFetch } = cloudService('fake-key'); const f = await fixture(engine);
+    const indexed = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const body = { snapshotId: indexed.graph.snapshotId, path: 'main.ts', model: 'chosen-model' };
+    const preview = await f.call('explanations/preview', 'POST', body);
+    expect(preview.statusCode).toBe(200); expect(preview.json.model).toBe('chosen-model');
+    expect((await f.call('explanations', 'POST', { ...body, model: 'changed', provider: 'cloud', previewHash: preview.json.previewHash })).text).toContain('preview-mismatch');
+    expect(cloudFetch).not.toHaveBeenCalled();
+    await f.call('explanations', 'POST', { ...body, provider: 'cloud', previewHash: preview.json.previewHash });
+    expect(cloudFetch).toHaveBeenCalledExactlyOnceWith(OPENAI_ENDPOINT, expect.objectContaining({ body: preview.json.payloadJson }));
+    expect((await f.call('explanations', 'POST', { ...body, provider: 'local' })).statusCode).toBe(400);
+  });
+});

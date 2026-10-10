@@ -40,6 +40,7 @@ These tools are not dependencies of Boozer's local inference. Commits and the [h
 | Component | Exact configured version/model | Use and license record |
 |---|---|---|
 | Ollama | 0.40.2; loopback `127.0.0.1:11434` | Local runtime for file explanations and chat; MIT per recorded runtime metadata |
+| System Git (optional file history) | MSI Git 2.39.5; existing installation, no download or new package | Read-only latest HEAD commit for an explicitly checked file, through InputAdapter. Git is GPL-2.0; no Git source is copied. Missing or unsupported metadata is labeled unavailable |
 | Qwen | `qwen3:4b-instruct`, Q4_K_M, 4.0B parameters, about 2.5 GB | Actually downloaded and used after approval; Apache-2.0 per recorded `ollama show --license` check |
 | OpenAI API | Default `gpt-6-luna`; MSI explicitly configured with `OPENAI_MODEL=gpt-5.6-luna`; fixed `https://api.openai.com/v1/chat/completions` for file comparison and `https://api.openai.com/v1/responses` for repository advice | Native server-side fetch, no SDK. Optional web search is restricted to official OpenAI documentation domains; search may add charges. Both source-free live endpoint checks returned HTTP 200 and reported `gpt-5.6-luna`, including an official-docs citation. Prior default-model request failed HTTP 403/model_not_found. Repository-answer quality remains unverified. Provider terms apply |
 
