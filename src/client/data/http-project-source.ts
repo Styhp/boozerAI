@@ -202,7 +202,7 @@ export class HttpProjectSource implements ProjectSource {
 
   async loadSource(path: string): Promise<FileResponse> {
     const file = this.#response.files.find((entry) => entry.path === path);
-    const node = this.#response.graph.files.find((entry) => entry.path === path);
+    const node = [...this.#response.graph.files, ...(this.#response.graph.documents ?? [])].find((entry) => entry.path === path);
     if (file === undefined || node === undefined) throw new ProjectApiError(404, 'invalid-file');
     const result = await this.#connection.request(`/api/projects/${this.#id}/files/${file.id}?snapshotId=${this.#initialSnapshot}`, 'GET', undefined, this.#abort.signal);
     const source = await result.json() as FileResponse;

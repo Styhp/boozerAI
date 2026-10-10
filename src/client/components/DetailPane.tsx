@@ -105,8 +105,9 @@ export function DetailPane({ graph, selection, source, onSelect, explanation, no
   // A cited range is evidence like an edge's: highlighted only while it matches the source.
   const evidence = selection.kind === 'range' ? selection.ref : edge?.evidence;
   const path = selection.kind === 'file' ? selection.path : selection.kind === 'range' ? selection.ref.file : edge?.from;
-  const file = path === undefined ? undefined : findFile(graph, path);
+  const file = path === undefined ? undefined : findFile(graph, path) ?? graph.documents?.find((document) => document.path === path);
   if (file === undefined) return <aside className="detail" data-state="missing"><p>This item is not in the current graph.</p></aside>;
+  const isCode = 'parse' in file;
 
   const header = (
     <header>
@@ -119,7 +120,8 @@ export function DetailPane({ graph, selection, source, onSelect, explanation, no
           <br /><span className="hint">{EDGE_KIND_HINTS[edge.kind]}, on line {edge.evidence.startLine} of this file.</span>
         </p>
       )}
-      {file.parse.status === 'error' && (
+      {!isCode && <p className="hint">Repository document · cited as text, not a dependency-graph node.</p>}
+      {isCode && file.parse.status === 'error' && (
         <p className="notice error" role="status">Parse error: this file contributed no relationships. Its source is shown as text.</p>
       )}
       {selection.kind === 'range' && (
@@ -131,17 +133,17 @@ export function DetailPane({ graph, selection, source, onSelect, explanation, no
           )}
         </p>
       )}
-      {selection.kind === 'file' && explanation !== undefined && (
+      {isCode && selection.kind === 'file' && explanation !== undefined && (
         <ExplanationPanel path={file.path} state={explanation.state} onExplain={explanation.onExplain}
           onCancel={explanation.onCancel} onSelect={onSelect} />
       )}
       {/* Each per-file panel keys on its own prefix: siblings sharing a key made React keep old copies on screen. */}
-      {selection.kind === 'file' && explanation?.cloud !== undefined && (
+      {isCode && selection.kind === 'file' && explanation?.cloud !== undefined && (
         <CloudComparePanel key={`cloud:${file.path}`} path={file.path} status={explanation.cloud.status} answer={explanation.cloud.answer}
           onPreview={explanation.cloud.onPreview} onSend={explanation.cloud.onSend} onCancel={explanation.cloud.onCancel} onSelect={onSelect} />
       )}
-      {selection.kind === 'file' && <ImpactPanel key={`impact:${file.path}`} graph={graph} path={file.path} onSelect={onSelect} />}
-      {selection.kind === 'file' && notes !== undefined && <NotesPanel key={`notes:${file.path}`} notes={notes} graph={graph} path={file.path} onSelect={onSelect} />}
+      {isCode && selection.kind === 'file' && <ImpactPanel key={`impact:${file.path}`} graph={graph} path={file.path} onSelect={onSelect} />}
+      {isCode && selection.kind === 'file' && notes !== undefined && <NotesPanel key={`notes:${file.path}`} notes={notes} graph={graph} path={file.path} onSelect={onSelect} />}
     </header>
   );
 
@@ -155,7 +157,7 @@ export function DetailPane({ graph, selection, source, onSelect, explanation, no
   const stale = evidence !== undefined && referenceState(evidence, source.source) === 'stale';
   const highlight = evidence !== undefined && !stale ? { start: evidence.startLine, end: evidence.endLine } : null;
   return (
-    <aside className="detail" data-state={stale ? 'stale' : file.parse.status === 'error' ? 'parse-error' : 'source'}>
+    <aside className="detail" data-state={stale ? 'stale' : isCode && file.parse.status === 'error' ? 'parse-error' : 'source'}>
       {header}
       {stale && (
         <p className="notice warning" role="status">

@@ -37,6 +37,12 @@ function validateSnapshot(snapshot: WorkspaceSnapshot): void {
       || Buffer.byteLength(file.text, 'utf8') !== file.sizeBytes
       || createHash('sha256').update(file.text, 'utf8').digest('hex') !== file.contentHash) throw new ExtractionError();
   }
+  for (const document of snapshot.documents ?? []) {
+    addPath(document.path);
+    if (!['markdown', 'manifest'].includes(document.kind) || typeof document.text !== 'string'
+      || Buffer.byteLength(document.text, 'utf8') !== document.sizeBytes
+      || createHash('sha256').update(document.text, 'utf8').digest('hex') !== document.contentHash) throw new ExtractionError();
+  }
   for (const skip of snapshot.inventory.skipped) {
     addPath(skip.path);
     if (!skipReasons.has(skip.reason)) throw new ExtractionError();
@@ -166,7 +172,8 @@ function candidates(source: ts.SourceFile): { candidates: Candidate[]; dynamicSc
 /** Pure snapshot -> immutable graph. It never loads, transpiles or executes target code. */
 export function extractDependencies(snapshot: WorkspaceSnapshot): DependencyGraph {
   validateSnapshot(snapshot);
-  const resolver = new SnapshotResolver(snapshot.files, snapshot.inventory.skipped);
+  const resolver = new SnapshotResolver(snapshot.files, [...snapshot.inventory.skipped,
+    ...(snapshot.documents ?? []).map(({ path }) => ({ path, reason: 'unsupported-extension' as const }))]);
   const files: FileNode[] = [];
   const edges: DependencyEdge[] = [];
   const skips: FileSkip[] = snapshot.inventory.skipped.map((skip) => Object.freeze({ ...skip }));
@@ -225,6 +232,8 @@ export function extractDependencies(snapshot: WorkspaceSnapshot): DependencyGrap
     }
   }
   return Object.freeze({ schemaVersion: 1, snapshotId: snapshot.snapshotId, extractor: EXTRACTOR_IDENTITY,
+    ...(snapshot.documents?.length ? { documents: Object.freeze([...snapshot.documents].sort((a, b) => bytewise(a.path, b.path))
+      .map(({ text: _text, ...info }) => Object.freeze(info))) } : {}),
     files: Object.freeze(files), edges: Object.freeze(edges), coverage: Object.freeze({
       files: Object.freeze({ found: snapshot.inventory.found, parsed, skipped: skips.length,
         skips: Object.freeze(skips), prunedDirectories: Object.freeze(snapshot.inventory.prunedDirectories

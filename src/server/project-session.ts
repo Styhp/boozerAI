@@ -134,7 +134,7 @@ export class ProjectSession {
       const graph = extractDependencies(snapshot);
       if (combined.aborted || this.#revoked) throw new ApiError(409, 'cancelled');
       const files = new Map<string, FileResponse>();
-      const ids = snapshot.files.map((file) => {
+      const ids = [...snapshot.files, ...(snapshot.documents ?? [])].map((file) => {
         const fileId = randomUUID();
         files.set(fileId, Object.freeze({ snapshotId: snapshot.snapshotId, path: file.path, contentHash: file.contentHash, text: file.text }));
         return Object.freeze({ id: fileId, path: file.path });

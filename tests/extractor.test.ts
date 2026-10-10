@@ -259,4 +259,20 @@ describe('empty coverage and snapshot validation', () => {
       { ...good, inventory: { ...good.inventory, found: 999 } },
     ]) expect(() => extractDependencies(bad)).toThrow(ExtractionError);
   });
+  it('validates document identity while keeping documents out of parsing and resolution', () => {
+    const good = memorySnapshot({ 'main.ts': 'export {};' });
+    const text = 'import "./imaginary"; <not valid TypeScript';
+    const document = { path: 'README.md', kind: 'markdown' as const, text, sizeBytes: Buffer.byteLength(text),
+      contentHash: createHash('sha256').update(text).digest('hex') };
+    const result = extractDependencies({ ...good, documents: [document] });
+    expect(result.files).toEqual(extractDependencies(good).files);
+    expect(result.edges).toEqual([]);
+    expect(result.documents).toEqual([{ path: document.path, kind: document.kind, sizeBytes: document.sizeBytes, contentHash: document.contentHash }]);
+    const importing = memorySnapshot({ 'main.ts': "import './README.md';" });
+    expect(extractDependencies({ ...importing, documents: [document] }).edges.map((edge) => edge.target))
+      .toEqual([{ type: 'excluded', path: 'README.md', reason: 'unsupported-extension' }]);
+    for (const documents of [[{ ...document, text: 'changed' }], [document, document], [{ ...document, path: '../README.md' }], [{ ...document, path: 'main.ts' }]]) {
+      expect(() => extractDependencies({ ...good, documents })).toThrow(ExtractionError);
+    }
+  });
 });

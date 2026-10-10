@@ -27,6 +27,16 @@ export interface SnapshotFile {
   readonly text: string;
 }
 
+// Chat evidence only. These files are never parsed as code or added as graph nodes.
+export interface SnapshotDocument {
+  readonly path: FilePath;
+  readonly kind: 'markdown' | 'manifest';
+  readonly sizeBytes: number;
+  readonly contentHash: string;
+  readonly text: string;
+}
+export type DocumentInfo = Omit<SnapshotDocument, 'text'>;
+
 export interface SnapshotLimits {
   readonly maxFiles: number;
   readonly maxFileBytes: number;
@@ -39,6 +49,7 @@ export interface WorkspaceSnapshot {
   readonly projectId: string;
   readonly snapshotId: string;
   readonly files: readonly SnapshotFile[];
+  readonly documents?: readonly SnapshotDocument[];
   readonly inventory: {
     readonly found: number;
     readonly skipped: readonly FileSkip[];
@@ -102,6 +113,7 @@ export interface DependencyGraph {
   readonly schemaVersion: 1;
   readonly snapshotId: string;
   readonly files: readonly FileNode[];
+  readonly documents?: readonly DocumentInfo[];
   readonly edges: readonly DependencyEdge[];
   readonly extractor: { readonly name: string; readonly version: string };
   readonly coverage: AnalysisCoverage;

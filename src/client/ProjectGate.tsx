@@ -113,11 +113,11 @@ export function ProjectGate({ connection }: { connection: ProjectConnection }) {
 
   // Either selection path still requires a separate confirmation before reading source.
   if (state.status === 'selected') return <GateCard title={`Open ${state.project.label}?`}>
-    <p className="bz-lead">Boozer will read this folder's code as text and draw how its files connect.</p>
+    <p className="bz-lead">Boozer will read this folder's code, Markdown documentation and package.json files as text. Code imports build the graph; chat can cite the documents too.</p>
     <ul>
       <li>Nothing is run, installed or changed in the folder.</li>
       <li>Reading happens on this computer. Nothing is sent online.</li>
-      <li>Limits: 2,000 code files, 1 MiB per file, 20 MiB in total. Anything skipped is counted and shown.</li>
+      <li>Limits: 2,000 code and document files combined, 1 MiB per file, 20 MiB in total. Anything skipped is counted and shown.</li>
     </ul>
     <div className="bz-inline">
       <button type="button" className="bz-btn bz-btn--primary" onClick={() => void index(state.project)}>Read this folder</button>

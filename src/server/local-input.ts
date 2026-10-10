@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { constants, type BigIntStats, type Dirent } from 'node:fs';
 import { lstat, open, opendir, realpath } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
-import type { FileSkip, Language, SnapshotFile, SnapshotLimits, WorkspaceSnapshot } from '../shared/contracts.js';
+import type { FileSkip, Language, SnapshotDocument, SnapshotFile, SnapshotLimits, WorkspaceSnapshot } from '../shared/contracts.js';
 
 export const DEFAULT_SNAPSHOT_LIMITS: SnapshotLimits = Object.freeze({
   maxFiles: 2_000, maxFileBytes: 1_048_576, maxTotalBytes: 20_971_520,
@@ -17,7 +17,7 @@ const IGNORED_DIRECTORY_SUFFIXES = ['.claude/worktrees'];
 const LANGUAGES: Readonly<Record<string, Language>> = {
   '.js': 'js', '.jsx': 'jsx', '.ts': 'ts', '.tsx': 'tsx', '.mjs': 'mjs', '.cjs': 'cjs',
 };
-const POLICY_VERSION = 'local-input-v3';
+const POLICY_VERSION = 'local-input-v4';
 const bytewise = (a: string, b: string) => Buffer.compare(Buffer.from(a), Buffer.from(b));
 const hash = (data: Buffer | string) => createHash('sha256').update(data).digest('hex');
 
@@ -221,6 +221,7 @@ export class LocalInputAdapter {
       if (signal?.aborted) throw new InputError('cancelled');
     };
     const files: SnapshotFile[] = [];
+    const documents: SnapshotDocument[] = [];
     const skipped: FileSkip[] = [];
     const pruned: { readonly path: string; readonly reason: 'ignored' }[] = [];
     const pending = [''];
@@ -263,7 +264,8 @@ export class LocalInputAdapter {
             check();
             const path = directory === '' ? entry.name : `${directory}/${entry.name}`;
             const language = LANGUAGES[extname(entry.name)];
-            if (!entry.isSymbolicLink() && entry.isFile() && language !== undefined && !secretName(entry.name)) {
+            const documentKind = entry.name === 'package.json' ? 'manifest' : /\.md$/i.test(entry.name) ? 'markdown' : undefined;
+            if (!entry.isSymbolicLink() && entry.isFile() && (language !== undefined || documentKind !== undefined) && !secretName(entry.name)) {
               if (++sourceCandidates > limits.maxFiles) throw new InputError('file-limit');
             }
             if ((names.get(entry.name.normalize('NFC').toLowerCase()) ?? 0) > 1) {
@@ -284,7 +286,7 @@ export class LocalInputAdapter {
             } else if (secretName(entry.name)) {
               skipped.push({ path, reason: 'secret-name' });
             } else {
-              if (language === undefined) {
+              if (language === undefined && documentKind === undefined) {
                 skipped.push({ path, reason: 'unsupported-extension' });
               } else if (!entry.isFile()) {
                 skipped.push({ path, reason: 'unreadable' });
@@ -345,7 +347,9 @@ export class LocalInputAdapter {
                   skipped.push({ path, reason: 'binary' });
                   continue;
                 }
-                files.push(Object.freeze({ path, language, sizeBytes: bytes.length, contentHash: hash(bytes), text }));
+                const content = { path, sizeBytes: bytes.length, contentHash: hash(bytes), text };
+                if (language !== undefined) files.push(Object.freeze({ ...content, language }));
+                else documents.push(Object.freeze({ ...content, kind: documentKind! }));
               }
             }
           }
@@ -366,6 +370,7 @@ export class LocalInputAdapter {
     }
 
     files.sort((a, b) => bytewise(a.path, b.path));
+    documents.sort((a, b) => bytewise(a.path, b.path));
     skipped.sort((a, b) => bytewise(a.path, b.path));
     pruned.sort((a, b) => bytewise(a.path, b.path));
     skipped.forEach(Object.freeze);
@@ -379,10 +384,11 @@ export class LocalInputAdapter {
       ignoredDirectories: IGNORED_DIRECTORIES, maxEntries: MAX_ENTRIES, maxDepth: MAX_DEPTH,
       ignoredDirectorySuffixes: IGNORED_DIRECTORY_SUFFIXES,
       files: files.map(({ path, contentHash }) => [path, contentHash]), inventory,
+      documents: documents.map(({ path, contentHash, kind }) => [path, contentHash, kind]),
     });
     return Object.freeze({
       schemaVersion: 1, projectId: this.projectId, snapshotId: `sha256:${hash(identity)}`,
-      files: Object.freeze(files), inventory, limits, createdAt: new Date().toISOString(),
+      files: Object.freeze(files), documents: Object.freeze(documents), inventory, limits, createdAt: new Date().toISOString(),
     });
   }
 }

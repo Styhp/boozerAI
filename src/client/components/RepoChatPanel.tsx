@@ -27,7 +27,7 @@ export function RepoChatPanel({ graph, chat, contextPath, onSelect }: {
   return <section className="ws-repo-chat" aria-label="Chat Boozer">
     <div className="ws-chat-head"><div><h2>Chat Boozer</h2><p className="muted">Local AI · answers from source excerpts · nothing sent online</p></div>
       <button type="button" className="secondary" disabled={turns.length === 0} onClick={chat.onClear}>Clear chat</button></div>
-    <p className="ws-chat-coverage">Current snapshot: {graph.files.length} indexed files. {coverage.files.skipped} files skipped,
+    <p className="ws-chat-coverage">Current snapshot: {graph.files.length} code files, {graph.documents?.length ?? 0} documents. {coverage.files.skipped} files skipped,
       {' '}{coverage.files.prunedDirectories.length} folders unread, {coverage.imports.failed} imports not followed,
       {' '}{coverage.imports.excluded} imports excluded, {coverage.unsupported.length} unsupported patterns. Answers may miss code.</p>
     {turns.length === 0 && <div className="ws-chat-empty"><p>Ask where something is implemented, how it works, or what a file does.</p>

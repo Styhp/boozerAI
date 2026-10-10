@@ -66,7 +66,7 @@ function InlineView({ parts, snippets, path, onSelect }: {
 function SnippetList({ snippets, path, onSelect }: { snippets: readonly Snippet[]; path: FilePath; onSelect: (s: Selection) => void }) {
   return (
     <details className="snippets">
-      <summary>Code the AI was shown ({snippets.length})</summary>
+      <summary>Evidence the AI was shown ({snippets.length})</summary>
       <p className="hint">The AI saw only these excerpts. Each [S#] link in the answer points to one of them.</p>
       <ol>
         {snippets.map((s) => (

@@ -109,6 +109,45 @@ describe('local selection authority', () => {
 });
 
 describe('snapshot bytes and identity', () => {
+  it('captures inert documents through the same authority, hashes and graph-independent corpus', async () => {
+    const root = await folder();
+    await put(root, 'main.ts', 'export const answer = 1;');
+    await put(root, 'README.md', '# Project\n<script>DO_NOT_EXECUTE</script>');
+    await put(root, 'package.json', '{"scripts":{"install":"DO_NOT_EXECUTE"},"dependencies":{"svelte":"1.2.3"}}');
+    const adapter = await selected(root);
+    const first = await snapshot(adapter);
+    expect(first.documents?.map((d) => d.path)).toEqual(['README.md', 'package.json']);
+    expect(first.files.map((f) => f.path)).toEqual(['main.ts']);
+    const graph = extractDependencies(first);
+    expect(graph.files.map((f) => f.path)).toEqual(['main.ts']);
+    expect(graph.edges).toEqual([]);
+    expect(graph.documents?.map((d) => d.path)).toEqual(['README.md', 'package.json']);
+    expect(JSON.stringify(graph)).not.toContain('DO_NOT_EXECUTE');
+    await put(root, 'README.md', '# Changed documentation');
+    const next = await snapshot(adapter);
+    expect(next.snapshotId).not.toBe(first.snapshotId);
+    expect(first.documents?.[0]?.text).toContain('# Project');
+    expect(extractDependencies(next).edges).toEqual(graph.edges);
+    await expect(snapshot(adapter, { ...DEFAULT_SNAPSHOT_LIMITS, maxFiles: 2 })).rejects.toMatchObject({ code: 'file-limit' });
+    await expect(snapshot(adapter, { ...DEFAULT_SNAPSHOT_LIMITS, maxTotalBytes: 40 })).rejects.toMatchObject({ code: 'total-bytes-limit' });
+  });
+  it('excludes secret, symlink, binary and oversized documentation without opening secrets or links', async () => {
+    const root = await folder(); const outside = await folder();
+    await put(outside, 'outside.md', 'PRIVATE_EXTERNAL_BYTES');
+    await symlink(join(outside, 'outside.md'), join(root, 'README.md'));
+    await put(root, 'credentials.md', 'PRIVATE_SECRET_BYTES');
+    await put(root, '.env.md', 'PRIVATE_ENV_BYTES');
+    await put(root, 'binary.md', Buffer.from([0, 1, 2]));
+    await put(root, 'large.md', 'x'.repeat(101));
+    const result = await snapshot(await selected(root), { ...DEFAULT_SNAPSHOT_LIMITS, maxFileBytes: 100 });
+    expect(result.documents).toEqual([]);
+    expect(result.inventory.skipped).toEqual([
+      { path: '.env.md', reason: 'secret-name' }, { path: 'README.md', reason: 'symlink' },
+      { path: 'binary.md', reason: 'binary' }, { path: 'credentials.md', reason: 'secret-name' }, { path: 'large.md', reason: 'oversize' },
+    ]);
+    expect(JSON.stringify(result)).not.toContain('PRIVATE_');
+    expect(vi.mocked(open).mock.calls.map(([path]) => path)).toEqual([join(root, 'binary.md')]);
+  });
   it('handles all supported languages and hashes exact UTF-8 bytes without running code', async () => {
     const root = await folder();
     const texts = new Map([

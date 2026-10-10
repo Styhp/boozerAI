@@ -140,7 +140,8 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
     if (action === 'chat') {
       if (!isRepoChatRequest(input)) throw new ApiError(400, 'invalid-body');
       const current = session.current(id, input.snapshotId);
-      if (input.contextPath !== undefined && !current.snapshot.files.some((file) => file.path === input.contextPath)) throw new ApiError(404, 'invalid-file');
+      if (input.contextPath !== undefined && ![...current.snapshot.files, ...(current.snapshot.documents ?? [])]
+        .some((file) => file.path === input.contextPath)) throw new ApiError(404, 'invalid-file');
       if (service.chat === undefined) throw new ApiError(404, 'chat-unavailable');
       const chat = session.beginChat(id, input.snapshotId, controller.signal);
       const timeout = setTimeout(() => {

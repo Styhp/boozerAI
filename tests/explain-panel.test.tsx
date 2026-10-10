@@ -65,7 +65,7 @@ describe('explanation panel', () => {
 
   it('labels model, runtime, local and duration, and keeps the sent snippets visible', () => {
     const html = panel(done);
-    for (const label of ['qwen3:4b-instruct', 'Ollama 0.40.2', '>local<', '41.2 s', 'Code the AI was shown (1)', '[S1] pricing.ts:1–2']) {
+    for (const label of ['qwen3:4b-instruct', 'Ollama 0.40.2', '>local<', '41.2 s', 'Evidence the AI was shown (1)', '[S1] pricing.ts:1–2']) {
       expect(html).toContain(label);
     }
   });

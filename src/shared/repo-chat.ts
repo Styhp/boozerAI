@@ -4,7 +4,7 @@ import type { ExplanationEvent } from './explanation.js';
 export const CHAT_QUESTION_LIMIT = 600;
 export const CHAT_HISTORY_LIMIT = 2;
 export const CHAT_TURN_LIMIT = 8;
-export const CHAT_PROMPT_VERSION = 'repo-chat-v1';
+export const CHAT_PROMPT_VERSION = 'repo-chat-v2';
 
 export interface RepoChatRequest {
   readonly snapshotId: string;

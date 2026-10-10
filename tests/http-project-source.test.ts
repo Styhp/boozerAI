@@ -25,6 +25,20 @@ const preview: CloudPreview = {
 };
 
 describe('M2 browser capability and HTTP ProjectSource', () => {
+  it('hash-checks document source through the authenticated snapshot file route', async () => {
+    const text = '# Different repository\nUses Svelte.\n';
+    const contentHash = createHash('sha256').update(text).digest('hex');
+    const doc = { path: 'README.md', kind: 'markdown' as const, sizeBytes: Buffer.byteLength(text), contentHash };
+    const response = { ...envelope, files: [...envelope.files, { id: 'doc-id', path: doc.path }], graph: { ...graph, documents: [doc] } };
+    for (const actualText of [text, 'tampered source']) {
+      const transport = vi.fn(async () => json({ snapshotId, path: doc.path, contentHash, text: actualText }));
+      const source = new HttpProjectSource(new ProjectConnection('c'.repeat(64), transport), response);
+      if (actualText === text) expect(await source.loadSource(doc.path)).toMatchObject({ text, contentHash });
+      else await expect(source.loadSource(doc.path)).rejects.toMatchObject({ code: 'stale-snapshot' });
+      expect(transport.mock.calls[0]).toMatchObject([`/api/projects/${id}/files/doc-id?snapshotId=${snapshotId}`,
+        { headers: { Authorization: `Bearer ${'c'.repeat(64)}` } }]);
+    }
+  });
   it('opens the native picker with an authenticated empty body and no browser path', async () => {
     const result = { status: 'selected', project: { id, label: 'Chosen folder', state: 'selected' } };
     const transport = vi.fn(async (_url: string, _init: RequestInit) => json(result));

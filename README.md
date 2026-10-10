@@ -6,7 +6,7 @@ Understand unfamiliar JavaScript and TypeScript repositories with a dependency g
 
 - Explore files and imports in the graph and file tree.
 - Inspect source, open cited lines, and ask for a local file explanation.
-- Ask repository questions in **Chat Boozer**, beside **Details**. **Thinking…** appears while waiting, then **Replying…** as text streams. Expand **Code the AI was shown** to check its excerpts.
+- Ask repository questions in **Chat Boozer**, beside **Details**. **Thinking…** appears while waiting, then **Replying…** as text streams. Expand **Evidence the AI was shown** to check its excerpts.
 - See potential change impact with the import chain as evidence.
 - Optionally save your own project notes outside the analyzed folder.
 
@@ -16,7 +16,7 @@ The graph workspace and chat are implemented; their independent reviews remain o
 
 Use **Node.js 24.x** and **npm 11.x**. Local AI requires Ollama on `127.0.0.1:11434` with the already installed **qwen3:4b-instruct** model; exact runtime/model details are in the [disclosure register](docs/SUBMISSION.md).
 
-Chat Boozer retrieves short source excerpts and sends them with your question to Ollama on the same computer. Ollama runs Qwen locally and streams back an answer with source references. This does not train the model on your repository; it gives each question a limited amount of source context. See the [local AI flow](docs/ARCHITECTURE.md#local-repository-chat--m3-chat--p-22).
+Chat Boozer retrieves short excerpts from code, Markdown documentation and package.json and sends them with your question to Ollama on the same computer. Ollama runs Qwen locally and streams back an answer with source references. This does not train the model on your repository; it gives each question a limited amount of source context. See the [local AI flow](docs/ARCHITECTURE.md#local-repository-chat--m3-chat--p-22).
 
 Run these commands in the trusted **Boozer AI checkout**, never in an unfamiliar repository selected for analysis:
 

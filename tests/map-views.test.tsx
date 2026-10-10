@@ -57,6 +57,19 @@ describe('display model', () => {
 });
 
 describe('detail pane states', () => {
+  it('opens escaped document citations outside graph nodes and highlights only matching evidence', () => {
+    const doc = { path: 'README.md', kind: 'markdown' as const, sizeBytes: 50, contentHash: 'doc-hash' };
+    const g = { ...graph, documents: [doc] };
+    const ref = { snapshotId: graph.snapshotId, file: doc.path, contentHash: doc.contentHash, startLine: 2, endLine: 2 };
+    const source = { status: 'loaded' as const, source: { snapshotId: graph.snapshotId, path: doc.path, contentHash: doc.contentHash, text: '# Docs\n<script>inert</script>\n' } };
+    const html = detail({ kind: 'range', ref }, source, g);
+    expect(html).toContain('Repository document');
+    expect(html).toContain('&lt;script&gt;inert&lt;/script&gt;');
+    expect(evidenceLines(html)).toEqual([2]);
+    const stale = detail({ kind: 'range', ref: { ...ref, contentHash: 'old' } }, source, g);
+    expect(stale).toContain('data-state="stale"');
+    expect(evidenceLines(stale)).toEqual([]);
+  });
   it('distinguishes empty, loading, failed, source, parse-error and stale states', () => {
     expect(detail(null)).toContain('data-state="empty"');
     expect(detail({ kind: 'file', path: 'main.ts' }, { status: 'loading', path: 'main.ts' })).toContain('data-state="loading"');

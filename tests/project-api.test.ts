@@ -167,6 +167,23 @@ describe('M2 native folder selection route', () => {
 });
 
 describe('M2 launch and project authority', () => {
+  it('serves document citations from the confirmed snapshot with opaque IDs and rejects stale references', async () => {
+    const f = await fixture();
+    await writeFile(join(f.root, 'README.md'), '# Inert docs\nA different project uses Svelte.\n');
+    const result = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    expect(result.graph.files.some((file) => file.path === 'README.md')).toBe(false);
+    expect(result.graph.documents?.map((doc) => doc.path)).toEqual(['README.md']);
+    expect(JSON.stringify(result)).not.toContain('A different project');
+    const file = result.files.find((entry) => entry.path === 'README.md')!;
+    expect(file.id).toMatch(/^[0-9a-f-]{36}$/);
+    await writeFile(join(f.root, 'README.md'), '# Changed since confirmation');
+    const read = await f.call(`files/${file.id}?snapshotId=${result.graph.snapshotId}`);
+    expect(read.json.text).toBe('# Inert docs\nA different project uses Svelte.\n');
+    const next = (await f.call('refresh', 'POST', { snapshotId: result.graph.snapshotId })).json as GraphResponse;
+    expect(next.graph.snapshotId).not.toBe(result.graph.snapshotId);
+    expect((await f.call(`files/${file.id}?snapshotId=${result.graph.snapshotId}`)).statusCode).toBe(409);
+    expect((await f.call(`files/${file.id}?snapshotId=${next.graph.snapshotId}`)).statusCode).toBe(404);
+  });
   it('requires current authority and rejects unbounded or privileged chat payloads before the service', async () => {
     const engine = service();
     engine.chat = vi.fn(async function* () { yield { type: 'error', code: 'no-excerpt', message: 'Chat double.' } as const; });

@@ -172,6 +172,12 @@ describe('retriever and prompt', () => {
 });
 
 describe('validator', () => {
+  it('recognizes document paths without mistaking the Node.js runtime name for a missing file', () => {
+    const withDocs = { ...snapshot, documents: [{ path: 'docs/stack.md', kind: 'markdown' as const, text: 'Node.js', sizeBytes: 7, contentHash: 'test' }] };
+    expect(validateMentions('Node.js uses docs/stack.md; missing.md is absent.', withDocs)).toEqual([
+      { text: 'docs/stack.md', status: 'linked', path: 'docs/stack.md' }, { text: 'missing.md', status: 'unknown' },
+    ]);
+  });
   const snippets = retrieveSnippets(snapshot, graph, 'pricing.ts');
 
   it('validates every [S#] marker and flags unknown ones without dropping them', () => {

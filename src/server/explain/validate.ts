@@ -6,7 +6,7 @@ import type { PathMention, SuspectedInjection } from '../../shared/explanation.j
 // citation shows provenance, not that the claim is correct.
 
 const CITATION = /\[(S\d+(?:\s*,\s*S\d+)*)\]/g;
-const PATH_LIKE = /(?<![\w@/.-])(?:\.{1,2}\/)?(?:[\w.-]+\/)*[\w-][\w.-]*\.(?:tsx?|jsx?|mjs|cjs|json|css)(?![\w/-])/g;
+const PATH_LIKE = /(?<![\w@/.-])(?:\.{1,2}\/)?(?:[\w.-]+\/)*[\w-][\w.-]*\.(?:tsx?|jsx?|mjs|cjs|json|css|md)(?![\w/-])/g;
 
 export function validateCitations(text: string, snippets: readonly Snippet[]): Explanation['citations'] {
   const ids = new Set(snippets.map((s) => s.id));
@@ -18,11 +18,13 @@ export function validateCitations(text: string, snippets: readonly Snippet[]): E
 // must match an indexed path exactly; only a bare file name may resolve by a unique match on
 // its last path segment (M3 review F2). Nothing is rewritten into a different path.
 export function validateMentions(text: string, snapshot: WorkspaceSnapshot): PathMention[] {
-  const indexed = snapshot.files.map((file) => file.path);
+  const indexed = [...snapshot.files, ...(snapshot.documents ?? [])].map((file) => file.path);
   const skipped = new Set(snapshot.inventory.skipped.map((skip) => skip.path));
   const seen = new Set<string>();
   const mentions: PathMention[] = [];
   for (const [raw] of text.matchAll(PATH_LIKE)) {
+    // The runtime's conventional name is prose, not a source-file claim.
+    if (raw.toLowerCase() === 'node.js' && !indexed.some((path) => path === raw || path.endsWith(`/${raw}`))) continue;
     if (seen.has(raw)) continue;
     seen.add(raw);
     const candidate = raw.replace(/^\.\//, '');

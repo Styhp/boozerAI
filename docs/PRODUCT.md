@@ -1,6 +1,6 @@
 # Product
 
-**Current branch:** local folders, static parsing, graph/source inspection, local file explanations, Chat Boozer, potential impact, notes and optional OpenAI file comparison are implemented. The baseline parser/integration/explanation/impact reviews are recorded; graph-workspace and reload/provider/chat extension reviews remain open. Model injection failures and newest-revision MSI/human checks are separate. See [TASKS.md](TASKS.md).
+**Current branch:** local folders, static parsing, graph/source inspection, local file explanations, Chat Boozer with code/document/manifest evidence, potential impact, notes and optional OpenAI file comparison are implemented. The baseline parser/integration/explanation/impact reviews are recorded; graph-workspace and reload/provider/chat extension reviews remain open. Model injection failures and newest-revision MSI/human checks are separate. See [TASKS.md](TASKS.md).
 
 ## Users and problem
 

@@ -41,7 +41,7 @@ Check these behaviors in the new launch tab:
 
 1. **Choose folder** opens the system dialog; Cancel returns to the start screen. Choose a folder and confirm: the graph opens and **Details / Chat Boozer** appear above the right pane. **Open another folder** in the graph header returns to folder selection without relaunching.
 2. Select a file, open Chat Boozer and ask about a named function. **Thinking…** appears before answer text, then **Replying…** while text streams. Local replies can be slow; Cancel remains available.
-3. **Code the AI was shown** starts closed. Expand it to check the actual excerpts, open a source link, and return to the retained conversation. Checked links do not prove answer correctness.
+3. **Evidence the AI was shown** starts closed. Expand it to check the actual excerpts, open a source link, and return to the retained conversation. Checked links do not prove answer correctness.
 4. Reload the browser: the analyzed project reconnects while the server stays running. Chat history resets on reload. Restarting the server requires its fresh launch tab.
 
 Local chat needs no API key. The Mac's private `.env` is excluded from Git. Optional OpenAI comparison is available only if separately configured on MSI and explicitly previewed/sent; no cloud request is needed for this setup.
