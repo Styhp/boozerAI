@@ -5,6 +5,7 @@ import type { FileResponse, FolderSelectionResponse, GraphResponse, SessionRespo
 import { readExplanationEvents } from './explanation-stream';
 import { sha256Hex, type NotesSource, type ProjectSource } from './project-source';
 import { isRepoChatRequest, type RepoChatRequest } from '../../shared/repo-chat';
+import { isCloudChatRequest, type CloudChatRequest, type CloudChatSend } from '../../shared/cloud-chat';
 
 export class ProjectApiError extends Error {
   constructor(readonly status: number, readonly code: string) { super(`Project request failed: ${code}`); }
@@ -228,14 +229,27 @@ export class HttpProjectSource implements ProjectSource {
     }
   }
 
-  async *chat(body: RepoChatRequest, signal: AbortSignal): AsyncIterable<ExplanationEvent> {
+  async previewCloudChat(body: CloudChatRequest, signal: AbortSignal): Promise<CloudPreview> {
+    if (!isCloudChatRequest(body) || body.snapshotId !== this.#initialSnapshot || this.#abort.signal.aborted) throw new Error('Refresh the project before previewing.');
+    try {
+      const response = await this.#connection.request(`/api/projects/${this.#id}/chat/cloud/preview`, 'POST', body, AbortSignal.any([signal, this.#abort.signal]));
+      const preview = await response.json() as CloudPreview;
+      if (signal.aborted || this.#abort.signal.aborted) throw new Error();
+      return preview;
+    } catch { throw new Error('Could not prepare OpenAI chat. Check the server key configuration and current project. Nothing was sent.'); }
+  }
+
+  cloudChat(body: CloudChatSend, signal: AbortSignal): AsyncIterable<ExplanationEvent> { return this.#chat(body, signal, true); }
+  chat(body: RepoChatRequest, signal: AbortSignal): AsyncIterable<ExplanationEvent> { return this.#chat(body, signal, false); }
+
+  async *#chat(body: RepoChatRequest | CloudChatSend, signal: AbortSignal, cloud: boolean): AsyncIterable<ExplanationEvent> {
     if (signal.aborted || this.#abort.signal.aborted) { yield { type: 'error', code: 'cancelled', message: 'Chat cancelled.' }; return; }
-    if (!isRepoChatRequest(body) || body.snapshotId !== this.#initialSnapshot
+    if (!(cloud ? isCloudChatRequest(body, true) : isRepoChatRequest(body)) || body.snapshotId !== this.#initialSnapshot
       || (body.contextPath !== undefined && !this.#response.files.some((entry) => entry.path === body.contextPath))) {
       yield { type: 'error', code: 'stale-snapshot', message: 'Ask about a file in the current project snapshot.' }; return;
     }
     try {
-      const response = await this.#connection.request(`/api/projects/${this.#id}/chat`, 'POST', body, AbortSignal.any([signal, this.#abort.signal]));
+      const response = await this.#connection.request(`/api/projects/${this.#id}/chat${cloud ? '/cloud' : ''}`, 'POST', body, AbortSignal.any([signal, this.#abort.signal]));
       if (response.body === null || response.headers.get('Content-Type') !== 'application/x-ndjson') throw new Error();
       for await (const event of readExplanationEvents(response.body)) {
         if (signal.aborted || this.#abort.signal.aborted) return;
@@ -246,7 +260,7 @@ export class HttpProjectSource implements ProjectSource {
       const stale = error instanceof ProjectApiError && error.code === 'stale-snapshot';
       const busy = error instanceof ProjectApiError && error.code === 'explanation-running';
       yield { type: 'error', code: cancelled ? 'cancelled' : stale ? 'stale-snapshot' : 'runtime-error',
-        message: cancelled ? 'Chat cancelled.' : stale ? 'The snapshot changed. Start a new chat.' : busy ? 'Another AI answer is running. Wait for it or cancel it first.' : 'Could not ask the local model.' };
+        message: cancelled ? 'Chat cancelled.' : stale ? 'The snapshot changed. Start a new chat.' : busy ? 'Another AI answer is running. Wait for it or cancel it first.' : 'Could not request the answer.' };
     }
   }
 }

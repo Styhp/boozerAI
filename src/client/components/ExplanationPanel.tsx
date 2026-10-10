@@ -2,6 +2,7 @@ import type { EvidenceRef, Explanation, FilePath, Snippet } from '../../shared/c
 import type { ExplanationDetails, ExplanationErrorCode } from '../../shared/explanation';
 import { formatExplanation, type Inline } from '../explain/format';
 import type { Selection } from '../map/model';
+import { isOfficialDocsUrl, type WebCitation } from '../../shared/cloud-chat';
 
 export type ExplanationState =
   | { readonly status: 'idle' }
@@ -16,7 +17,7 @@ const ERROR_TITLES: Record<ExplanationErrorCode, string> = {
   'runtime-unavailable': 'Local model runtime not available',
   'model-missing': 'Approved local model not installed',
   'model-mismatch': 'Installed model is not the approved build',
-  timeout: 'The local model took too long',
+  timeout: 'The model took too long',
   cancelled: 'Explanation cancelled',
   'runtime-error': 'The local model failed',
   'cloud-unavailable': 'No cloud provider is configured',
@@ -27,8 +28,8 @@ const ERROR_TITLES: Record<ExplanationErrorCode, string> = {
 const rangeLabel = (ref: EvidenceRef) =>
   `${ref.file}:${ref.startLine}${ref.endLine !== ref.startLine ? `–${ref.endLine}` : ''}`;
 
-function InlineView({ parts, snippets, path, onSelect }: {
-  parts: readonly Inline[]; snippets: readonly Snippet[]; path: FilePath; onSelect: (s: Selection) => void;
+function InlineView({ parts, snippets, path, onSelect, webCitations = [] }: {
+  parts: readonly Inline[]; snippets: readonly Snippet[]; path: FilePath; onSelect: (s: Selection) => void; webCitations?: readonly WebCitation[];
 }) {
   return (
     <>
@@ -38,6 +39,11 @@ function InlineView({ parts, snippets, path, onSelect }: {
           case 'code': return <code key={i}>{part.text}</code>;
           case 'bold': return <strong key={i}>{part.text}</strong>;
           case 'citation': {
+            if (part.id.startsWith('W')) {
+              const citation = webCitations.find((c) => c.id === part.id && isOfficialDocsUrl(c.url));
+              return citation ? <a key={i} className="citation" href={citation.url} target="_blank" rel="noopener noreferrer" title={citation.title}>[{part.id}]</a>
+                : <span key={i} className="citation invalid" title="No verified web source for this marker">[{part.id}]?</span>;
+            }
             const snippet = snippets.find((s) => s.id === part.id);
             return snippet ? (
               <button key={i} type="button" className="citation" title={rangeLabel(snippet.ref)}
@@ -115,6 +121,7 @@ export function ExplanationResult({ path, state, onSelect }: {
   const text = state.status === 'done' ? state.explanation.text : state.status === 'idle' ? '' : state.text;
   const snippets = state.status === 'done' ? state.explanation.snippets : state.status === 'idle' ? [] : state.snippets;
   const mentions = state.status === 'done' ? state.details.mentions : [];
+  const webCitations = state.status === 'done' ? state.details.webCitations ?? [] : [];
   const blocks = formatExplanation(text, mentions);
 
   return (
@@ -134,8 +141,8 @@ export function ExplanationResult({ path, state, onSelect }: {
       {blocks.length > 0 && (
         <div className="explanation-text">
           {blocks.map((block, i) => (block.kind === 'paragraph'
-            ? <p key={i}><InlineView parts={block.inline} snippets={snippets} path={path} onSelect={onSelect} /></p>
-            : <ul key={i}>{block.items.map((item, j) => <li key={j}><InlineView parts={item} snippets={snippets} path={path} onSelect={onSelect} /></li>)}</ul>))}
+            ? <p key={i}><InlineView parts={block.inline} snippets={snippets} path={path} onSelect={onSelect} webCitations={webCitations} /></p>
+            : <ul key={i}>{block.items.map((item, j) => <li key={j}><InlineView parts={item} snippets={snippets} path={path} onSelect={onSelect} webCitations={webCitations} /></li>)}</ul>))}
         </div>
       )}
 
@@ -161,6 +168,9 @@ export function ExplanationResult({ path, state, onSelect }: {
         const unknown = state.details.mentions.filter((m) => m.status !== 'linked');
         return (
           <ul className="checks">
+            {state.details.searchedDocs !== undefined && <li>{state.details.searchedDocs
+              ? `${webCitations.length} official documentation citations returned. ${webCitations.length === 0 ? 'Current external requirements were not verified by a cited source.' : 'Open [W#] links to check external guidance.'}`
+              : 'No live documentation lookup. External guidance may be outdated.'}</li>}
             <li>{state.explanation.citations.length} source links like [S1], {invalid === 0 ? 'all pointing to code the AI was shown' : `${invalid} unknown (flagged with ?)`}.</li>
             {unknown.length > 0 && <li className="warning">File names not found as indexed source: {unknown.map((m) => m.text).join(', ')}.</li>}
             {state.details.truncated && <li className="warning">The answer reached the output limit and may be cut short.</li>}
@@ -170,6 +180,9 @@ export function ExplanationResult({ path, state, onSelect }: {
         );
       })()}
 
+      {webCitations.length > 0 && <details><summary>Official documentation sources ({webCitations.length})</summary><ul>
+        {webCitations.filter((c) => isOfficialDocsUrl(c.url)).map((c) => <li key={c.id}><a href={c.url} target="_blank" rel="noopener noreferrer">[{c.id}] {c.title}</a></li>)}
+      </ul></details>}
       {snippets.length > 0 && <SnippetList snippets={snippets} path={path} onSelect={onSelect} />}
     </>
   );

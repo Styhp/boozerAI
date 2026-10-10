@@ -25,7 +25,7 @@ export function loadServerEnv(
   const settings = parseEnv(content);
   // Deliberate allowlist: a .env cannot change Origin policy, model endpoints,
   // app-data paths or enable tracing. An explicitly empty export also wins.
-  if (environment.OPENAI_API_KEY === undefined && settings.OPENAI_API_KEY !== undefined) {
-    environment.OPENAI_API_KEY = settings.OPENAI_API_KEY;
+  for (const key of ['OPENAI_API_KEY', 'OPENAI_MODEL']) {
+    if (environment[key] === undefined && settings[key] !== undefined) environment[key] = settings[key];
   }
 }

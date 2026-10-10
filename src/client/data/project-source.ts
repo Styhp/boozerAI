@@ -3,6 +3,7 @@ import type { CloudPreview, CloudStatus, ExplainRequestBody, ExplanationEvent } 
 import type { NoteCreateBody, NoteEditBody, NotesResponse } from '../../shared/notes';
 import type { LoadedSource } from '../map/model';
 import type { RepoChatRequest } from '../../shared/repo-chat';
+import type { CloudChatRequest, CloudChatSend } from '../../shared/cloud-chat';
 
 // The map screen reads everything through this interface. The M2/M3 API integration
 // provides the real implementation; until then only the dev-only fixture preview exists.
@@ -16,6 +17,8 @@ export interface ProjectSource {
   // /api/projects/:id/explanations and passes the response to readExplanationEvents.
   explain(body: ExplainRequestBody, signal: AbortSignal): AsyncIterable<ExplanationEvent>;
   chat?(body: RepoChatRequest, signal: AbortSignal): AsyncIterable<ExplanationEvent>;
+  previewCloudChat?(body: CloudChatRequest, signal: AbortSignal): Promise<CloudPreview>;
+  cloudChat?(body: CloudChatSend, signal: AbortSignal): AsyncIterable<ExplanationEvent>;
   // Optional cloud comparison (P-16), present only when the server offers it. `preview`
   // returns the exact payload and sends nothing; it rejects with a user-readable Error.
   readonly cloud?: {

@@ -42,6 +42,10 @@ The written description should identify the actual machine, Ollama 0.40.2, `qwen
 
 If any answer is incorrect, truncated, times out or follows an injected instruction, record that failure and retry a suitable narrow question; do not edit failure into success. Two of five wider injection phrasings remain known failures. Agent browser checks are implementation evidence; human acceptance and independent review are separate.
 
+## Optional online advice check (separate from offline proof)
+
+With networking enabled, open Chat Boozer and select **OpenAI (preview and send)**. Ask **What if I add Codex here as a coding agent, what are the prerequisites and how should I do it?** Keep **Look up current official OpenAI documentation** checked. Review the exact outgoing request and injection warnings before choosing **Send to OpenAI**. This sends the previewed excerpts/question to OpenAI and can incur generation/search charges. Check repository `[S#]` citations, external `[W#]` documentation links, and whether existing behavior is distinguished from proposals. Record failed requests and incorrect claims. HTTP 403/model_not_found previously blocked the default model; an accessible `OPENAI_MODEL` and restart may be needed. This cloud check does not establish offline readiness or execute/install Codex.
+
 ## Previous recording, preserved locally
 
 The pre-merge MSI handoff reports `/home/boozer/Videos/BoozerAI/BoozerAI-demo-60s-silent.mp4`: 60 seconds, 1920×1080, 30 fps, H.264, no audio. It includes an uninterrupted local generation wait, a five-code answer with `[S1]`, highlighted `folder-picker.ts` lines 2–13 and an import-source click. The recorded UI displayed 4.0 seconds; an earlier focused rehearsal displayed 7.8 seconds. These are historical take observations, not current measurements or general latency claims.

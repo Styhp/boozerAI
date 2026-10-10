@@ -39,6 +39,25 @@ describe('M2 browser capability and HTTP ProjectSource', () => {
         { headers: { Authorization: `Bearer ${'c'.repeat(64)}` } }]);
     }
   });
+  it('keeps cloud preview local and uses a separate hash-confirmed send route', async () => {
+    const preview = { provider: 'OpenAI', endpoint: 'https://api.openai.com/v1/responses', model: 'test', payloadJson: '{}', payload: {}, previewHash: 'a'.repeat(64), suspectedInjections: [] };
+    const transport = vi.fn(async (url: string, _init: RequestInit) => url.endsWith('/preview') ? json(preview)
+      : new Response('{"type":"error","code":"cloud-error","message":"Provider double"}\n', { headers: { 'Content-Type': 'application/x-ndjson' } }));
+    const source = new HttpProjectSource(new ProjectConnection('c'.repeat(64), transport), envelope);
+    const body = { snapshotId, question: 'How would I add a coding agent?', history: [], searchDocs: true };
+    const signal = new AbortController().signal;
+    expect(await source.previewCloudChat(body, signal)).toEqual(preview);
+    expect(transport.mock.calls[0]?.[0]).toBe(`/api/projects/${id}/chat/cloud/preview`);
+    expect(transport).toHaveBeenCalledTimes(1);
+    const send = { ...body, previewHash: preview.previewHash };
+    const events = []; for await (const event of source.cloudChat(send, signal)) events.push(event);
+    expect(events).toMatchObject([{ type: 'error', code: 'cloud-error' }]);
+    expect(transport.mock.calls[1]?.[0]).toBe(`/api/projects/${id}/chat/cloud`);
+    expect(JSON.parse(transport.mock.calls[1]![1].body as string)).toEqual(send);
+    source.revoke(); await expect(source.previewCloudChat(body, signal)).rejects.toThrow();
+    for await (const _event of source.cloudChat(send, signal)) { /* drain */ }
+    expect(transport).toHaveBeenCalledTimes(2);
+  });
   it('opens the native picker with an authenticated empty body and no browser path', async () => {
     const result = { status: 'selected', project: { id, label: 'Chosen folder', state: 'selected' } };
     const transport = vi.fn(async (_url: string, _init: RequestInit) => json(result));

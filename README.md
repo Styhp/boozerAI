@@ -55,6 +55,10 @@ Reading, parsing, graph analysis, source inspection, default explanations and Ch
 
 Package/runtime/model setup needs downloads. Optional **OpenAI file comparison** needs internet and a server-side `OPENAI_API_KEY` in this checkout's ignored `.env` or launch environment. Copy the empty `.env.example` if configuring it. Restart after changes. The UI previews the exact outgoing request and sends only after **Send to OpenAI**. Local chat needs no API key; cloud comparison is a secondary feature with no automatic fallback. GitHub import, JEV and LangSmith integration are not implemented.
 
+**OpenAI repository advice:** in Chat Boozer, choose **OpenAI (preview and send)** to ask about possible additions and prerequisites. Boozer prepares up to 12 larger excerpts from the confirmed snapshot plus bounded parsed relationships. Review **Preview OpenAI request**, then **Send to OpenAI**. Optional official OpenAI documentation search supports current Codex/API guidance; `[W#]` links open documentation sources and `[S#]` links open repository lines. The prompt distinguishes existing facts, external guidance and proposed changes. It cannot edit files, run a coding agent or inspect files beyond the preview.
+
+Cloud advice uses OpenAI Responses and requires an account-accessible model; documentation lookup also requires web-search support. Set `OPENAI_MODEL` in the ignored `.env` if needed, then restart. The default remains `gpt-6-luna`; this key previously returned HTTP 403/model_not_found. Offline implementation checks pass; a successful live cloud answer and independent review remain unverified. No model substitution or cloud fallback happens automatically.
+
 ## Limits
 
 Static parsing can miss unsupported imports and framework relationships; Boozer counts missing analysis. Impact means **potentially affected**, never guaranteed breakage or safety. Chat searches indexed JS/TS source excerpts and can miss relevant code. Checked citations establish valid references, not correct claims.

@@ -70,6 +70,19 @@ describe('explanation panel', () => {
     }
   });
 
+  it('renders provider-annotated documentation links separately from source citations and blocks unsafe URLs', () => {
+    const html = panel({ ...done, explanation: { ...done.explanation, text: 'Repo [S1]. Docs [W1]. Unsafe [W2]. Unknown [W9].' },
+      details: { ...done.details, searchedDocs: true, webCitations: [
+        { id: 'W1', title: 'Official <script> reference', url: 'https://learn.chatgpt.com/docs/codex-sdk' },
+        { id: 'W2', title: 'Unsafe', url: 'javascript:alert(1)' },
+      ] } });
+    expect(html).toContain('href="https://learn.chatgpt.com/docs/codex-sdk"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).toContain('title="pricing.ts:1–2">[S1]</button>');
+    expect(html).toContain('[W2]?'); expect(html).toContain('[W9]?');
+    expect(html).not.toContain('href="javascript:'); expect(html).not.toContain('<script>');
+  });
+
   it('links valid citations and flags unknown citations and file names', () => {
     const html = panel(done);
     expect(html).toContain('class="citation" title="pricing.ts:1–2">[S1]</button>');

@@ -69,6 +69,15 @@ describe('private application environment', () => {
     expect(environment).toEqual({ OPENAI_API_KEY: '${OTHER_KEY}-$(echo do-not-execute)' });
   });
 
+  it('loads an explicit model ID without permitting endpoint or browser-secret overrides', () => {
+    writeFileSync(file, 'OPENAI_MODEL=account-model\nOPENAI_BASE_URL=https://evil.example\nVITE_OPENAI_API_KEY=fake-secret\n');
+    const environment: NodeJS.ProcessEnv = {};
+    loadServerEnv(file, environment);
+    expect(environment).toEqual({ OPENAI_MODEL: 'account-model' });
+    expect(createOpenAIAdapter({ apiKey: 'fake', model: environment.OPENAI_MODEL }).status()).toMatchObject({ model: 'account-model', endpoint: 'https://api.openai.com/v1/chat/completions' });
+    expect(() => createOpenAIAdapter({ apiKey: 'fake', model: 'bad\nmodel' })).toThrow('valid model ID');
+  });
+
   it('reports a read failure without a private path or underlying cause', () => {
     mkdirSync(file);
     let caught: unknown;

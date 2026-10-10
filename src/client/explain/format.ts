@@ -15,7 +15,7 @@ export type Block =
   | { readonly kind: 'paragraph'; readonly inline: readonly Inline[] }
   | { readonly kind: 'list'; readonly items: readonly (readonly Inline[])[] };
 
-const INLINE = /`([^`\n]+)`|\*\*([^*\n]+)\*\*|\[(S\d+(?:\s*,\s*S\d+)*)\]/g;
+const INLINE = /`([^`\n]+)`|\*\*([^*\n]+)\*\*|\[([SW]\d+(?:\s*,\s*[SW]\d+)*)\]/g;
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 function withMentions(text: string, mentions: readonly PathMention[]): Inline[] {

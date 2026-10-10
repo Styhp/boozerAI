@@ -1,4 +1,5 @@
 import type { Explanation, FilePath, Snippet } from './contracts.js';
+import type { WebCitation } from './cloud-chat.js';
 
 // The HTTP route allows a little additional time for readiness and terminal delivery.
 export const LOCAL_EXPLANATION_TIMEOUT_MS = 360_000;
@@ -43,6 +44,8 @@ export interface SuspectedInjection {
 }
 
 export interface ExplanationDetails {
+  readonly webCitations?: readonly WebCitation[];
+  readonly searchedDocs?: boolean;
   readonly promptVersion: string;
   readonly modelDigest: string | null;   // local runtime digest; null for cloud answers
   readonly runtimeVersion: string;

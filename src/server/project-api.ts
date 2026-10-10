@@ -5,6 +5,8 @@ import type { CloudComparison, ExplanationService } from './explain/index.js';
 import { ApiError, ProjectSession } from './project-session.js';
 import { NotesError, routeNotes } from './project-notes.js';
 import { isRepoChatRequest, type RepoChatService } from '../shared/repo-chat.js';
+import { isCloudChatRequest, type CloudChatSend } from '../shared/cloud-chat.js';
+import type { CloudRepoChatService } from './explain/cloud-chat-service.js';
 
 const MAX_BODY = 8_192;
 const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -54,7 +56,7 @@ function explanationBody(input: Record<string, unknown>): ExplainRequestBody {
   throw new ApiError(400, 'invalid-body');
 }
 
-export async function handleProjectApi(request: IncomingMessage, response: ServerResponse, session: ProjectSession, service: ExplanationService & CloudComparison & Partial<RepoChatService>, development: boolean): Promise<void> {
+export async function handleProjectApi(request: IncomingMessage, response: ServerResponse, session: ProjectSession, service: ExplanationService & CloudComparison & Partial<RepoChatService & CloudRepoChatService>, development: boolean): Promise<void> {
   const controller = new AbortController();
   let timedOut = false;
   const disconnected = () => { if (!response.writableEnded) controller.abort(); };
@@ -94,7 +96,7 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
       return;
     }
     // --- end project notes hook ---
-    const route = /^\/api\/projects\/([0-9a-f-]{36})\/(confirm|graph|files\/([0-9a-f-]{36})|refresh|close|explanations|explanations\/preview|chat)$/.exec(pathname ?? '');
+    const route = /^\/api\/projects\/([0-9a-f-]{36})\/(confirm|graph|files\/([0-9a-f-]{36})|refresh|close|explanations|explanations\/preview|chat|chat\/cloud|chat\/cloud\/preview)$/.exec(pathname ?? '');
     if (route === null) throw new ApiError(404, 'not-found');
     const id = route[1]!;
     const action = route[2]!;
@@ -137,29 +139,40 @@ export async function handleProjectApi(request: IncomingMessage, response: Serve
       }
       json(response, 200, result.preview); return;
     }
-    if (action === 'chat') {
-      if (!isRepoChatRequest(input)) throw new ApiError(400, 'invalid-body');
-      const current = session.current(id, input.snapshotId);
-      if (input.contextPath !== undefined && ![...current.snapshot.files, ...(current.snapshot.documents ?? [])]
-        .some((file) => file.path === input.contextPath)) throw new ApiError(404, 'invalid-file');
-      if (service.chat === undefined) throw new ApiError(404, 'chat-unavailable');
-      const chat = session.beginChat(id, input.snapshotId, controller.signal);
+    if (action === 'chat' || action === 'chat/cloud' || action === 'chat/cloud/preview') {
+      const cloud = action !== 'chat';
+      if (!(cloud ? isCloudChatRequest(input, action === 'chat/cloud') : isRepoChatRequest(input))) throw new ApiError(400, 'invalid-body');
+      // Both validators share the base request contract; cloud adds only consent/search.
+      const chatBody = input as unknown as CloudChatSend;
+      const current = session.current(id, chatBody.snapshotId);
+      if (chatBody.contextPath !== undefined && ![...current.snapshot.files, ...(current.snapshot.documents ?? [])]
+        .some((file) => file.path === chatBody.contextPath)) throw new ApiError(404, 'invalid-file');
+      if (action === 'chat/cloud/preview') {
+        if (!service.previewCloudChat) throw new ApiError(404, 'cloud-unavailable');
+        const result = service.previewCloudChat({ ...chatBody, snapshot: current.snapshot, graph: current.response.graph, signal: controller.signal });
+        if (result.type === 'error') throw new ApiError(result.code === 'cloud-unavailable' ? 404 : 400, result.code);
+        json(response, 200, result.preview); return;
+      }
+      if (cloud ? service.cloudChat === undefined : service.chat === undefined) throw new ApiError(404, 'chat-unavailable');
+      const chat = session.beginChat(id, chatBody.snapshotId, controller.signal);
       const timeout = setTimeout(() => {
         timedOut = true;
         controller.abort(new DOMException('The chat request timed out.', 'TimeoutError'));
-      }, LOCAL_EXPLANATION_TIMEOUT_MS + 10_000);
+      }, cloud ? 130_000 : LOCAL_EXPLANATION_TIMEOUT_MS + 10_000);
       timeout.unref();
       try {
         response.writeHead(200, { 'Content-Type': 'application/x-ndjson', 'Cache-Control': 'no-store' });
         response.flushHeaders();
         let terminal = false;
-        for await (const event of service.chat({ ...input, ...chat })) {
+        const context = { snapshot: chat.snapshot, graph: chat.graph, signal: chat.signal };
+        const events = cloud ? service.cloudChat!({ ...chatBody, ...context }) : service.chat!({ ...chatBody, ...context });
+        for await (const event of events) {
           if (chat.signal.aborted) break;
           if (!response.write(`${JSON.stringify(event)}\n`)) await once(response, 'drain', { signal: chat.signal });
           if (event.type === 'done' || event.type === 'error') { terminal = true; break; }
         }
         if (!terminal && !response.destroyed) response.write(`${JSON.stringify({ type: 'error', code: timedOut ? 'timeout' : chat.signal.aborted ? 'cancelled' : 'runtime-error',
-          message: timedOut ? 'The local model did not finish within the request time limit.' : 'The chat ended before completion.' })}\n`);
+          message: timedOut ? 'The model did not finish within the request time limit.' : 'The chat ended before completion.' })}\n`);
         response.end();
       } finally { clearTimeout(timeout); chat.finish(); }
       return;

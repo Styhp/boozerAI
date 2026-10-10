@@ -10,6 +10,15 @@ const render = (state: ChatState = { turns: [], running: false }) => renderToSta
   chat={{ state, onAsk: noop, onCancel: noop, onClear: noop }} contextPath="pricing.ts" onSelect={noop} />);
 
 describe('repo chat panel', () => {
+  it('offers an explicit cloud choice while keeping local selected and nothing sent', () => {
+    const html = renderToStaticMarkup(<RepoChatPanel graph={graph} contextPath={null} onSelect={noop}
+      chat={{ state: { turns: [], running: false }, onAsk: noop, onCancel: noop, onClear: noop,
+        cloud: { preview: async () => { throw new Error('Rendering must not preview or send.'); }, send: () => { throw new Error('Rendering must not send.'); } } }} />);
+    expect(html).toContain('value="local" selected=""');
+    expect(html).toContain('OpenAI (preview and send)');
+    expect(html).not.toContain('>Send to OpenAI</button>');
+    expect(html).toContain('nothing sent online');
+  });
   it('offers local questions, bounded composition, explicit file context and counted missing analysis', () => {
     const html = render();
     for (const label of ['<h2>Chat Boozer</h2>', 'nothing sent online', '2 files skipped', '3 imports not followed',

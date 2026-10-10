@@ -9,6 +9,7 @@ import { retrieveSnippets } from './retriever.js';
 import { findInstructionLikeText, validateCitations, validateMentions } from './validate.js';
 import { createRepoChatService } from './chat-service.js';
 import type { RepoChatService } from '../../shared/repo-chat.js';
+import { createCloudRepoChatService, type CloudRepoChatService } from './cloud-chat-service.js';
 
 // No cache in the demo tier (S-11/M8), so every answer is generated fresh. Local and
 // cloud answers share retrieval, prompt and validation so they are directly comparable,
@@ -41,9 +42,10 @@ function prepare({ snapshot, graph, selected }: ExplainRequest): Prepared {
 export function createExplanationService(
   adapter: ModelAdapter = createOllamaAdapter(),
   cloud: CloudAdapter = createOpenAIAdapter(),
-): ExplanationService & CloudComparison & RepoChatService {
+): ExplanationService & CloudComparison & RepoChatService & CloudRepoChatService {
   return {
     ...createRepoChatService(adapter),
+    ...createCloudRepoChatService(cloud),
     status: (signal) => adapter.status(signal),
     preload: (signal) => adapter.preload(signal),
     cloudStatus: () => cloud.status(),

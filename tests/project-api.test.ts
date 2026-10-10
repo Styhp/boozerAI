@@ -78,6 +78,47 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
+describe('cloud chat preview and send routes', () => {
+  it('authorizes previews locally and binds sending to the exact question and documentation option', async () => {
+    const { engine, cloudFetch, local } = cloudService('fake-chat-key');
+    const f = await fixture(engine);
+    const indexed = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    const body = { snapshotId: indexed.graph.snapshotId, question: 'What if I add a coding agent?', history: [], searchDocs: true };
+    const preview = await f.call('chat/cloud/preview', 'POST', body);
+    expect(preview.statusCode).toBe(200);
+    expect(preview.json.endpoint).toBe('https://api.openai.com/v1/responses');
+    expect(cloudFetch).not.toHaveBeenCalled(); expect(local.stream).not.toHaveBeenCalled();
+    expect((await f.call('chat/cloud', 'POST', body)).statusCode).toBe(400);
+    const send = { ...body, previewHash: preview.json.previewHash };
+    for (const changed of [{ question: 'Different question' }, { searchDocs: false }, { history: ['Changed history'] }]) {
+      expect((await f.call('chat/cloud', 'POST', { ...send, ...changed })).text).toContain('preview-mismatch');
+    }
+    expect(cloudFetch).not.toHaveBeenCalled();
+    const result = await f.call('chat/cloud', 'POST', send);
+    expect(result.text).toContain('cloud-error'); // provider double deliberately fails
+    expect(cloudFetch).toHaveBeenCalledExactlyOnceWith('https://api.openai.com/v1/responses', expect.objectContaining({ body: preview.json.payloadJson }));
+    expect(local.stream).not.toHaveBeenCalled();
+  });
+  it('retains auth, Origin, body limits, snapshot and inert-input boundaries for both routes', async () => {
+    const { engine, cloudFetch } = cloudService('fake-chat-key'); const f = await fixture(engine);
+    const indexed = (await f.call('confirm', 'POST', {})).json as GraphResponse;
+    for (const action of ['chat/cloud/preview', 'chat/cloud']) {
+      const body = { snapshotId: indexed.graph.snapshotId, question: 'How would I extend this?', history: [], searchDocs: false,
+        ...(action.endsWith('preview') ? {} : { previewHash: 'a'.repeat(64) }) };
+      expect((await f.call(action, 'POST', body, { authorization: undefined })).statusCode).toBe(401);
+      expect((await f.call(action, 'POST', body, { origin: 'https://evil.example' })).statusCode).toBe(403);
+      expect((await f.call(action, 'POST', body, { 'content-type': 'text/plain' })).statusCode).toBe(415);
+      expect((await f.call(action, 'POST', { ...body, question: 'x'.repeat(9000) })).statusCode).toBe(413);
+      expect((await f.call(action, 'POST', { ...body, snapshotId: 'old' })).statusCode).toBe(409);
+      expect((await f.call(action, 'POST', { ...body, contextPath: 'credentials.ts' })).statusCode).toBe(404);
+      for (const extra of [{ source: 'untrusted' }, { provider: 'local' }, { tools: ['shell'] }, { searchDocs: 'true' }]) {
+        expect((await f.call(action, 'POST', { ...body, ...extra })).statusCode).toBe(400);
+      }
+    }
+    expect(cloudFetch).not.toHaveBeenCalled();
+  });
+});
+
 describe('M2 native folder selection route', () => {
   it('requires token, Origin, JSON and an empty POST before invoking the dialog', async () => {
     const picker = vi.fn(async () => null);

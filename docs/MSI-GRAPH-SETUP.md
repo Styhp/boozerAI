@@ -44,7 +44,7 @@ Check these behaviors in the new launch tab:
 3. **Evidence the AI was shown** starts closed. Expand it to check the actual excerpts, open a source link, and return to the retained conversation. Checked links do not prove answer correctness.
 4. Reload the browser: the analyzed project reconnects while the server stays running. Chat history resets on reload. Restarting the server requires its fresh launch tab.
 
-Local chat needs no API key. The Mac's private `.env` is excluded from Git. Optional OpenAI comparison is available only if separately configured on MSI and explicitly previewed/sent; no cloud request is needed for this setup.
+Local chat needs no API key. The Mac's private `.env` is excluded from Git. Optional OpenAI comparison and repository advice require MSI configuration and explicit preview/send. Advice optionally searches current official OpenAI documentation. `OPENAI_MODEL` selects a model your API project can access; restart after changing it. The default model previously returned HTTP 403/model_not_found. No cloud request is needed for local setup; cloud streaming/search quality remain unverified with this key.
 
 Independent review and human MSI browser/offline/recording acceptance remain separate from terminal and automated-browser checks. Keep known grounding/injection failures in [BENCHMARKS.md](BENCHMARKS.md) visible; historical handoffs and current integration evidence are linked in [TASKS.md](TASKS.md).
 

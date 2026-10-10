@@ -2,6 +2,8 @@
 
 **Current branch:** local folders, static parsing, graph/source inspection, local file explanations, Chat Boozer with code/document/manifest evidence, potential impact, notes and optional OpenAI file comparison are implemented. The baseline parser/integration/explanation/impact reviews are recorded; graph-workspace and reload/provider/chat extension reviews remain open. Model injection failures and newest-revision MSI/human checks are separate. See [TASKS.md](TASKS.md).
 
+Human-requested extension, M3-CLOUD-CHAT (2026-10-09 America/New_York): Chat Boozer offers explicit OpenAI inspection/advice for questions about adding capabilities and prerequisites. A larger snapshot evidence preview and optional current official OpenAI documentation lookup precede every send. Existing repository facts, external guidance and proposed changes are distinguished; no target writes or coding-agent execution. Local chat stays the default. Implementation passes offline checks; live cloud access/answer quality and independent review remain open.
+
 ## Users and problem
 
 Primary users are developers joining unfamiliar codebases and developers reviewing AI-generated code. Per P-18, the interface and explanations are written so that people who build with AI tools but read little code ("vibe coders") can follow them too. Privacy-constrained teams are secondary users. Reading structure across many files is slow; unsupported AI claims make that harder. Users need checkable source evidence without requiring a cloud AI service.
