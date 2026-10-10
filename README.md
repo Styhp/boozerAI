@@ -57,7 +57,7 @@ Package/runtime/model setup needs downloads. Optional **OpenAI file comparison**
 
 **OpenAI repository advice:** in Chat Boozer, choose **OpenAI (preview and send)** to ask about possible additions and prerequisites. Boozer prepares up to 12 larger excerpts from the confirmed snapshot plus bounded parsed relationships. Review **Preview OpenAI request**, then **Send to OpenAI**. Optional official OpenAI documentation search supports current Codex/API guidance; `[W#]` links open documentation sources and `[S#]` links open repository lines. The prompt distinguishes existing facts, external guidance and proposed changes. It cannot edit files, run a coding agent or inspect files beyond the preview.
 
-Cloud advice uses OpenAI Responses and requires an account-accessible model; documentation lookup also requires web-search support. Set `OPENAI_MODEL` in the ignored `.env` if needed, then restart. The default remains `gpt-6-luna`; this key previously returned HTTP 403/model_not_found. Offline implementation checks pass; a successful live cloud answer and independent review remain unverified. No model substitution or cloud fallback happens automatically.
+Cloud advice uses OpenAI Responses and requires an account-accessible model; documentation lookup also requires web-search support. Set `OPENAI_MODEL` in the ignored `.env` if needed, then restart. The default remains `gpt-6-luna`; the MSI key returned HTTP 403/model_not_found for it. MSI is now explicitly configured for `gpt-5.6-luna`: source-free live comparison and official-docs advice checks pass. Repository answer quality and independent review remain unverified. No model substitution or cloud fallback happens automatically.
 
 ## Limits
 

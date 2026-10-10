@@ -31,7 +31,7 @@ Development assistants are separate from the local model used by the app.
 
 Codex also documented the local Ollama flow and corrected repository-chat lexical retrieval after a question about Ollama returned unrelated UI excerpts. A subsequent correction removed the question-specific source comments, added bounded Markdown/manifest evidence and fixed new-topic retrieval. Answers are generated from repository excerpts, not stored templates or model training.
 
-Codex implemented the human-requested optional cloud repository advice path, broader snapshot evidence, preview/hash consent, official OpenAI documentation search/citations, configurable model ID and offline tests. No SDK/dependency or external code was copied. Official OpenAI API documentation informed the implementation. Live model access/answer quality and independent review remain unverified at this handoff.
+Codex implemented the human-requested optional cloud repository advice path, broader snapshot evidence, preview/hash consent, official OpenAI documentation search/citations, configurable model ID and offline tests. No SDK/dependency or external code was copied. Official OpenAI API documentation informed the implementation. Source-free live comparison and official-docs advice pass with `gpt-5.6-luna`; repository answer quality and independent review remain unverified.
 
 These tools are not dependencies of Boozer's local inference. Commits and the [historical task register](https://github.com/Styhp/boozerAI/blob/a5ece9d6da3eedbd9e6fb585b2565cfd90d2f7e7/docs/TASKS.md) retain development chronology, ownership, reviews and failures.
 
@@ -41,7 +41,7 @@ These tools are not dependencies of Boozer's local inference. Commits and the [h
 |---|---|---|
 | Ollama | 0.40.2; loopback `127.0.0.1:11434` | Local runtime for file explanations and chat; MIT per recorded runtime metadata |
 | Qwen | `qwen3:4b-instruct`, Q4_K_M, 4.0B parameters, about 2.5 GB | Actually downloaded and used after approval; Apache-2.0 per recorded `ollama show --license` check |
-| OpenAI API | Default `gpt-6-luna`, optional server-side `OPENAI_MODEL`; fixed `https://api.openai.com/v1/chat/completions` for file comparison and `https://api.openai.com/v1/responses` for repository advice | Native server-side fetch, no SDK. Optional web search is restricted to official OpenAI documentation domains; search may add charges. Exact response model is recorded; configuration alone does not prove live access. Prior default-model request failed HTTP 403/model_not_found. Provider terms apply |
+| OpenAI API | Default `gpt-6-luna`; MSI explicitly configured with `OPENAI_MODEL=gpt-5.6-luna`; fixed `https://api.openai.com/v1/chat/completions` for file comparison and `https://api.openai.com/v1/responses` for repository advice | Native server-side fetch, no SDK. Optional web search is restricted to official OpenAI documentation domains; search may add charges. Both source-free live endpoint checks returned HTTP 200 and reported `gpt-5.6-luna`, including an official-docs citation. Prior default-model request failed HTTP 403/model_not_found. Repository-answer quality remains unverified. Provider terms apply |
 
 Boozer verifies the approved local model's full digest:
 
